@@ -7,9 +7,8 @@ namespace MyEdit {
         public bool WithParenthesis;
         public bool IsType;
 
-        public virtual string Text(TParser parser) {
+        public virtual void Text(StringWriter sw, TParser parser) {
             Debug.Assert(false);
-            return null;
         }
     }
 
@@ -28,29 +27,27 @@ namespace MyEdit {
             InitValue = init;
         }
 
-        public virtual string Text(TParser parser) {
-            StringWriter sw = new StringWriter();
-
+        public virtual void Text(StringWriter sw, TParser parser) {
             sw.Write(NameVar);
 
             if (TypeVar != null) {
 
-                sw.Write(" : {0}", TypeVar.Text(parser));
+                sw.Write(" : ");
+                TypeVar.Text(sw, parser);
             }
 
             if (InitValue != null) {
 
-                sw.Write(" = {0}", InitValue.Text(parser));
+                sw.Write(" = ");
+                InitValue.Text(sw, parser);
             }
-
-            return sw.ToString();
         }
     }
 
     public abstract class TType {
         public static TClass IndexClass = new TClass("_index_");
 
-        public abstract string Text(TParser parser);
+        public abstract void Text(StringWriter sw, TParser parser);
     }
 
     public class TFunctionType : TType {
@@ -62,10 +59,8 @@ namespace MyEdit {
             ArgsType = args_type;
         }
 
-        public override string Text(TParser parser) {
-            StringWriter sw = new StringWriter();
-
-            sw.Write("{0}", ValType);
+        public override void Text(StringWriter sw, TParser parser) {
+            ValType.Text(sw, parser);
 
             for (int i = 0; i < ArgsType.Length; i++) {
                 if (i == 0) {
@@ -85,8 +80,6 @@ namespace MyEdit {
             }
 
             sw.Write("]");
-
-            return sw.ToString();
         }
     }
 
@@ -100,13 +93,11 @@ namespace MyEdit {
             ClassName = name;
         }
 
-        public override string Text(TParser parser) {
-            return ClassName;
+        public override void Text(StringWriter sw, TParser parser) {
+            sw.Write(ClassName);
         }
 
-        public string ClassLine() {
-            StringWriter sw = new StringWriter();
-
+        public void ClassLine(StringWriter sw) {
             sw.Write("class {0}", ClassName);
 
             for (int i = 0; i < SuperClasses.Count; i++) {
@@ -120,8 +111,6 @@ namespace MyEdit {
                 }
                 sw.Write(SuperClasses[i].ClassName);
             }
-
-            return sw.ToString();
         }
     }
 
@@ -138,19 +127,38 @@ namespace MyEdit {
 
         public TField(bool is_static, string name) : base(is_static, name) {
         }
-
-        public override string Text(TParser parser) {
-            return string.Format("{0} : {1}", NameVar, TypeVar);
-        }
     }
 
     public class TFunction : TMember {
-        public List<TVariable> ArgsFnc;
-        public TType ReturnType;
+        public List<TVariable> ArgsFnc = new List<TVariable>();
         public TBlock BlockFnc;
 
         public TFunction(bool is_static, string name) : base(is_static, name) {
         }
+
+
+        public override void Text(StringWriter sw, TParser parser) {
+            sw.Write("function ");
+
+            sw.Write(NameVar);
+
+            sw.Write("(");
+            foreach(TVariable var1 in ArgsFnc) {
+                if(var1 != ArgsFnc[0]) {
+                    sw.Write(", ");
+                }
+
+                var1.Text(sw, parser);
+            }
+            sw.Write(")");
+
+            if (TypeVar != null) {
+
+                sw.Write(" : ");
+                TypeVar.Text(sw, parser);
+            }
+        }
+
     }
 
     public class TLiteral : TTerm {
@@ -162,8 +170,8 @@ namespace MyEdit {
             TextLit = text;
         }
 
-        public override string Text(TParser parser) {
-            return TextLit;
+        public override void Text(StringWriter sw, TParser parser) {
+            sw.Write(TextLit);
         }
     }
 
@@ -174,8 +182,8 @@ namespace MyEdit {
             NameRef = name;
         }
 
-        public override string Text(TParser parser) {
-            return NameRef;
+        public override void Text(StringWriter sw, TParser parser) {
+            sw.Write(NameRef);
         }
     }
 
@@ -186,8 +194,9 @@ namespace MyEdit {
             TermFldRef = trm;
         }
 
-        public override string Text(TParser parser) {
-            return string.Format("{0}.{1}", TermFldRef.Text(parser), NameRef);
+        public override void Text(StringWriter sw, TParser parser) {
+            TermFldRef.Text(sw, parser);
+            sw.Write(".{0}", NameRef);
         }
     }
 
@@ -215,29 +224,35 @@ namespace MyEdit {
             Args = args;
         }
 
-        public override string Text(TParser parser) {
+        public override void Text(StringWriter sw, TParser parser) {
             switch (KindApp) {
             case EKind.FunctionApply:
-                return string.Format("{0}{1}", FunctionName, ArgsText(parser));
+                sw.Write("{0}", FunctionName);
+                ArgsText(sw, parser);
+                break;
 
             default:
                 switch (Args.Length) {
                 case 1:
-                    return string.Format("{0} {1}", parser.KindString[KindApp], Args[0].Text(parser));
+                    sw.Write("{0} ", parser.KindString[KindApp]);
+                    Args[0].Text(sw, parser);
+                    break;
 
                 case 2:
-                    return string.Format("{0} {1} {2}", Args[0].Text(parser), parser.KindString[KindApp], Args[1].Text(parser));
+                    Args[0].Text(sw, parser);
+                    sw.Write(" {0} ", parser.KindString[KindApp]);
+                    Args[1].Text(sw, parser);
+                    break;
 
                 default:
                     Debug.Assert(false);
-                    return null;
+                    break;
                 }
+                break;
             }
         }
 
-        public string ArgsText(TParser parser) {
-            StringWriter sw = new StringWriter();
-
+        public void ArgsText(StringWriter sw, TParser parser) {
             foreach(TTerm trm in Args) {
                 if(trm == Args[0]) {
 
@@ -248,12 +263,10 @@ namespace MyEdit {
                     sw.Write(", ");
                 }
 
-                sw.Write(trm.Text(parser));
+                trm.Text(sw, parser);
             }
 
             sw.Write(")");
-
-            return sw.ToString();
         }
     }
 
@@ -264,8 +277,10 @@ namespace MyEdit {
             TermApp = trm;
         }
 
-        public override string Text(TParser parser) {
-            return string.Format("{0}.{1}{2}", TermApp.Text(parser), FunctionName, ArgsText(parser));
+        public override void Text(StringWriter sw, TParser parser) {
+            TermApp.Text(sw, parser);
+            sw.Write(".{0}", FunctionName);
+            ArgsText(sw, parser);
         }
     }
 
@@ -281,15 +296,13 @@ namespace MyEdit {
     }
 
     public abstract class TStatement {
-        public abstract string Text(TParser parser);
+        public abstract void Text(StringWriter sw, TParser parser);
     }
 
     public class TVariableDeclaration : TStatement {
         public List<TVariable> Variables = new List<TVariable>();
 
-        public override string Text(TParser parser) {
-            StringWriter sw = new StringWriter();
-
+        public override void Text(StringWriter sw, TParser parser) {
             foreach(TVariable var1 in Variables) {
                 if(var1 == Variables[0]) {
 
@@ -300,10 +313,8 @@ namespace MyEdit {
                     sw.Write(", ");
                 }
 
-                sw.Write(var1.Text(parser));
+                var1.Text(sw, parser);
             }
-
-            return sw.ToString();
         }
     }
 
@@ -311,8 +322,7 @@ namespace MyEdit {
         public List<TVariable> VariablesBlc = new List<TVariable>();
         public List<TStatement> StatementsBlc = new List<TStatement>();
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -320,16 +330,14 @@ namespace MyEdit {
         public TTerm ConditionIf;
         public TBlock BlockIf;
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
     public class TIf : TStatement {
         public List<TIfBlock> IfBlocks = new List<TIfBlock>();
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -337,8 +345,7 @@ namespace MyEdit {
         public bool IsDefault;
         public List<TTerm> TermsCase = new List<TTerm>();
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -346,8 +353,7 @@ namespace MyEdit {
         public TTerm TermSwitch;
         public List<TCase> Cases = new List<TCase>();
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -356,8 +362,7 @@ namespace MyEdit {
         public TVariable CatchVariable;
         public TBlock CatchBlock;
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -365,8 +370,7 @@ namespace MyEdit {
         public TTerm WhileCondition;
         public TBlock WhileBlock;
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -375,8 +379,7 @@ namespace MyEdit {
         public TTerm ListFor;
         public TBlock ForBlock;
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 
@@ -388,8 +391,7 @@ namespace MyEdit {
             KindJmp = kind;
         }
 
-        public override string Text(TParser parser) {
-            return null;
+        public override void Text(StringWriter sw, TParser parser) {
         }
     }
 

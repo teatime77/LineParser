@@ -10,7 +10,6 @@ namespace MyEdit {
         StringLiteral,
         CharLiteral,
 
-        Type_,
         Index,
 
         FunctionApply,

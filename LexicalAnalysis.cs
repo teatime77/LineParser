@@ -436,27 +436,45 @@ namespace MyEdit {
                 if(line.Tokens.Length != 0) {
 
                     var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
-                    object obj = Parser.ParseLine(v.ToArray());
-                    if(obj != null) {
-                        if(obj is TClass) {
+                    if (v.Any()) {
 
-                            Debug.WriteLine("read class : {0}{1}", "", ((TClass)obj).ClassLine());
+                        TToken[] token_list = v.ToArray();
+                        int line_top_idx = Parser.LineTopTokenIndex(token_list);
+
+                        if(line_top_idx == -1) {
+
+                            line.ObjLine = null;
                         }
-                        else if(obj is TVariable) {
+                        else {
+                            line.Indent = token_list[line_top_idx].StartPos;
 
-                            Debug.WriteLine("{0}{1}", "", ((TVariable)obj).Text(Parser));
-                        }
-                        else if (obj is TTerm) {
+                            object obj = Parser.ParseLine(line_top_idx, token_list);
+                            if (obj != null) {
+                                StringWriter sw = new StringWriter();
+                                if (obj is TClass) {
 
-                            Debug.WriteLine("{0}{1}", "", ((TTerm)obj).Text(Parser));
-                        }
-                        else if (obj is TStatement) {
+                                    ((TClass)obj).ClassLine(sw);
+                                }
+                                else if (obj is TVariable) {
 
-                            Debug.WriteLine("{0}{1}", "", ((TStatement)obj).Text(Parser));
+                                    ((TVariable)obj).Text(sw, Parser);
+                                }
+                                else if (obj is TTerm) {
+
+                                    ((TTerm)obj).Text(sw, Parser);
+                                }
+                                else if (obj is TStatement) {
+
+                                    ((TStatement)obj).Text(sw, Parser);
+                                }
+
+                                Debug.WriteLine(sw.ToString());
+
+                            }
+
+                            line.ObjLine = obj;
                         }
                     }
-
-                    line.ObjLine = obj;
                 }
                 else {
                     line.ObjLine = null;

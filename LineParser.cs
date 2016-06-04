@@ -160,17 +160,16 @@ namespace MyEdit {
 
             GetToken(EKind.LP);
 
-            while (CurTkn.Kind != EKind.LP) {
-                TToken arg_name = GetToken(EKind.Identifier);
+            while (CurTkn.Kind != EKind.RP) {
+                TVariable var1 = ReadVariable();
+                fnc1.ArgsFnc.Add(var1);
 
-                TVariable var1 = new TVariable(arg_name.TextTkn);
+                if (CurTkn.Kind != EKind.Comma) {
 
-                if (CurTkn.Kind == EKind.Colon) {
-
-                    GetToken(EKind.Colon);
-
-                    var1.TypeVar = ReadType();
+                    break;
                 }
+
+                GetToken(EKind.Comma);
             }
 
             GetToken(EKind.RP);
@@ -179,7 +178,7 @@ namespace MyEdit {
 
                 GetToken(EKind.Colon);
 
-                fnc1.ReturnType = ReadType();
+                fnc1.TypeVar = ReadType();
             }
 
             GetToken(EKind.EOT);
@@ -345,28 +344,36 @@ namespace MyEdit {
             return t1;
         }
 
-        public object ParseLine(TToken[] token_list) {
-            TokenList = token_list;
-            TokenPos = 0;
-
-            while (true) {
-                if (TokenPos < TokenList.Length) {
-
-                    CurTkn = TokenList[TokenPos];
-
-                    if (CurTkn.TokenType != ETokenType.BlockComment && CurTkn.TokenType != ETokenType.LineComment && CurTkn.TokenType != ETokenType.White) {
-
-                        break;
-                    }
-                }
-                else {
-
-                    CurTkn = EOTToken;
+        public int LineTopTokenIndex(TToken[] token_list) {
+            for(int i = 0; i < token_list.Length; i++) {
+                TToken tkn = token_list[i];
+                switch (tkn.TokenType) {
+                case ETokenType.BlockComment:
+                case ETokenType.LineComment:
+                case ETokenType.White:
                     break;
-                }
 
-                TokenPos++;
+                default:
+                    return i;
+                }
             }
+
+            return -1;
+        }
+
+        public object ParseLine(int line_top_idx, TToken[] token_list) {
+            TokenList = token_list;
+            TokenPos = line_top_idx;
+
+            if (TokenPos < TokenList.Length) {
+
+                CurTkn = TokenList[TokenPos];
+            }
+            else {
+
+                CurTkn = EOTToken;
+            }
+
             if (TokenPos + 1 < TokenList.Length) {
 
                 NextTkn = TokenList[TokenPos + 1];
@@ -449,9 +456,6 @@ namespace MyEdit {
 
                         return ReadAssignmentCallLine();
                     }
-
-                case EKind.Type_:
-                    break;
 
                 default:
                     break;
@@ -759,15 +763,13 @@ namespace MyEdit {
     }
 
     public class TLine {
+        public int Indent;
         public TToken[] Tokens;
         public object ObjLine;
     }
 
-    public interface IIndent {
-        int Indent();
-    }
-
     public class TParseException : Exception {
-
+        public TParseException() {
+        }
     }
 }
