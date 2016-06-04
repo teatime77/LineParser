@@ -11,31 +11,159 @@ using System.Net;
 
 namespace MyEdit {
     public class TParser {
-        static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT, 0, 0);
+        static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
         TToken[] TokenList;
         int TokenPos;
         TToken CurTkn;
         TToken NextTkn;
+        Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
+        Dictionary<string, TType> TypeTable = new Dictionary<string, TType>();
 
         public TParser() {
+        }
+
+        public TClass GetClassByName(string name) {
+            TClass cls;
+
+            if(ClassTable.TryGetValue(name, out cls)) {
+                return cls;
+            }
+            else {
+                cls = new TClass(name);
+
+                ClassTable.Add(name, cls);
+
+                return cls;
+            }
         }
 
         public TClass ReadClassLine() {
             GetToken(EKind.class_);
             TToken id = GetToken(EKind.Identifier);
-            if(CurTkn.Kind == EKind.Colon) {
 
+            TClass cls = GetClassByName(id.TextTkn);
+
+            if (CurTkn.Kind == EKind.Colon) {
+
+                GetToken(EKind.Colon);
+                while (true) {
+
+                    TToken super_class_name = GetToken(EKind.Identifier);
+
+                    TClass super_class = GetClassByName(super_class_name.TextTkn);
+                    cls.SuperClasses.Add(super_class);
+
+                    if(CurTkn.Kind == EKind.Comma) {
+
+                        GetToken(EKind.Comma);
+                    }
+                    else {
+
+                        break;
+                    }
+                }
             }
+            GetToken(EKind.EOT);
 
-            return null;
+            Debug.WriteLine("read class : {0}{1}", "", cls.ClassLine());
+
+            return cls;
+        }
+
+        public TField ReadFieldLine() {
+            TToken id = GetToken(EKind.Identifier);
+
+            TField fld = new TField(id.TextTkn);
+
+            GetToken(EKind.Colon);
+
+            fld.TypeVar = ReadType();
+
+            GetToken(EKind.EOT);
+
+            Debug.WriteLine("read field : {0}", fld);
+
+            return fld;
         }
 
         public TClass ReadEnumLine() {
             return null;
         }
 
+        //public TClass ReadClassType() {
+        //    switch (CurTkn.Kind) {
+        //    case EKind.Identifier:
+        //        break;
+
+        //    case EKind.char_:
+        //    case EKind.bool_:
+        //    case EKind.int_:
+        //    case EKind.short_:
+        //    case EKind.float_:
+        //    case EKind.double_:
+        //    case EKind.string_:
+        //        break;
+
+        //    default:
+        //        throw new TParseException();
+        //    }
+
+        //    TToken id = GetToken(EKind.Undefined);
+        //    TClass cls1 = GetClassByName(id.TextTkn);
+
+        //    return cls1;
+        //}
+
         public TType ReadType() {
-            return null;
+            //TClass cls1 = ReadClassType();
+            TToken id = GetToken(EKind.Undefined);
+            TClass cls1 = GetClassByName(id.TextTkn);
+
+            if (CurTkn.Kind != EKind.LB) {
+
+                return cls1;
+            }
+            else { 
+                GetToken(EKind.LB);
+
+                List<TType> types = new List<TType>();
+                while (true) {
+                    TType tp1;
+                    
+                    if(CurTkn.Kind == EKind.Identifier) {
+
+                        tp1 = ReadType();
+                    }
+                    else {
+
+                        tp1 = TType.IndexClass;
+                    }
+                    types.Add(tp1);
+
+                    if(CurTkn.Kind == EKind.Comma) {
+
+                        GetToken(EKind.Comma);
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                GetToken(EKind.RB);
+
+                TFunctionType fnc_type = new TFunctionType(cls1, types.ToArray());
+
+                string type_text = fnc_type.ToString();
+
+                TType reg_type;
+                if(TypeTable.TryGetValue(type_text, out reg_type)) {
+                    return reg_type;
+                }
+
+                TypeTable.Add(type_text, fnc_type);
+
+                return fnc_type;
+            }
         }
 
         public TFunction ReadFunctionLine() {
@@ -43,14 +171,14 @@ namespace MyEdit {
 
             TToken fnc_name = GetToken(EKind.Identifier);
 
-            TFunction fnc1 = new TFunction(fnc_name.NameTkn);
+            TFunction fnc1 = new TFunction(fnc_name.TextTkn);
 
             GetToken(EKind.LP);
 
             while (CurTkn.Kind != EKind.LP) {
                 TToken arg_name = GetToken(EKind.Identifier);
 
-                TVariable var1 = new TVariable(arg_name.NameTkn);
+                TVariable var1 = new TVariable(arg_name.TextTkn);
 
                 if (CurTkn.Kind == EKind.Colon) {
 
@@ -144,7 +272,7 @@ namespace MyEdit {
             GetToken(EKind.for_);
 
             TToken id = GetToken(EKind.Identifier);
-            for1.LoopVariable = new TVariable(id.NameTkn);
+            for1.LoopVariable = new TVariable(id.TextTkn);
 
             GetToken(EKind.in_);
 
@@ -184,7 +312,25 @@ namespace MyEdit {
         public object ParseLine(TToken[] token_list) {
             TokenList = token_list;
             TokenPos = 0;
-            CurTkn = TokenList[TokenPos];
+
+            while (true) {
+                if (TokenPos < TokenList.Length) {
+
+                    CurTkn = TokenList[TokenPos];
+
+                    if (CurTkn.TokenType != ETokenType.BlockComment && CurTkn.TokenType != ETokenType.LineComment && CurTkn.TokenType != ETokenType.White) {
+
+                        break;
+                    }
+                }
+                else {
+
+                    CurTkn = EOTToken;
+                    break;
+                }
+
+                TokenPos++;
+            }
             if (TokenPos + 1 < TokenList.Length) {
 
                 NextTkn = TokenList[TokenPos + 1];
@@ -200,7 +346,7 @@ namespace MyEdit {
                 switch (CurTkn.Kind) {
                 case EKind.class_:
                 case EKind.enum_:
-                    return ReadCaseLine();
+                    return ReadClassLine();
 
                 case EKind.function_:
                 case EKind.constructor_:
@@ -246,6 +392,7 @@ namespace MyEdit {
                 case EKind.Identifier:
                     if(NextTkn.Kind == EKind.Colon) {
 
+                        return ReadFieldLine();
                     }
                     else {
 
@@ -314,7 +461,7 @@ namespace MyEdit {
             case EKind.Identifier:
                 TToken id = GetToken(EKind.Identifier);
 
-                return new TReference(id.NameTkn);
+                return new TReference(id.TextTkn);
 
             case EKind.LP:
                 GetToken(EKind.LP);
@@ -558,13 +705,14 @@ namespace MyEdit {
     public class TToken {
         public ETokenType TokenType;
         public EKind Kind;
-        public string NameTkn;
+        public string TextTkn;
         public int StartPos;
         public int EndPos;
 
-        public TToken(ETokenType token_type, EKind kind, int start_pos, int end_pos) {
+        public TToken(ETokenType token_type, EKind kind, string txt, int start_pos, int end_pos) {
             TokenType = token_type;
             Kind = kind;
+            TextTkn = txt;
             StartPos = start_pos;
             EndPos = end_pos;
         }

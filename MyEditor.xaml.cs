@@ -50,9 +50,6 @@ namespace MyEdit {
 
         List<TLine> Lines = new List<TLine>();
 
-        // 文書の行数
-        int LineCount = 1;
-
         // 1行の高さ
         double LineHeight = double.NaN;
 
@@ -412,9 +409,6 @@ namespace MyEdit {
                     Lines.Insert(start_line_idx, new TLine());
                 }
             }
-
-            // 文書の行数を更新します。
-            LineCount += new_LF_cnt - old_LF_cnt;
 
             // 字句型を更新します。
             UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
@@ -1203,7 +1197,7 @@ namespace MyEdit {
             MyNotifyTextChanged(sel_start, sel_end, new_text.Length);
 
             if (!double.IsNaN(LineHeight)) {
-                double document_height = LineCount * LineHeight;
+                double document_height = Lines.Count * LineHeight;
 
                 if (EditCanvas.Height != document_height) {
 

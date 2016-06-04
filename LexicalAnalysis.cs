@@ -4,6 +4,7 @@ using System;
 using Windows.UI;
 using System.IO;
 using System.Net;
+using System.Linq;
 
 /*--------------------------------------------------------------------------------
         字句解析
@@ -384,7 +385,8 @@ namespace MyEdit {
                     }
                 }
 
-                token_list.Add(new TToken(token_type, token_kind, start_pos, pos));
+                string s = text.Substring(start_pos, pos - start_pos);
+                token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
 
                 // 各文字の字句型の配列に字句型をセットします。
                 //for (int k = start_pos; k < pos; k++) {
@@ -436,7 +438,11 @@ namespace MyEdit {
 
                 if(line.Tokens.Length != 0) {
 
-                    parser.ParseLine(line.Tokens);
+                    var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
+                    line.ObjLine = parser.ParseLine(v.ToArray());
+                }
+                else {
+                    line.ObjLine = null;
                 }
 
                 if (sel_end <= next_line_top) {

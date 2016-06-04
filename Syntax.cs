@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 
 namespace MyEdit {
     public class TTerm {
@@ -12,18 +13,83 @@ namespace MyEdit {
         public TTerm InitValue;
         
         public TVariable(string name) {
-
+            NameVar = name;
         }
     }
 
     public class TType {
+        public static TClass IndexClass = new TClass("_index_");
     }
 
-    public class TClass : TVariable {
+    public class TFunctionType : TType {
+        public TType ValType;
+        public TType[] ArgsType;
+
+        public TFunctionType(TType val_type, TType[] args_type) {
+            ValType = val_type;
+            ArgsType = args_type;
+        }
+
+        public override string ToString() {
+            StringWriter sw = new StringWriter();
+
+            sw.Write("{0}", ValType);
+
+            for (int i = 0; i < ArgsType.Length; i++) {
+                if (i == 0) {
+
+                    sw.Write("[");
+                }
+                else {
+
+                    sw.Write(",");
+                }
+
+                TType tp = ArgsType[i];
+                if(tp != TType.IndexClass) {
+
+                    sw.Write("{0}", tp);
+                }
+            }
+
+            sw.Write("]");
+
+            return sw.ToString();
+        }
+    }
+
+    public class TClass : TType {
+        public string ClassName;
+        public List<TClass> SuperClasses = new List<TClass>();
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
 
-        public TClass(string name) : base(name) {            
+        public TClass(string name) {
+            ClassName = name;
+        }
+
+        public override string ToString() {
+            return ClassName;
+        }
+
+        public string ClassLine() {
+            StringWriter sw = new StringWriter();
+
+            sw.Write("class {0}", ClassName);
+
+            for (int i = 0; i < SuperClasses.Count; i++) {
+                if (i == 0) {
+
+                    sw.Write(" : ");
+                }
+                else {
+
+                    sw.Write(" , ");
+                }
+                sw.Write(SuperClasses[i].ClassName);
+            }
+
+            return sw.ToString();
         }
     }
 
@@ -37,6 +103,10 @@ namespace MyEdit {
     public class TField : TMember {
 
         public TField(string name) : base(name) {
+        }
+
+        public override string ToString() {
+            return string.Format("{0} : {1}", NameVar, TypeVar);
         }
     }
 
