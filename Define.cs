@@ -6,8 +6,14 @@ namespace MyEdit {
         Undefined,
 
         Identifier,
+        NumberLiteral,
+        StringLiteral,
+        CharLiteral,
+
         Type_,
         Index,
+
+        FunctionApply,
 
         LP,
         RP,
@@ -156,7 +162,7 @@ namespace MyEdit {
         EOT,
     }
 
-    partial class MyEditor {
+    partial class TParser {
 
         /*
             字句解析の初期処理をします。
@@ -384,6 +390,8 @@ namespace MyEdit {
             // キーワードの文字列を辞書に登録します。
             for(int i = 0; i < keyword_list.Length; i++) {
                 KeywordMap.Add(keyword_list[i], token_list[i]);
+
+                KindString.Add(token_list[i], keyword_list[i]);
             }
 
             AddSymbol("=", EKind.Assign);
@@ -443,6 +451,8 @@ namespace MyEdit {
                 Debug.Assert(false);
                 break;
             }
+
+            KindString.Add(kind, s);
         }
     }
 }

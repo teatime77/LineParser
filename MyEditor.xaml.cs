@@ -84,6 +84,8 @@ namespace MyEdit {
         Stack<TDiff> UndoStack = new Stack<TDiff>();
         Stack<TDiff> RedoStack = new Stack<TDiff>();
 
+        TParser Parser = new TParser();
+
         /*
             テキスト選択の開始位置
         */
@@ -107,14 +109,11 @@ namespace MyEdit {
         */
         public MyEditor() {
             this.InitializeComponent();
-            Debug.WriteLine("<<--- Initialize");
+            MyEditor.WriteLine("<<--- Initialize");
 
             // フォントを変更する場合は以下のコメントをはずしてください。
             //TextFormat.FontSize = 48;
             TextFormat.FontFamily = "ＭＳ ゴシック";
-
-            // 字句解析の初期処理をします。
-            InitializeLexicalAnalysis();
 
             Lines.Add(new TLine());
         }
@@ -123,7 +122,7 @@ namespace MyEdit {
             コントロールがロードされた。
         */
         private void UserControl_Loaded(object sender, RoutedEventArgs e) {
-            Debug.WriteLine("<<--- Control Loaded");
+            MyEditor.WriteLine("<<--- Control Loaded");
             CoreWindow wnd = CoreApplication.GetCurrentView().CoreWindow;
 
             // イベントハンドラを登録します。
@@ -141,7 +140,7 @@ namespace MyEdit {
             Win2DのCanvasControlの描画
         */
         private void Win2DCanvas_Draw(Microsoft.Graphics.Canvas.UI.Xaml.CanvasControl sender, Microsoft.Graphics.Canvas.UI.Xaml.CanvasDrawEventArgs args) {
-            Debug.WriteLine("<<--- Draw");
+            MyEditor.WriteLine("<<--- Draw");
 
             DrawList.Clear();
             if (double.IsNaN(LineHeight)) {
@@ -580,7 +579,7 @@ namespace MyEdit {
         private async void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs e) {
             bool control_down = ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0);
 
-            Debug.WriteLine("<<--- CoreWindow KeyDown : {0} {1} {2}", e.VirtualKey, OverlappedButton.FocusState, InComposition);
+            MyEditor.WriteLine("<<--- CoreWindow KeyDown : {0} {1} {2}", e.VirtualKey, OverlappedButton.FocusState, InComposition);
 
             if (editContext == null || InComposition || OverlappedButton.FocusState == FocusState.Unfocused) {
                 return;
@@ -750,14 +749,14 @@ namespace MyEdit {
         private void CoreWindow_PointerReleased(CoreWindow sender, PointerEventArgs e) {
             // ポインタのイベントハンドラのコルーチンを継続します。
             ContinuePointerEventLoop(EEvent.PointerReleased, e);
-            Debug.WriteLine("<<--- CoreWindow PointerReleased");
+            MyEditor.WriteLine("<<--- CoreWindow PointerReleased");
         }
 
         /*
             ポインタの処理のタイマー イベント
         */
         private void PointerTimer_Tick(object sender, object e) {
-            Debug.WriteLine("<<--- PointerTimer");
+            MyEditor.WriteLine("<<--- PointerTimer");
             PointerTimer.Stop();
 
             // ポインタのイベントハンドラのコルーチンを継続します。
@@ -1012,14 +1011,14 @@ namespace MyEdit {
             int scroll_direction = (0 < args.CurrentPoint.Properties.MouseWheelDelta ? -1 : 1);
             int offset = (int)Math.Round(EditScroll.VerticalOffset / LineHeight);
             EditScroll.ScrollToVerticalOffset((offset + scroll_direction) * LineHeight);
-            Debug.WriteLine("<<--- PointerWheelChanged {0}", args.CurrentPoint.Properties.MouseWheelDelta);
+            MyEditor.WriteLine("<<--- PointerWheelChanged {0}", args.CurrentPoint.Properties.MouseWheelDelta);
         }
 
         /*
             ScrollViewerがスクロールした。
         */
         private void EditScroll_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e) {
-            Debug.WriteLine("<<--- ViewChanged");
+            MyEditor.WriteLine("<<--- ViewChanged");
 
             // 再描画します。
             Win2DCanvas.Invalidate();

@@ -22,7 +22,7 @@ namespace MyEdit {
             TextBlockはフォーカスの取得/喪失の管理ができないので、TextBlockの上に透明のRadioButtonをかぶせてフォーカスの管理をしています。
         */
         private async void OverlappedButton_GotFocus(object sender, RoutedEventArgs e) {
-            Debug.WriteLine("<<--- Button GotFocus");
+            MyEditor.WriteLine("<<--- Button GotFocus");
 
             if (DesignMode.DesignModeEnabled) {
                 // ビューデザイナーの中で動作している場合は何もしない。
@@ -37,11 +37,11 @@ namespace MyEdit {
                 await Task.Delay(500);
 
                 // CoreTextServicesManagerを作ります。
-                Debug.WriteLine("--->> GetForCurrentView");
+                MyEditor.WriteLine("--->> GetForCurrentView");
                 textServiceManager = CoreTextServicesManager.GetForCurrentView();
 
                 // IMEの切り替えのイベントハンドラを登録します。
-                Debug.WriteLine("--->> Subscribe InputLanguageChanged");
+                MyEditor.WriteLine("--->> Subscribe InputLanguageChanged");
                 textServiceManager.InputLanguageChanged += TextServiceManager_InputLanguageChanged;
             }
 
@@ -56,7 +56,7 @@ namespace MyEdit {
             ボタンがフォーカスを喪失した。
         */
         private void OverlappedButton_LostFocus(object sender, RoutedEventArgs e) {
-            Debug.WriteLine("<<--- Button LostFocus");
+            MyEditor.WriteLine("<<--- Button LostFocus");
 
             if (DesignMode.DesignModeEnabled) {
                 // ビューデザイナーの中で動作している場合は何もしない。
@@ -67,7 +67,7 @@ namespace MyEdit {
             if (editContext != null) {
 
                 // IMEにフォーカスの喪失を知らせます。
-                Debug.WriteLine("--->> NotifyFocusLeave");
+                MyEditor.WriteLine("--->> NotifyFocusLeave");
                 editContext.NotifyFocusLeave();
             }
 
@@ -86,11 +86,11 @@ namespace MyEdit {
 
             // CoreTextEditContextオブジェクトを作ります。
             // IMEとのやりとりはこのオブジェクトを使います。
-            Debug.WriteLine("--->> CreateEditContext");
+            MyEditor.WriteLine("--->> CreateEditContext");
             editContext = textServiceManager.CreateEditContext();
 
             // IMEの各種のイベントハンドラを登録します。
-            Debug.WriteLine("--->> Subscribe IME Event");
+            MyEditor.WriteLine("--->> Subscribe IME Event");
             editContext.CompositionStarted          += EditContext_CompositionStarted;
             editContext.CompositionCompleted        += EditContext_CompositionCompleted;
             editContext.FocusRemoved                += EditContext_FocusRemoved;
@@ -103,7 +103,7 @@ namespace MyEdit {
             editContext.FormatUpdating              += EditContext_FormatUpdating;
 
             // IMEにフォーカスの取得を知らせます。
-            Debug.WriteLine("--->> NotifyFocusEnter");
+            MyEditor.WriteLine("--->> NotifyFocusEnter");
             editContext.NotifyFocusEnter();
         }
 
@@ -129,7 +129,7 @@ namespace MyEdit {
             テキストの内容の変化を通知してきた。
         */
         private void EditContext_TextUpdating(CoreTextEditContext sender, CoreTextTextUpdatingEventArgs ev) {
-            Debug.WriteLine("<<--- TextUpdating:({0},{1})->({2},{3}) [{4}] {5} {6}",
+            MyEditor.WriteLine("<<--- TextUpdating:({0},{1})->({2},{3}) [{4}] {5} {6}",
                 ev.Range.StartCaretPosition, ev.Range.EndCaretPosition,
                 ev.NewSelection.StartCaretPosition, ev.NewSelection.EndCaretPosition,
                 ev.Text,
@@ -148,7 +148,7 @@ namespace MyEdit {
             テキストの選択位置の変化を通知してきた。
         */
         private void EditContext_SelectionUpdating(CoreTextEditContext sender, CoreTextSelectionUpdatingEventArgs ev) {
-            Debug.WriteLine("<<--- SelectionUpdating: cancel:{0} result:{1} ({2},{3})",
+            MyEditor.WriteLine("<<--- SelectionUpdating: cancel:{0} result:{1} ({2},{3})",
                 ev.IsCanceled,
                 ev.Result,
                 ev.Selection.StartCaretPosition, ev.Selection.EndCaretPosition
@@ -167,7 +167,7 @@ namespace MyEdit {
             rng.StartCaretPosition = SelStart;
             rng.EndCaretPosition = SelEnd;
 
-            Debug.WriteLine("<<--- SelectionRequested : {0}-{1}", rng.StartCaretPosition, rng.EndCaretPosition);
+            MyEditor.WriteLine("<<--- SelectionRequested : {0}-{1}", rng.StartCaretPosition, rng.EndCaretPosition);
 
             // アプリ内で持っているテキストの選択位置を返します。
             ev.Request.Selection = rng;
@@ -178,14 +178,14 @@ namespace MyEdit {
             アプリからNotifyFocusLeaveを呼んだら、このメソッドが呼ばれます。
         */
         private void EditContext_NotifyFocusLeaveCompleted(CoreTextEditContext sender, object ev) {
-            Debug.WriteLine("<<--- NotifyFocusLeaveCompleted");
+            MyEditor.WriteLine("<<--- NotifyFocusLeaveCompleted");
         }
 
         /*
             入力コントロールの位置と入力テキストの位置を聞いてきた。
         */
         private void EditContext_LayoutRequested(CoreTextEditContext sender, CoreTextLayoutRequestedEventArgs ev) {
-            Debug.WriteLine("<<--- LayoutRequested range:{0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
+            MyEditor.WriteLine("<<--- LayoutRequested range:{0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
 
 
             // メインウインドウを囲む矩形を得ます。
@@ -241,7 +241,7 @@ namespace MyEdit {
             かな漢字変換の途中で表示するテキストの書式を指定してきた。
         */
         private void EditContext_FormatUpdating(CoreTextEditContext sender, CoreTextFormatUpdatingEventArgs ev) {
-            Debug.WriteLine("<<--- FormatUpdating: BG:{0} cancel:{1} range:({2},{3}) reason:{4} result:{5} color:{6} under-line:({7},{8})",
+            MyEditor.WriteLine("<<--- FormatUpdating: BG:{0} cancel:{1} range:({2},{3}) reason:{4} result:{5} color:{6} under-line:({7},{8})",
                 (ev.BackgroundColor == null ? "null" : ev.BackgroundColor.Value.ToString()),
                 ev.IsCanceled,
                 ev.Range.StartCaretPosition, ev.Range.EndCaretPosition,
@@ -273,7 +273,7 @@ namespace MyEdit {
             かな漢字変換を開始した。
         */
         private void EditContext_CompositionStarted(CoreTextEditContext sender, CoreTextCompositionStartedEventArgs ev) {
-            Debug.WriteLine("<<--- CompositionStarted");
+            MyEditor.WriteLine("<<--- CompositionStarted");
             InComposition = true;
         }
 
@@ -289,7 +289,7 @@ namespace MyEdit {
                 sw.Write("({0},{1}):{2} ", seg.Range.StartCaretPosition, seg.Range.EndCaretPosition, seg.PreconversionString);
             }
 
-            Debug.WriteLine("<<--- CompositionCompleted:{0} {1}", ev.IsCanceled, sw.ToString());
+            MyEditor.WriteLine("<<--- CompositionCompleted:{0} {1}", ev.IsCanceled, sw.ToString());
         }
 
         /*
@@ -299,7 +299,7 @@ namespace MyEdit {
         private void EditContext_TextRequested(CoreTextEditContext sender, CoreTextTextRequestedEventArgs ev) {
             ev.Request.Text = StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
 
-            Debug.WriteLine("<<--- TextRequested : {0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
+            MyEditor.WriteLine("<<--- TextRequested : {0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
         }
 
         /*
@@ -307,7 +307,7 @@ namespace MyEdit {
             これがどのタイミングで呼ばれるかは不明。
         */
         private void EditContext_FocusRemoved(CoreTextEditContext sender, object ev) {
-            Debug.WriteLine("<<--- FocusRemoved");
+            MyEditor.WriteLine("<<--- FocusRemoved");
         }
 
         /*
@@ -318,7 +318,7 @@ namespace MyEdit {
             new_range.StartCaretPosition = SelStart;
             new_range.EndCaretPosition = SelEnd;
 
-            Debug.WriteLine("--->> NotifySelectionChanged");
+            MyEditor.WriteLine("--->> NotifySelectionChanged");
             editContext.NotifySelectionChanged(new_range);
         }
 
@@ -334,6 +334,9 @@ namespace MyEdit {
             new_range.StartCaretPosition = SelCurrent;
             new_range.EndCaretPosition = SelCurrent;
             editContext.NotifyTextChanged(modifiedRange, new_text_length, new_range);
+        }
+
+        public static void WriteLine(params object[] args) {
         }
     }
 }

@@ -29,17 +29,7 @@ namespace MyEdit {
         Error,          // エラー
     }
 
-    partial class MyEditor {
-
-        // キーワードの文字列の辞書
-        public Dictionary<string, EKind> KeywordMap;
-
-        // 2文字の記号の表
-        public EKind[,] SymbolTable2 = new EKind[256, 256];
-
-        // 1文字の記号の表
-        public EKind[] SymbolTable1 = new EKind[256];
-
+    public partial class TParser {
         /*
             16進数文字ならtrueを返します。
         */
@@ -51,7 +41,7 @@ namespace MyEdit {
             エスケープ文字を読み込み、文字位置(pos)を進めます。
         */
         public char ReadEscapeChar(string text, ref int pos) {
-            if(text.Length <= pos + 1) {
+            if (text.Length <= pos + 1) {
                 return '\0';
             }
 
@@ -71,7 +61,7 @@ namespace MyEdit {
                 return out_str[k];
             }
 
-            switch(text[pos + 1]) {
+            switch (text[pos + 1]) {
             case 'u':
                 // \uXXXX
 
@@ -92,7 +82,7 @@ namespace MyEdit {
                 // \xX...
 
                 // 16進数字の終わりを探します。
-                for (pos++; pos < text.Length && IsHexDigit(text[pos]); pos++);
+                for (pos++; pos < text.Length && IsHexDigit(text[pos]); pos++) ;
 
                 // エスケープ文字の計算は未実装です。
                 return '\0';
@@ -148,7 +138,7 @@ namespace MyEdit {
                     ch2 = '\0';
                 }
 
-                if(pos == 0 && (prev_token_type == ETokenType.BlockComment || prev_token_type == ETokenType.VerbatimString)) {
+                if (pos == 0 && (prev_token_type == ETokenType.BlockComment || prev_token_type == ETokenType.VerbatimString)) {
                     // 文字列の最初で直前がブロックコメントか逐語的文字列の場合
 
                     if (prev_token_type == ETokenType.BlockComment) {
@@ -158,7 +148,7 @@ namespace MyEdit {
 
                         // ブロックコメントの終わりを探します。
                         int k = text.IndexOf("*/");
-                
+
                         if (k != -1) {
                             // ブロックコメントの終わりがある場合
 
@@ -173,6 +163,7 @@ namespace MyEdit {
                     else {
                         // 逐語的文字列の場合
 
+                        token_kind = EKind.StringLiteral;
                         token_type = ETokenType.VerbatimString;
 
                         // 逐語的文字列の終わりを探します。
@@ -201,6 +192,7 @@ namespace MyEdit {
                 else if (ch1 == '@' && ch2 == '\"') {
                     // 逐語的文字列の場合
 
+                    token_kind = EKind.StringLiteral;
                     token_type = ETokenType.VerbatimString;
 
                     // 逐語的文字列の終わりの位置
@@ -241,6 +233,7 @@ namespace MyEdit {
                 else if (char.IsDigit(ch1)) {
                     // 数字の場合
 
+                    token_kind = EKind.NumberLiteral;
                     token_type = ETokenType.Number;
 
                     if (ch1 == '0' && ch2 == 'x') {
@@ -287,6 +280,7 @@ namespace MyEdit {
                         // 文字の終わりがある場合
 
                         pos++;
+                        token_kind = EKind.CharLiteral;
                         token_type = ETokenType.Char_;
                     }
                     else {
@@ -298,6 +292,7 @@ namespace MyEdit {
                 else if (ch1 == '\"') {
                     // 文字列の場合
 
+                    token_kind = EKind.StringLiteral;
                     token_type = ETokenType.Error;
 
                     // 文字列の終わりを探します。
@@ -333,7 +328,7 @@ namespace MyEdit {
                     // 改行を探します。
                     int k = text.IndexOf('\n', pos);
 
-                    if(k != -1) {
+                    if (k != -1) {
                         // 改行がある場合
 
                         pos = k;
@@ -366,7 +361,7 @@ namespace MyEdit {
                 else {
                     // 上記以外は1文字の記号とします。
 
-                    if(ch1 < 256 && ch2 < 256 && SymbolTable2[ch1, ch2] != EKind.Undefined) {
+                    if (ch1 < 256 && ch2 < 256 && SymbolTable2[ch1, ch2] != EKind.Undefined) {
 
                         token_type = ETokenType.Symbol;
                         token_kind = SymbolTable2[ch1, ch2];
@@ -398,6 +393,10 @@ namespace MyEdit {
             return token_list.ToArray();
         }
 
+    }
+
+    partial class MyEditor { 
+
         /*
             字句型を更新します。
         */
@@ -407,8 +406,6 @@ namespace MyEdit {
 
             // 直前の字句型
             ETokenType last_token_type = (line_top == 0 ? ETokenType.Undefined : Chars[line_top - 1].CharType);
-
-            TParser parser = new TParser();
 
             for (int line_idx = start_line_idx; ; line_idx++) {
                 TLine line = Lines[line_idx];
@@ -423,7 +420,7 @@ namespace MyEdit {
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得ます。
-                line.Tokens = LexicalAnalysis(lex_string, last_token_type);
+                line.Tokens = Parser.LexicalAnalysis(lex_string, last_token_type);
                 foreach(TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットします。
@@ -439,7 +436,27 @@ namespace MyEdit {
                 if(line.Tokens.Length != 0) {
 
                     var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
-                    line.ObjLine = parser.ParseLine(v.ToArray());
+                    object obj = Parser.ParseLine(v.ToArray());
+                    if(obj != null) {
+                        if(obj is TClass) {
+
+                            Debug.WriteLine("read class : {0}{1}", "", ((TClass)obj).ClassLine());
+                        }
+                        else if(obj is TVariable) {
+
+                            Debug.WriteLine("{0}{1}", "", ((TVariable)obj).Text(Parser));
+                        }
+                        else if (obj is TTerm) {
+
+                            Debug.WriteLine("{0}{1}", "", ((TTerm)obj).Text(Parser));
+                        }
+                        else if (obj is TStatement) {
+
+                            Debug.WriteLine("{0}{1}", "", ((TStatement)obj).Text(Parser));
+                        }
+                    }
+
+                    line.ObjLine = obj;
                 }
                 else {
                     line.ObjLine = null;
