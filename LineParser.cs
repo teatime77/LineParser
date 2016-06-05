@@ -85,15 +85,21 @@ namespace MyEdit {
         public TField ReadFieldLine(bool is_static) {
             TToken id = GetToken(EKind.Identifier);
 
-            TField fld = new TField(is_static, id.TextTkn);
-
             GetToken(EKind.Colon);
 
-            fld.TypeVar = ReadType();
+            TType tp = ReadType();
+
+            TTerm init = null;
+            if (CurTkn.Kind == EKind.Assign) {
+
+                GetToken(EKind.Assign);
+
+                init = Expression();
+            }
 
             GetToken(EKind.EOT);
 
-            return fld;
+            return new TField(is_static, id.TextTkn, tp, init);
         }
 
         public TClass ReadEnumLine() {
@@ -156,13 +162,12 @@ namespace MyEdit {
 
             TToken fnc_name = GetToken(EKind.Identifier);
 
-            TFunction fnc1 = new TFunction(is_static, fnc_name.TextTkn);
-
             GetToken(EKind.LP);
 
+            List<TVariable> vars = new List<TVariable>();
             while (CurTkn.Kind != EKind.RP) {
                 TVariable var1 = ReadVariable();
-                fnc1.ArgsFnc.Add(var1);
+                vars.Add(var1);
 
                 if (CurTkn.Kind != EKind.Comma) {
 
@@ -174,16 +179,17 @@ namespace MyEdit {
 
             GetToken(EKind.RP);
 
+            TType ret_type = null;
             if(CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
-                fnc1.TypeVar = ReadType();
+                ret_type = ReadType();
             }
 
             GetToken(EKind.EOT);
 
-            return fnc1;
+            return new TFunction(is_static, fnc_name.TextTkn, vars.ToArray(), ret_type);
         }
 
         public TVariable ReadVariable() {

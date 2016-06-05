@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 
 namespace MyEdit {
-    public class TTerm {
+    public abstract partial class TTerm {
         public bool WithParenthesis;
         public bool IsType;
 
@@ -12,39 +12,7 @@ namespace MyEdit {
         }
     }
 
-    public class TVariable {
-        public string NameVar;
-        public TType TypeVar;
-        public TTerm InitValue;
-        
-        public TVariable(string name) {
-            NameVar = name;
-        }
-
-        public TVariable(string name, TType type, TTerm init) {
-            NameVar = name;
-            TypeVar = type;
-            InitValue = init;
-        }
-
-        public virtual void Text(StringWriter sw, TParser parser) {
-            sw.Write(NameVar);
-
-            if (TypeVar != null) {
-
-                sw.Write(" : ");
-                TypeVar.Text(sw, parser);
-            }
-
-            if (InitValue != null) {
-
-                sw.Write(" = ");
-                InitValue.Text(sw, parser);
-            }
-        }
-    }
-
-    public abstract class TType {
+    public abstract partial class TType {
         public static TClass IndexClass = new TClass("_index_");
 
         public abstract void Text(StringWriter sw, TParser parser);
@@ -83,7 +51,7 @@ namespace MyEdit {
         }
     }
 
-    public class TClass : TType {
+    public partial class TClass : TType {
         public string ClassName;
         public List<TClass> SuperClasses = new List<TClass>();
         public List<TField> Fields = new List<TField>();
@@ -114,26 +82,60 @@ namespace MyEdit {
         }
     }
 
+    public class TVariable {
+        public string NameVar;
+        public TType TypeVar;
+        public TTerm InitValue;
+
+        public TVariable(string name) {
+            NameVar = name;
+        }
+
+        public TVariable(string name, TType type, TTerm init) {
+            NameVar = name;
+            TypeVar = type;
+            InitValue = init;
+        }
+
+        public virtual void Text(StringWriter sw, TParser parser) {
+            sw.Write(NameVar);
+
+            if (TypeVar != null) {
+
+                sw.Write(" : ");
+                TypeVar.Text(sw, parser);
+            }
+
+            if (InitValue != null) {
+
+                sw.Write(" = ");
+                InitValue.Text(sw, parser);
+            }
+        }
+    }
+
     public class TMember : TVariable {
         public bool IsStatic;
         public TClass ClassMember;
 
-        public TMember(bool is_static, string name) : base(name) {
+        public TMember(bool is_static, string name, TType tp, TTerm init) : base(name, tp, init) {
             IsStatic = is_static;
         }
     }
 
     public class TField : TMember {
 
-        public TField(bool is_static, string name) : base(is_static, name) {
+        public TField(bool is_static, string name, TType tp, TTerm init) : base(is_static, name, tp, init) {
         }
     }
 
-    public class TFunction : TMember {
-        public List<TVariable> ArgsFnc = new List<TVariable>();
+    public partial class TFunction : TMember {
+        public TVariable[] ArgsFnc;
         public TBlock BlockFnc;
 
-        public TFunction(bool is_static, string name) : base(is_static, name) {
+        public TFunction(bool is_static, string name, TVariable[]args, TType ret_type) : base(is_static, name, ret_type, null) {
+            ArgsFnc = args;
+
         }
 
 
@@ -161,7 +163,7 @@ namespace MyEdit {
 
     }
 
-    public class TLiteral : TTerm {
+    public partial class TLiteral : TTerm {
         public EKind KindLit;
         public string TextLit;
 
@@ -175,8 +177,9 @@ namespace MyEdit {
         }
     }
 
-    public class TReference : TTerm {
+    public partial class TReference : TTerm {
         public string NameRef;
+        public TVariable VarRef;
 
         public TReference(string name) {
             NameRef = name;
@@ -187,7 +190,7 @@ namespace MyEdit {
         }
     }
 
-    public class TFieldReference : TReference {
+    public partial class TFieldReference : TReference {
         public TTerm TermFldRef;
 
         public TFieldReference(TTerm trm, string name) : base(name) {
@@ -200,10 +203,10 @@ namespace MyEdit {
         }
     }
 
-    public class TApply : TTerm {
+    public partial class TApply : TTerm {
         EKind KindApp;
-        public string FunctionName;
-        TTerm[] Args;
+        public TReference FunctionRef;
+        public TTerm[] Args;
 
         public TApply(EKind opr_kind, TTerm t1, TTerm t2) {
             KindApp = opr_kind;
@@ -220,14 +223,14 @@ namespace MyEdit {
 
         public TApply(string function_name, TTerm[] args) {
             KindApp = EKind.FunctionApply;
-            FunctionName = function_name;
+            FunctionRef = new TReference(function_name);
             Args = args;
         }
 
         public override void Text(StringWriter sw, TParser parser) {
             switch (KindApp) {
             case EKind.FunctionApply:
-                sw.Write("{0}", FunctionName);
+                FunctionRef.Text(sw, parser);
                 ArgsText(sw, parser);
                 break;
 
@@ -270,7 +273,7 @@ namespace MyEdit {
         }
     }
 
-    public class TMethodApply : TApply {
+    public partial class TMethodApply : TApply {
         public TTerm TermApp;
 
         public TMethodApply(TTerm trm, string function_name, TTerm[] args) : base(function_name, args) {
@@ -279,7 +282,7 @@ namespace MyEdit {
 
         public override void Text(StringWriter sw, TParser parser) {
             TermApp.Text(sw, parser);
-            sw.Write(".{0}", FunctionName);
+            FunctionRef.Text(sw, parser);
             ArgsText(sw, parser);
         }
     }
@@ -359,8 +362,14 @@ namespace MyEdit {
 
     public class TTry : TStatement {
         public TBlock TryBlock;
-        public TVariable CatchVariable;
         public TBlock CatchBlock;
+
+        public override void Text(StringWriter sw, TParser parser) {
+        }
+    }
+
+    public class TCatch : TStatement {
+        public TVariable CatchVariable;
 
         public override void Text(StringWriter sw, TParser parser) {
         }

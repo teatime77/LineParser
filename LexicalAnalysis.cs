@@ -433,7 +433,9 @@ namespace MyEdit {
                     }
                 }
 
-                if(line.Tokens.Length != 0) {
+                line.Indent = -1;
+                line.ObjLine = null;
+                if (line.Tokens.Length != 0) {
 
                     var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
                     if (v.Any()) {
@@ -441,11 +443,7 @@ namespace MyEdit {
                         TToken[] token_list = v.ToArray();
                         int line_top_idx = Parser.LineTopTokenIndex(token_list);
 
-                        if(line_top_idx == -1) {
-
-                            line.ObjLine = null;
-                        }
-                        else {
+                        if(line_top_idx != -1) {
                             line.Indent = token_list[line_top_idx].StartPos;
 
                             object obj = Parser.ParseLine(line_top_idx, token_list);
@@ -466,6 +464,10 @@ namespace MyEdit {
                                 else if (obj is TStatement) {
 
                                     ((TStatement)obj).Text(sw, Parser);
+
+                                    List<TVariable> vars;
+                                    TClass cls;
+                                    GetVariableClass(line_idx, out cls, out vars);
                                 }
 
                                 Debug.WriteLine(sw.ToString());
@@ -475,9 +477,6 @@ namespace MyEdit {
                             line.ObjLine = obj;
                         }
                     }
-                }
-                else {
-                    line.ObjLine = null;
                 }
 
                 if (sel_end <= next_line_top) {
