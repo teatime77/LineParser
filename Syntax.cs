@@ -3,6 +3,15 @@ using System.Diagnostics;
 using System.IO;
 
 namespace MyEdit {
+    public enum EGeneric {
+        UnknownClass,
+        SimpleClass,
+        ParameterizedClass,
+        ArgumentClass,
+        SpecializedClass
+    }
+
+
     public abstract partial class TTerm {
         public bool WithParenthesis;
         public bool IsType;
@@ -12,47 +21,10 @@ namespace MyEdit {
         }
     }
 
-    public abstract partial class TType {
-        public static TClass IndexClass = new TClass("_index_");
-
-        public abstract void Text(StringWriter sw, TParser parser);
-    }
-
-    public class TFunctionType : TType {
-        public TType ValType;
-        public TType[] ArgsType;
-
-        public TFunctionType(TType val_type, TType[] args_type) {
-            ValType = val_type;
-            ArgsType = args_type;
-        }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            ValType.Text(sw, parser);
-
-            for (int i = 0; i < ArgsType.Length; i++) {
-                if (i == 0) {
-
-                    sw.Write("[");
-                }
-                else {
-
-                    sw.Write(",");
-                }
-
-                TType tp = ArgsType[i];
-                if(tp != TType.IndexClass) {
-
-                    sw.Write("{0}", tp);
-                }
-            }
-
-            sw.Write("]");
-        }
-    }
-
-    public partial class TClass : TType {
+    public partial class TClass {
+        public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
+
         public List<TClass> SuperClasses = new List<TClass>();
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
@@ -61,7 +33,7 @@ namespace MyEdit {
             ClassName = name;
         }
 
-        public override void Text(StringWriter sw, TParser parser) {
+        public virtual void Text(StringWriter sw, TParser parser) {
             sw.Write(ClassName);
         }
 
@@ -80,18 +52,91 @@ namespace MyEdit {
                 sw.Write(SuperClasses[i].ClassName);
             }
         }
+
+        public virtual string GetClassText() {
+            return ClassName;
+        }
+    }
+
+    public class TGenericClass : TClass {
+        public TClass OrgCla;
+        public int DimCnt;
+        public bool ContainsArgumentClass;
+        public string ClassText = null;
+
+        public List<TClass> GenCla;
+
+        public TGenericClass(string name, List<TClass> arg_classes) : base(name) {
+            GenCla = arg_classes;
+        }
+
+        public TGenericClass(TClass org_class, List<TClass> arg_classes) : base(org_class.ClassName) {
+            OrgCla = org_class;
+            GenCla = arg_classes;
+        }
+
+        public TGenericClass(TClass org_class, int dim_cnt) : base(org_class.ClassName) {
+            OrgCla = org_class;
+        }
+
+        public override void Text(StringWriter sw, TParser parser) {
+            sw.Write(ClassName);
+
+            if (DimCnt != 0) {
+
+                sw.Write("[");
+                for (int i = 0; i < DimCnt - 1; i++) {
+                    sw.Write(",");
+                }
+                sw.Write("]");
+            }
+        }
+
+        public override string GetClassText() {
+            if(ClassText == null) {
+
+                StringWriter sw = new StringWriter();
+
+                sw.Write(ClassName);
+
+                if(GenCla != null) {
+
+                    sw.Write("<");
+                    foreach (TClass c in GenCla) {
+                        if (c != GenCla[0]) {
+                            sw.Write(",");
+                        }
+                        sw.Write("{0}", c.GetClassText());
+                    }
+                    sw.Write(">");
+                }
+
+                if (DimCnt != 0) {
+
+                    sw.Write("[");
+                    for (int i = 0; i < DimCnt - 1; i++) {
+                        sw.Write(",");
+                    }
+                    sw.Write("]");
+                }
+
+                ClassText = sw.ToString();
+            }
+
+            return ClassText;
+        }
     }
 
     public class TVariable {
         public string NameVar;
-        public TType TypeVar;
+        public TClass TypeVar;
         public TTerm InitValue;
 
         public TVariable(string name) {
             NameVar = name;
         }
 
-        public TVariable(string name, TType type, TTerm init) {
+        public TVariable(string name, TClass type, TTerm init) {
             NameVar = name;
             TypeVar = type;
             InitValue = init;
@@ -118,14 +163,14 @@ namespace MyEdit {
         public bool IsStatic;
         public TClass ClassMember;
 
-        public TMember(bool is_static, string name, TType tp, TTerm init) : base(name, tp, init) {
+        public TMember(bool is_static, string name, TClass tp, TTerm init) : base(name, tp, init) {
             IsStatic = is_static;
         }
     }
 
     public class TField : TMember {
 
-        public TField(bool is_static, string name, TType tp, TTerm init) : base(is_static, name, tp, init) {
+        public TField(bool is_static, string name, TClass tp, TTerm init) : base(is_static, name, tp, init) {
         }
     }
 
@@ -133,15 +178,13 @@ namespace MyEdit {
         public TVariable[] ArgsFnc;
         public TBlock BlockFnc;
 
-        public TFunction(bool is_static, string name, TVariable[]args, TType ret_type) : base(is_static, name, ret_type, null) {
+        public TFunction(bool is_static, string name, TVariable[]args, TClass ret_type) : base(is_static, name, ret_type, null) {
             ArgsFnc = args;
 
         }
 
 
         public override void Text(StringWriter sw, TParser parser) {
-            sw.Write("function ");
-
             sw.Write(NameVar);
 
             sw.Write("(");

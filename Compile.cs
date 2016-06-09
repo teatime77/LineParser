@@ -53,7 +53,7 @@ namespace MyEdit {
         public virtual void ResolveName(TClass cls, List<TVariable> vars) {
         }
 
-        public virtual TType CalcType() {
+        public virtual TClass CalcType() {
             return null;
         }
     }
@@ -70,7 +70,7 @@ namespace MyEdit {
             }
         }
 
-        public override TType CalcType() {
+        public override TClass CalcType() {
             if(VarRef != null) {
                 return VarRef.TypeVar;
             }
@@ -86,7 +86,7 @@ namespace MyEdit {
 
     partial class TApply {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
-            List<TType> arg_types = new List<TType>();
+            List<TClass> arg_types = new List<TClass>();
 
             foreach(TTerm trm in Args) {
                 trm.ResolveName(cls, vars);
@@ -100,9 +100,9 @@ namespace MyEdit {
     partial class TMethodApply {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
             TermApp.ResolveName(cls, vars);
-            TType tp = TermApp.CalcType();
+            TClass tp = TermApp.CalcType();
 
-            List<TType> arg_types = new List<TType>();
+            List<TClass> arg_types = new List<TClass>();
 
             foreach (TTerm trm in Args) {
                 trm.ResolveName(cls, vars);
@@ -113,14 +113,14 @@ namespace MyEdit {
         }
     }
 
-    partial class TType {
-        public bool IsSuper(TType tp) {
+    partial class TClass {
+        public bool IsSuper(TClass tp) {
             return true;
         }
     }
 
     partial class TFunction {
-        public bool Match(string name, List<TType> arg_types) {
+        public bool Match(string name, List<TClass> arg_types) {
             if(NameVar != name || arg_types.Count != ArgsFnc.Length) {
                 return false;
             }
@@ -137,7 +137,7 @@ namespace MyEdit {
     }
 
     partial class TClass {
-        public TFunction MatchFunction(string name, List<TType> arg_types) {
+        public TFunction MatchFunction(string name, List<TClass> arg_types) {
             var v = from f in Functions where f.Match(name, arg_types) select f;
             if (v.Any()) {
                 return v.First();

@@ -446,7 +446,11 @@ namespace MyEdit {
                         if(line_top_idx != -1) {
                             line.Indent = token_list[line_top_idx].StartPos;
 
-                            object obj = Parser.ParseLine(line_top_idx, token_list);
+                            List<TVariable> vars;
+                            TClass cls;
+                            GetVariableClass(line_idx, out cls, out vars);
+
+                            object obj = Parser.ParseLine(cls, line_top_idx, token_list);
                             if (obj != null) {
                                 StringWriter sw = new StringWriter();
                                 if (obj is TClass) {
@@ -464,10 +468,6 @@ namespace MyEdit {
                                 else if (obj is TStatement) {
 
                                     ((TStatement)obj).Text(sw, Parser);
-
-                                    List<TVariable> vars;
-                                    TClass cls;
-                                    GetVariableClass(line_idx, out cls, out vars);
                                 }
 
                                 Debug.WriteLine(sw.ToString());

@@ -4,6 +4,7 @@ using System;
 using Windows.UI;
 using System.IO;
 using System.Net;
+using System.Linq;
 
 /*--------------------------------------------------------------------------------
         1行の構文解析
@@ -11,13 +12,16 @@ using System.Net;
 
 namespace MyEdit {
     partial class TParser {
+        const int FunctionTab = 4;
         static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
         TToken[] TokenList;
         int TokenPos;
         TToken CurTkn;
         TToken NextTkn;
         Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
-        Dictionary<string, TType> TypeTable = new Dictionary<string, TType>();
+        Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
+        Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
+        Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
 
         // キーワードの文字列の辞書
         public Dictionary<string, EKind> KeywordMap;
@@ -45,9 +49,34 @@ namespace MyEdit {
             else {
                 cls = new TClass(name);
 
+                Debug.WriteLine("class : {0}", cls.GetClassText(), "");
                 ClassTable.Add(name, cls);
 
                 return cls;
+            }
+        }
+
+        public TClass GetParamClassByName(TClass cls, string name) {
+            if(cls != null && cls is TGenericClass) {
+                TGenericClass gen = (TGenericClass)cls;
+
+                var v = from c in gen.GenCla where c.ClassName == name select c;
+                if (v.Any()) {
+                    return v.First();
+                }
+            }
+
+            return GetClassByName(name);
+        }
+
+        public void RegClass(Dictionary<string, TClass> dic, TClass cls) {
+            if (dic.ContainsKey(cls.ClassName)) {
+
+                dic[cls.ClassName] = cls;
+            }
+            else {
+
+                dic.Add(cls.ClassName, cls);
             }
         }
 
@@ -55,7 +84,52 @@ namespace MyEdit {
             GetToken(EKind.class_);
             TToken id = GetToken(EKind.Identifier);
 
-            TClass cls = GetClassByName(id.TextTkn);
+            TClass cls;
+
+            if (CurTkn.Kind == EKind.LT) {
+                // 総称型の場合
+
+                List<TClass> param_classes = new List<TClass>();
+
+                GetToken(EKind.LT);
+                while (true) {
+                    TToken param_name = GetToken(EKind.Identifier);
+
+                    TClass param_class = new TClass(param_name.TextTkn);
+                    param_class.GenericType = EGeneric.ArgumentClass;
+
+                    param_classes.Add(param_class);
+
+                    if (CurTkn.Kind != EKind.Comma) {
+
+                        break;
+                    }
+
+                    GetToken(EKind.Comma);
+                }
+                GetToken(EKind.GT);
+
+                TGenericClass parameterized_class = new TGenericClass(id.TextTkn, param_classes);
+
+                parameterized_class.GenericType = EGeneric.ParameterizedClass;
+
+                if(ParameterizedClassTable.ContainsKey(parameterized_class.ClassName)){
+
+                    ParameterizedClassTable[parameterized_class.ClassName] = parameterized_class;
+                }
+                else{
+
+                    Debug.WriteLine("総称型 : {0}", parameterized_class.GetClassText(), "");
+                    ParameterizedClassTable.Add(parameterized_class.ClassName, parameterized_class);
+                }
+                RegClass(ClassTable, parameterized_class);
+
+                cls = parameterized_class;
+            }
+            else {
+
+                cls = GetClassByName(id.TextTkn);
+            }
 
             if (CurTkn.Kind == EKind.Colon) {
 
@@ -82,12 +156,12 @@ namespace MyEdit {
             return cls;
         }
 
-        public TField ReadFieldLine(bool is_static) {
+        public TField ReadFieldLine(TClass parent_class, bool is_static) {
             TToken id = GetToken(EKind.Identifier);
 
             GetToken(EKind.Colon);
 
-            TType tp = ReadType();
+            TClass tp = ReadType(parent_class);
 
             TTerm init = null;
             if (CurTkn.Kind == EKind.Assign) {
@@ -106,60 +180,143 @@ namespace MyEdit {
             return null;
         }
 
-        public TType ReadType() {
+        public TClass ReadType(TClass parent_class) {
             TToken id = GetToken(EKind.Identifier);
-            TClass cls1 = GetClassByName(id.TextTkn);
+            TClass cls1 = GetParamClassByName(parent_class, id.TextTkn);
 
-            if (CurTkn.Kind != EKind.LB) {
+            List<TClass> param_classes = null;
+            bool contains_argument_class = false;
 
-                return cls1;
-            }
-            else { 
-                GetToken(EKind.LB);
+            if (CurTkn.Kind == EKind.LT) {
+                // 総称型の場合
 
-                List<TType> types = new List<TType>();
+                if (! (cls1 is TGenericClass)) {
+
+                    throw new TParseException("総称型以外に引数型があります。");
+                }
+                TGenericClass org_cla = cls1 as TGenericClass;
+
+                param_classes = new List<TClass>();
+
+                GetToken(EKind.LT);
                 while (true) {
-                    TType tp1;
-                    
-                    if(CurTkn.Kind == EKind.Identifier) {
+                    TClass param_class = ReadType(parent_class);
 
-                        tp1 = ReadType();
+                    if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && ((TGenericClass)parent_class).ContainsArgumentClass) {
+
+                        contains_argument_class = true;
                     }
-                    else {
 
-                        tp1 = TType.IndexClass;
-                    }
-                    types.Add(tp1);
+                    param_classes.Add(param_class);
 
-                    if(CurTkn.Kind == EKind.Comma) {
+                    if(CurTkn.Kind != EKind.Comma) {
 
-                        GetToken(EKind.Comma);
-                    }
-                    else {
                         break;
                     }
+
+                    GetToken(EKind.Comma);
+                }
+                GetToken(EKind.GT);
+
+                if(org_cla.GenCla.Count != param_classes.Count) {
+
+                    throw new TParseException("総称型の引数の数が一致しません。");
+                }
+            }
+
+            int dim_cnt = 0;
+            if (CurTkn.Kind == EKind.LB) {
+                GetToken(EKind.LB);
+
+                dim_cnt = 1;
+                while (CurTkn.Kind == EKind.Comma) {
+                    GetToken(EKind.Comma);
+                    dim_cnt++;
                 }
 
                 GetToken(EKind.RB);
-
-                TFunctionType fnc_type = new TFunctionType(cls1, types.ToArray());
-
-                string type_text = fnc_type.ToString();
-
-                TType reg_type;
-                if(TypeTable.TryGetValue(type_text, out reg_type)) {
-                    return reg_type;
-                }
-
-                TypeTable.Add(type_text, fnc_type);
-
-                return fnc_type;
             }
+
+            if (contains_argument_class) {
+                // 引数にArgumentClassを含む場合
+
+                TGenericClass tmp_class = new TGenericClass(cls1, param_classes);
+                tmp_class.ContainsArgumentClass = true;
+                tmp_class.DimCnt = dim_cnt;
+
+                return tmp_class;
+            }
+
+            TClass cls2 = null;
+            if (param_classes == null) {
+                // 引数がない場合
+
+                cls2 = cls1;
+            }
+            else {
+                // 引数がある場合
+
+                cls2 = GetSpecializedClass(cls1, param_classes);
+            }
+
+            if (dim_cnt == 0) {
+                // 配列でない場合
+
+                return cls2;
+            }
+
+            StringWriter sw = new StringWriter();
+
+            sw.Write(cls2.GetClassText());
+            sw.Write("[");
+            for (int i = 0; i < dim_cnt - 1; i++) {
+                sw.Write(",");
+            }
+            sw.Write("]");
+
+            string class_text = sw.ToString();
+
+            TGenericClass reg_class;
+            if (!ArrayClassTable.TryGetValue(class_text, out reg_class)) {
+
+                reg_class = new TGenericClass(cls2, dim_cnt);
+                reg_class.GenericType = EGeneric.SpecializedClass;
+
+                Debug.WriteLine("配列型 : {0}", reg_class.GetClassText(),"");
+                ArrayClassTable.Add(class_text, reg_class);
+            }
+
+            return reg_class;
         }
 
-        public TFunction ReadFunctionLine(bool is_static) {
-            TToken tkn = GetToken(EKind.Undefined);
+        public TClass GetSpecializedClass(TClass org_class, List<TClass> param_classes) {
+            StringWriter sw = new StringWriter();
+            sw.Write(org_class.ClassName);
+            sw.Write("<");
+            foreach(TClass c in param_classes) {
+                if(c != param_classes[0]) {
+                    sw.Write(",");
+                }
+                sw.Write("{0}", c.GetClassText());
+            }
+            sw.Write(">");
 
+            string class_text = sw.ToString();
+
+            TGenericClass reg_class;
+            if (!SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
+
+                reg_class = new TGenericClass(org_class, param_classes);
+                reg_class.GenericType = EGeneric.SpecializedClass;
+
+                Debug.WriteLine("特化クラス : {0}", reg_class.GetClassText(), "");
+                SpecializedClassTable.Add(class_text, reg_class);
+            }
+
+            return reg_class;
+        }
+
+        public TFunction ReadFunctionLine(TClass parent_class, bool is_static) {
             TToken fnc_name = GetToken(EKind.Identifier);
 
             GetToken(EKind.LP);
@@ -179,12 +336,12 @@ namespace MyEdit {
 
             GetToken(EKind.RP);
 
-            TType ret_type = null;
+            TClass ret_type = null;
             if(CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
-                ret_type = ReadType();
+                ret_type = ReadType(parent_class);
             }
 
             GetToken(EKind.EOT);
@@ -195,12 +352,12 @@ namespace MyEdit {
         public TVariable ReadVariable() {
             TToken id = GetToken(EKind.Identifier);
 
-            TType type = null;
+            TClass type = null;
             if(CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
-                type = ReadType();
+                type = ReadType(null);
             }
 
             TTerm init = null;
@@ -367,7 +524,7 @@ namespace MyEdit {
             return -1;
         }
 
-        public object ParseLine(int line_top_idx, TToken[] token_list) {
+        public object ParseLine(TClass cls, int line_top_idx, TToken[] token_list) {
             TokenList = token_list;
             TokenPos = line_top_idx;
 
@@ -395,10 +552,10 @@ namespace MyEdit {
 
                 switch (CurTkn.Kind) {
                 case EKind.function_:
-                    return ReadFunctionLine(true);
+                    return ReadFunctionLine(cls, true);
 
                 case EKind.Identifier:
-                    return ReadFieldLine(true);
+                    return ReadFieldLine(cls, true);
 
                 default:
                     throw new TParseException();
@@ -412,10 +569,6 @@ namespace MyEdit {
                 case EKind.class_:
                 case EKind.enum_:
                     return ReadClassLine();
-
-                case EKind.function_:
-                case EKind.constructor_:
-                    return ReadFunctionLine(false);
 
                 case EKind.var_:
                     return ReadVariableDeclarationLine();
@@ -456,7 +609,11 @@ namespace MyEdit {
                 case EKind.Identifier:
                     if(NextTkn.Kind == EKind.Colon) {
 
-                        return ReadFieldLine(false);
+                        return ReadFieldLine(cls, false);
+                    }
+                    else if (CurTkn.StartPos == FunctionTab) {
+
+                        return ReadFunctionLine(cls, false);
                     }
                     else {
 
@@ -776,6 +933,10 @@ namespace MyEdit {
 
     public class TParseException : Exception {
         public TParseException() {
+        }
+
+        public TParseException(string msg) {
+            Debug.WriteLine(msg);
         }
     }
 }
