@@ -84,7 +84,9 @@ namespace MyEdit {
         Stack<TDiff> UndoStack = new Stack<TDiff>();
         Stack<TDiff> RedoStack = new Stack<TDiff>();
 
-        TParser Parser = new TParser();
+        TParser Parser;
+
+        TProject Project = new TProject();
 
         /*
             テキスト選択の開始位置
@@ -114,6 +116,8 @@ namespace MyEdit {
             // フォントを変更する場合は以下のコメントをはずしてください。
             //TextFormat.FontSize = 48;
             TextFormat.FontFamily = "ＭＳ ゴシック";
+
+            Parser = new TParser(Project, Lines);
 
             Lines.Add(new TLine());
         }
@@ -411,6 +415,13 @@ namespace MyEdit {
 
             // 字句型を更新します。
             UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
+
+            Parser.ParseFile();
+
+            StringWriter sw = new StringWriter();
+            sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
+            Parser.ProjectText(Project, sw);
+            Debug.WriteLine(sw.ToString());
         }
 
         /*

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace MyEdit {
     public enum EGeneric {
@@ -11,15 +12,7 @@ namespace MyEdit {
         SpecializedClass
     }
 
-
-    public abstract partial class TTerm {
-        public bool WithParenthesis;
-        public bool IsType;
-
-        public virtual void Text(StringWriter sw, TParser parser) {
-            Debug.Assert(false);
-        }
-    }
+    //------------------------------------------------------------ TClass
 
     public partial class TClass {
         public EGeneric GenericType = EGeneric.SimpleClass;
@@ -31,26 +24,6 @@ namespace MyEdit {
 
         public TClass(string name) {
             ClassName = name;
-        }
-
-        public virtual void Text(StringWriter sw, TParser parser) {
-            sw.Write(ClassName);
-        }
-
-        public void ClassLine(StringWriter sw) {
-            sw.Write("class {0}", ClassName);
-
-            for (int i = 0; i < SuperClasses.Count; i++) {
-                if (i == 0) {
-
-                    sw.Write(" : ");
-                }
-                else {
-
-                    sw.Write(" , ");
-                }
-                sw.Write(SuperClasses[i].ClassName);
-            }
         }
 
         public virtual string GetClassText() {
@@ -77,19 +50,6 @@ namespace MyEdit {
 
         public TGenericClass(TClass org_class, int dim_cnt) : base(org_class.ClassName) {
             OrgCla = org_class;
-        }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            sw.Write(ClassName);
-
-            if (DimCnt != 0) {
-
-                sw.Write("[");
-                for (int i = 0; i < DimCnt - 1; i++) {
-                    sw.Write(",");
-                }
-                sw.Write("]");
-            }
         }
 
         public override string GetClassText() {
@@ -127,6 +87,8 @@ namespace MyEdit {
         }
     }
 
+    //------------------------------------------------------------ TVariable
+
     public class TVariable {
         public string NameVar;
         public TClass TypeVar;
@@ -140,22 +102,6 @@ namespace MyEdit {
             NameVar = name;
             TypeVar = type;
             InitValue = init;
-        }
-
-        public virtual void Text(StringWriter sw, TParser parser) {
-            sw.Write(NameVar);
-
-            if (TypeVar != null) {
-
-                sw.Write(" : ");
-                TypeVar.Text(sw, parser);
-            }
-
-            if (InitValue != null) {
-
-                sw.Write(" = ");
-                InitValue.Text(sw, parser);
-            }
         }
     }
 
@@ -176,34 +122,18 @@ namespace MyEdit {
 
     public partial class TFunction : TMember {
         public TVariable[] ArgsFnc;
-        public TBlock BlockFnc;
+        public TBlock BlockFnc = new TBlock();
 
         public TFunction(bool is_static, string name, TVariable[]args, TClass ret_type) : base(is_static, name, ret_type, null) {
             ArgsFnc = args;
-
         }
+    }
 
+    //------------------------------------------------------------ TTerm
 
-        public override void Text(StringWriter sw, TParser parser) {
-            sw.Write(NameVar);
-
-            sw.Write("(");
-            foreach(TVariable var1 in ArgsFnc) {
-                if(var1 != ArgsFnc[0]) {
-                    sw.Write(", ");
-                }
-
-                var1.Text(sw, parser);
-            }
-            sw.Write(")");
-
-            if (TypeVar != null) {
-
-                sw.Write(" : ");
-                TypeVar.Text(sw, parser);
-            }
-        }
-
+    public abstract partial class TTerm {
+        public bool WithParenthesis;
+        public bool IsType;
     }
 
     public partial class TLiteral : TTerm {
@@ -214,10 +144,6 @@ namespace MyEdit {
             KindLit = kind;
             TextLit = text;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            sw.Write(TextLit);
-        }
     }
 
     public partial class TReference : TTerm {
@@ -227,10 +153,6 @@ namespace MyEdit {
         public TReference(string name) {
             NameRef = name;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            sw.Write(NameRef);
-        }
     }
 
     public partial class TFieldReference : TReference {
@@ -239,15 +161,10 @@ namespace MyEdit {
         public TFieldReference(TTerm trm, string name) : base(name) {
             TermFldRef = trm;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            TermFldRef.Text(sw, parser);
-            sw.Write(".{0}", NameRef);
-        }
     }
 
     public partial class TApply : TTerm {
-        EKind KindApp;
+        public EKind KindApp;
         public TReference FunctionRef;
         public TTerm[] Args;
 
@@ -269,51 +186,6 @@ namespace MyEdit {
             FunctionRef = new TReference(function_name);
             Args = args;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            switch (KindApp) {
-            case EKind.FunctionApply:
-                FunctionRef.Text(sw, parser);
-                ArgsText(sw, parser);
-                break;
-
-            default:
-                switch (Args.Length) {
-                case 1:
-                    sw.Write("{0} ", parser.KindString[KindApp]);
-                    Args[0].Text(sw, parser);
-                    break;
-
-                case 2:
-                    Args[0].Text(sw, parser);
-                    sw.Write(" {0} ", parser.KindString[KindApp]);
-                    Args[1].Text(sw, parser);
-                    break;
-
-                default:
-                    Debug.Assert(false);
-                    break;
-                }
-                break;
-            }
-        }
-
-        public void ArgsText(StringWriter sw, TParser parser) {
-            foreach(TTerm trm in Args) {
-                if(trm == Args[0]) {
-
-                    sw.Write("(");
-                }
-                else {
-
-                    sw.Write(", ");
-                }
-
-                trm.Text(sw, parser);
-            }
-
-            sw.Write(")");
-        }
     }
 
     public partial class TMethodApply : TApply {
@@ -322,117 +194,124 @@ namespace MyEdit {
         public TMethodApply(TTerm trm, string function_name, TTerm[] args) : base(function_name, args) {
             TermApp = trm;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-            TermApp.Text(sw, parser);
-            FunctionRef.Text(sw, parser);
-            ArgsText(sw, parser);
-        }
     }
 
-    public class TQuery {
-
+    public class TQuery : TTerm {
     }
 
     public class TFrom : TQuery {
-
     }
 
     public class TAggregate : TQuery {
     }
 
+    //------------------------------------------------------------ TStatement
+
     public abstract class TStatement {
-        public abstract void Text(StringWriter sw, TParser parser);
-    }
+        public void sub(TStatement stmt) {
+            if (stmt is TVariableDeclaration) {
+                TVariableDeclaration var_decl = stmt as TVariableDeclaration;
+            }
+            else if (stmt is TAssignment) {
+                TAssignment asn = stmt as TAssignment;
+            }
+            else if (stmt is TCall) {
+                TCall call1 = stmt as TCall;
+            }
+            else if (stmt is TJump) {
+                TJump jmp = stmt as TJump;
+            }
+            else if (stmt is TBlockStatement) {
+                TBlockStatement blc_stmt = stmt as TBlockStatement;
 
-    public class TVariableDeclaration : TStatement {
-        public List<TVariable> Variables = new List<TVariable>();
-
-        public override void Text(StringWriter sw, TParser parser) {
-            foreach(TVariable var1 in Variables) {
-                if(var1 == Variables[0]) {
-
-                    sw.Write("var ");
+                if (stmt is TBlock) {
+                    TBlock block = stmt as TBlock;
                 }
-                else {
-
-                    sw.Write(", ");
+                else if (stmt is TIfBlock) {
+                    TIfBlock if_block = stmt as TIfBlock;
                 }
-
-                var1.Text(sw, parser);
+                else if (stmt is TCase) {
+                    TCase cas = stmt as TCase;
+                }
+                else if (stmt is TSwitch) {
+                    TSwitch swt = stmt as TSwitch;
+                }
+                else if (stmt is TFor) {
+                    TFor for1 = stmt as TFor;
+                }
+                else if (stmt is TWhile) {
+                    TWhile while1 = stmt as TWhile;
+                }
+                else if (stmt is TTry) {
+                    TTry try1 = stmt as TTry;
+                }
+                else if (stmt is TCatch) {
+                    TCatch catch1 = stmt as TCatch;
+                }
             }
         }
     }
 
-    public class TBlock : TStatement {
-        public List<TVariable> VariablesBlc = new List<TVariable>();
-        public List<TStatement> StatementsBlc = new List<TStatement>();
+    public class TAssignment : TStatement {
+        public TApply RelAsn;
 
-        public override void Text(StringWriter sw, TParser parser) {
+        public TAssignment(TApply rel) {
+            RelAsn = rel;
         }
     }
 
-    public class TIfBlock : TStatement {
-        public TTerm ConditionIf;
-        public TBlock BlockIf;
+    public class TCall : TStatement {
+        public TApply AppCall;
 
-        public override void Text(StringWriter sw, TParser parser) {
+        public TCall(TApply app) {
+            AppCall = app;
         }
+    }
+
+    public class TVariableDeclaration : TStatement {
+        public List<TVariable> Variables = new List<TVariable>();
+    }
+
+    public abstract class TBlockStatement : TStatement {
+        public List<TStatement> StatementsBlc = new List<TStatement>();
+    }
+
+    public class TBlock : TBlockStatement {
+        public List<TVariable> VariablesBlc = new List<TVariable>();
+    }
+
+    public class TIfBlock : TBlockStatement {
+        public TTerm ConditionIf;
     }
 
     public class TIf : TStatement {
         public List<TIfBlock> IfBlocks = new List<TIfBlock>();
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
-    public class TCase : TStatement {
+    public class TCase : TBlockStatement {
         public bool IsDefault;
         public List<TTerm> TermsCase = new List<TTerm>();
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
     public class TSwitch : TStatement {
         public TTerm TermSwitch;
         public List<TCase> Cases = new List<TCase>();
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
-    public class TTry : TStatement {
-        public TBlock TryBlock;
-        public TBlock CatchBlock;
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
+    public class TTry : TBlockStatement {
     }
 
-    public class TCatch : TStatement {
+    public class TCatch : TBlockStatement {
         public TVariable CatchVariable;
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
-    public class TWhile : TStatement {
+    public class TWhile : TBlockStatement {
         public TTerm WhileCondition;
-        public TBlock WhileBlock;
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
-    public class TFor : TStatement {
+    public class TFor : TBlockStatement {
         public TVariable LoopVariable;
         public TTerm ListFor;
-        public TBlock ForBlock;
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
     public class TJump : TStatement {
@@ -442,11 +321,69 @@ namespace MyEdit {
         public TJump(EKind kind) {
             KindJmp = kind;
         }
-
-        public override void Text(StringWriter sw, TParser parser) {
-        }
     }
 
     public class TSourceFile {
+    }
+
+    //------------------------------------------------------------ TProject
+
+    public class TProject {
+        public List<TClass> Classes = new List<TClass>();
+
+        public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
+        public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
+        public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
+        public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
+
+        public void ClearProject() {
+            Classes.Clear();
+            ClassTable.Clear();
+            ParameterizedClassTable.Clear();
+            SpecializedClassTable.Clear();
+            ArrayClassTable.Clear();
+        }
+
+        public TClass GetClassByName(string name) {
+            TClass cls;
+
+            if (ClassTable.TryGetValue(name, out cls)) {
+                return cls;
+            }
+            else {
+                cls = new TClass(name);
+
+                Debug.WriteLine("class : {0}", cls.GetClassText(), "");
+                ClassTable.Add(name, cls);
+
+                Classes.Add(cls);
+
+                return cls;
+            }
+        }
+
+        public TClass GetParamClassByName(TClass cls, string name) {
+            if (cls != null && cls is TGenericClass) {
+                TGenericClass gen = (TGenericClass)cls;
+
+                var v = from c in gen.GenCla where c.ClassName == name select c;
+                if (v.Any()) {
+                    return v.First();
+                }
+            }
+
+            return GetClassByName(name);
+        }
+
+        public void RegClass(Dictionary<string, TClass> dic, TClass cls) {
+            if (dic.ContainsKey(cls.ClassName)) {
+
+                dic[cls.ClassName] = cls;
+            }
+            else {
+
+                dic.Add(cls.ClassName, cls);
+            }
+        }
     }
 }

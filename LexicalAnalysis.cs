@@ -433,52 +433,6 @@ namespace MyEdit {
                     }
                 }
 
-                line.Indent = -1;
-                line.ObjLine = null;
-                if (line.Tokens.Length != 0) {
-
-                    var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
-                    if (v.Any()) {
-
-                        TToken[] token_list = v.ToArray();
-                        int line_top_idx = Parser.LineTopTokenIndex(token_list);
-
-                        if(line_top_idx != -1) {
-                            line.Indent = token_list[line_top_idx].StartPos;
-
-                            List<TVariable> vars;
-                            TClass cls;
-                            GetVariableClass(line_idx, out cls, out vars);
-
-                            object obj = Parser.ParseLine(cls, line_top_idx, token_list);
-                            if (obj != null) {
-                                StringWriter sw = new StringWriter();
-                                if (obj is TClass) {
-
-                                    ((TClass)obj).ClassLine(sw);
-                                }
-                                else if (obj is TVariable) {
-
-                                    ((TVariable)obj).Text(sw, Parser);
-                                }
-                                else if (obj is TTerm) {
-
-                                    ((TTerm)obj).Text(sw, Parser);
-                                }
-                                else if (obj is TStatement) {
-
-                                    ((TStatement)obj).Text(sw, Parser);
-                                }
-
-                                Debug.WriteLine(sw.ToString());
-
-                            }
-
-                            line.ObjLine = obj;
-                        }
-                    }
-                }
-
                 if (sel_end <= next_line_top) {
                     // 変更した文字列の字句解析が終わった場合
 

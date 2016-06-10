@@ -4,51 +4,6 @@ using System.IO;
 using System.Linq;
 
 namespace MyEdit {
-    
-    partial class MyEditor {
-        void GetVariableClass(int current_line_idx, out TClass cls, out List<TVariable> vars) {
-            vars = new List<TVariable>();
-            cls = null;
-
-            int min_indent = Lines[current_line_idx].Indent;
-
-            for (int line_idx = current_line_idx; 0 <= line_idx; line_idx--) {
-                TLine line = Lines[line_idx];
-
-                if(line.ObjLine != null && line.Indent <= min_indent) {
-
-                    if (line.Indent < min_indent) {
-
-                        min_indent = line.Indent;
-                    }
-
-                    if (line.ObjLine is TVariableDeclaration) {
-
-                        TVariableDeclaration var_decl = (TVariableDeclaration)line.ObjLine;
-                        vars.AddRange(var_decl.Variables);
-                    }
-                    else if(line.ObjLine is TFunction) {
-                        TFunction fnc = (TFunction)line.ObjLine;
-                        vars.AddRange(fnc.ArgsFnc);
-                    }
-                    else if (line.ObjLine is TFor) {
-                        TFor for1 = (TFor)line.ObjLine;
-                        vars.Add(for1.LoopVariable);
-                    }
-                    else if (line.ObjLine is TCatch) {
-                        TCatch catch1 = (TCatch)line.ObjLine;
-                        vars.Add(catch1.CatchVariable);
-                    }
-                    else if (line.ObjLine is TClass) {
-
-                        cls = (TClass)line.ObjLine;
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
     partial class TTerm {
         public virtual void ResolveName(TClass cls, List<TVariable> vars) {
         }
