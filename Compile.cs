@@ -75,8 +75,13 @@ namespace MyEdit {
     }
 
     partial class TFunction {
+        /*
+            関数名と引数の数と型が一致したらtrueを返します。
+        */
         public bool Match(string name, List<TClass> arg_types) {
             if(NameVar != name || arg_types.Count != ArgsFnc.Length) {
+                // 関数名か引数の数が違う場合
+
                 return false;
             }
 

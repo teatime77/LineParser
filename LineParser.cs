@@ -841,48 +841,47 @@ namespace MyEdit {
             throw new TParseException();
         }
 
-        TTerm DotExpression() {
+        TTerm DotIndexExpression() {
             TTerm t1 = PrimaryExpression();
 
-            while(CurTkn.Kind == EKind.Dot) {
-                GetToken(EKind.Dot);
+            while(CurTkn.Kind == EKind.Dot || CurTkn.Kind == EKind.LB) {
+                if(CurTkn.Kind == EKind.Dot) {
 
-                TToken id = GetToken(EKind.Identifier);
+                    GetToken(EKind.Dot);
 
-                if (CurTkn.Kind == EKind.LP) {
-                    GetToken(EKind.LP);
+                    TToken id = GetToken(EKind.Identifier);
 
-                    TTerm[] expr_list = ExpressionList().ToArray();
+                    if (CurTkn.Kind == EKind.LP) {
+                        GetToken(EKind.LP);
 
-                    GetToken(EKind.RP);
+                        TTerm[] expr_list = ExpressionList().ToArray();
 
-                    t1 = new TMethodApply(t1, id.TextTkn, expr_list);
+                        GetToken(EKind.RP);
+
+                        t1 = new TMethodApply(t1, id.TextTkn, expr_list);
+                    }
+                    else {
+
+                        t1 = new TFieldReference(t1, id.TextTkn);
+                    }
                 }
                 else {
 
-                    t1 = new TFieldReference(t1, id.TextTkn);
+                    GetToken(EKind.LB);
+
+                    TTerm t2 = Expression();
+
+                    GetToken(EKind.RB);
+
+                    t1 = new TApply(EKind.Index, t1, t2);
                 }
-            }
-
-            return t1;
-        }
-
-        TTerm IndexExpression() {
-            TTerm t1 = DotExpression();
-
-            if (CurTkn.Kind == EKind.LB) {
-                GetToken(EKind.LB);
-
-                TTerm exp = Expression();
-
-                GetToken(EKind.RB);
             }
 
             return t1;
         }
 
         TTerm PostIncDecExpression() {
-            TTerm t1 = IndexExpression();
+            TTerm t1 = DotIndexExpression();
 
             if (CurTkn.Kind == EKind.Inc || CurTkn.Kind == EKind.Dec) {
                 TToken opr = GetToken(EKind.Undefined);
@@ -1134,6 +1133,13 @@ namespace MyEdit {
                 case EKind.FunctionApply:
                     TermText(app.FunctionRef, sw);
                     ArgsText(app, sw);
+                    break;
+
+                case EKind.Index:
+                    TermText(app.Args[0], sw);
+                    sw.Write("[");
+                    TermText(app.Args[1], sw);
+                    sw.Write("]");
                     break;
 
                 default:
