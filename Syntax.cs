@@ -17,6 +17,7 @@ namespace MyEdit {
     public partial class TClass {
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
+        public string ClassText = null;
 
         public List<TClass> SuperClasses = new List<TClass>();
         public List<TField> Fields = new List<TField>();
@@ -32,10 +33,9 @@ namespace MyEdit {
     }
 
     public class TGenericClass : TClass {
-        public TClass OrgCla;
-        public int DimCnt;
+        public TGenericClass OrgCla;
         public bool ContainsArgumentClass;
-        public string ClassText = null;
+        public int DimCnt;
 
         public List<TClass> GenCla;
 
@@ -43,13 +43,14 @@ namespace MyEdit {
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TClass org_class, List<TClass> arg_classes) : base(org_class.ClassName) {
+        public TGenericClass(TGenericClass org_class, List<TClass> arg_classes) : base(org_class.ClassName) {
             OrgCla = org_class;
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TClass org_class, int dim_cnt) : base(org_class.ClassName) {
-            OrgCla = org_class;
+        public TGenericClass(TClass element_class, int dim_cnt) : base(element_class.ClassName) {
+            GenCla = new List<TClass>();
+            GenCla.Add(element_class);
         }
 
         public override string GetClassText() {
@@ -73,11 +74,7 @@ namespace MyEdit {
 
                 if (DimCnt != 0) {
 
-                    sw.Write("[");
-                    for (int i = 0; i < DimCnt - 1; i++) {
-                        sw.Write(",");
-                    }
-                    sw.Write("]");
+                    sw.Write("[{0}]", new string(',', DimCnt - 1));
                 }
 
                 ClassText = sw.ToString();
@@ -324,66 +321,5 @@ namespace MyEdit {
     }
 
     public class TSourceFile {
-    }
-
-    //------------------------------------------------------------ TProject
-
-    public class TProject {
-        public List<TClass> Classes = new List<TClass>();
-
-        public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
-        public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
-        public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
-        public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
-
-        public void ClearProject() {
-            Classes.Clear();
-            ClassTable.Clear();
-            ParameterizedClassTable.Clear();
-            SpecializedClassTable.Clear();
-            ArrayClassTable.Clear();
-        }
-
-        public TClass GetClassByName(string name) {
-            TClass cls;
-
-            if (ClassTable.TryGetValue(name, out cls)) {
-                return cls;
-            }
-            else {
-                cls = new TClass(name);
-
-                Debug.WriteLine("class : {0}", cls.GetClassText(), "");
-                ClassTable.Add(name, cls);
-
-                Classes.Add(cls);
-
-                return cls;
-            }
-        }
-
-        public TClass GetParamClassByName(TClass cls, string name) {
-            if (cls != null && cls is TGenericClass) {
-                TGenericClass gen = (TGenericClass)cls;
-
-                var v = from c in gen.GenCla where c.ClassName == name select c;
-                if (v.Any()) {
-                    return v.First();
-                }
-            }
-
-            return GetClassByName(name);
-        }
-
-        public void RegClass(Dictionary<string, TClass> dic, TClass cls) {
-            if (dic.ContainsKey(cls.ClassName)) {
-
-                dic[cls.ClassName] = cls;
-            }
-            else {
-
-                dic.Add(cls.ClassName, cls);
-            }
-        }
     }
 }

@@ -205,7 +205,7 @@ namespace MyEdit {
             if (contains_argument_class) {
                 // 引数にArgumentClassを含む場合
 
-                TGenericClass tmp_class = new TGenericClass(cls1, param_classes);
+                TGenericClass tmp_class = new TGenericClass(cls1 as TGenericClass, param_classes);
                 tmp_class.ContainsArgumentClass = true;
                 tmp_class.DimCnt = dim_cnt;
 
@@ -221,7 +221,7 @@ namespace MyEdit {
             else {
                 // 引数がある場合
 
-                cls2 = GetSpecializedClass(cls1, param_classes);
+                cls2 = GetSpecializedClass(cls1 as TGenericClass, param_classes);
             }
 
             if (dim_cnt == 0) {
@@ -230,18 +230,10 @@ namespace MyEdit {
                 return cls2;
             }
 
-            StringWriter sw = new StringWriter();
-
-            sw.Write(cls2.GetClassText());
-            sw.Write("[");
-            for (int i = 0; i < dim_cnt - 1; i++) {
-                sw.Write(",");
-            }
-            sw.Write("]");
-
-            string class_text = sw.ToString();
+            string class_text = cls2.GetClassText() + new string(',', dim_cnt - 1);
 
             TGenericClass reg_class;
+
             if (!PrjParser.ArrayClassTable.TryGetValue(class_text, out reg_class)) {
 
                 reg_class = new TGenericClass(cls2, dim_cnt);
@@ -254,7 +246,7 @@ namespace MyEdit {
             return reg_class;
         }
 
-        public TClass GetSpecializedClass(TClass org_class, List<TClass> param_classes) {
+        public TClass GetSpecializedClass(TGenericClass org_class, List<TClass> param_classes) {
             StringWriter sw = new StringWriter();
             sw.Write(org_class.ClassName);
             sw.Write("<");
