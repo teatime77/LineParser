@@ -45,16 +45,22 @@ namespace MyEdit {
         }
 
         public virtual void ReferenceNavi(TReference ref1, params object[] args) {
-        }
-
-        public virtual void FieldReferenceNavi(TFieldReference fld_ref, params object[] args) {
-            Action(fld_ref.TermFldRef, args);
+            if(ref1 is TDotReference) {
+                TermNavi((ref1 as TDotReference).DotRef, args);
+            }
         }
 
         public virtual void ApplyNavi(TApply app, params object[] args) {
-        }
+            if(app is TDotApply) {
 
-        public virtual void MethodApplyNavi(TMethodApply app, params object[] args) {
+                TermNavi((app as TDotApply).DotApp, args);
+            }
+
+            foreach(TTerm t in app.Args) {
+                TermNavi(t, args);
+            }
+
+            Action(app, args);
         }
 
         public virtual void StatementNavi(TStatement stmt, params object[] args) {
@@ -118,6 +124,39 @@ namespace MyEdit {
 
         public virtual void JumpNavi(TJump jmp, params object[] args) {
             TermNavi(jmp.RetVal, args);
+        }
+
+        void sub(TTerm trm) {
+            if (trm is TLiteral) {
+                TLiteral lit = trm as TLiteral;
+
+            }
+            else if (trm is TReference) {
+                TReference ref1 = trm as TReference;
+            }
+            else if (trm is TApply) {
+                TApply app = trm as TApply;
+
+            }
+        }
+    }
+
+    public class TResolveNameNavi : TNavigation {
+
+        public override void Action(object self, params object[] args) {
+            TClass cls = args[0] as TClass;
+            List<TVariable> vars = args[1] as List<TVariable>;
+
+            if (self is TTerm) {
+                TTerm trm = self as TTerm;
+
+                trm.ResolveName(cls, vars);
+            }
+            else if(self is TStatement) {
+                TStatement stmt = self as TStatement;
+
+
+            }
         }
     }
 }

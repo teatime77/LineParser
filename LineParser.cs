@@ -126,7 +126,7 @@ namespace MyEdit {
 
             GetToken(EKind.Colon);
 
-            TClass tp = ReadType(parent_class);
+            TClass tp = ReadType(parent_class, false);
 
             TTerm init = null;
             if (CurTkn.Kind == EKind.Assign) {
@@ -138,14 +138,14 @@ namespace MyEdit {
 
             GetToken(EKind.EOT);
 
-            return new TField(is_static, id.TextTkn, tp, init);
+            return new TField(is_static, id, tp, init);
         }
 
         public TClass ReadEnumLine() {
             return null;
         }
 
-        public TClass ReadType(TClass parent_class) {
+        public TClass ReadType(TClass parent_class, bool new_class) {
             TToken id = GetToken(EKind.Identifier);
             TClass cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
 
@@ -165,7 +165,7 @@ namespace MyEdit {
 
                 GetToken(EKind.LT);
                 while (true) {
-                    TClass param_class = ReadType(parent_class);
+                    TClass param_class = ReadType(parent_class, false);
 
                     if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && ((TGenericClass)parent_class).ContainsArgumentClass) {
 
@@ -190,7 +190,7 @@ namespace MyEdit {
             }
 
             int dim_cnt = 0;
-            if (CurTkn.Kind == EKind.LB) {
+            if (CurTkn.Kind == EKind.LB && ! new_class) {
                 GetToken(EKind.LB);
 
                 dim_cnt = 1;
@@ -274,7 +274,21 @@ namespace MyEdit {
         }
 
         public TFunction ReadFunctionLine(TClass parent_class, bool is_static) {
-            TToken fnc_name = GetToken(EKind.Identifier);
+            TToken fnc_name;
+            
+            if(CurTkn.Kind == EKind.operator_) {
+
+                GetToken(EKind.operator_);
+                fnc_name = GetToken(EKind.Undefined);
+                if(fnc_name.TokenType != ETokenType.Symbol) {
+                    throw new TParseException();
+                }
+                
+            }
+            else {
+
+                fnc_name = GetToken(EKind.Identifier);
+            }
 
             GetToken(EKind.LP);
 
@@ -298,12 +312,12 @@ namespace MyEdit {
 
                 GetToken(EKind.Colon);
 
-                ret_type = ReadType(parent_class);
+                ret_type = ReadType(parent_class, false);
             }
 
             GetToken(EKind.EOT);
 
-            return new TFunction(is_static, fnc_name.TextTkn, vars.ToArray(), ret_type);
+            return new TFunction(is_static, fnc_name, vars.ToArray(), ret_type);
         }
 
         public TVariable ReadVariable() {
@@ -314,7 +328,7 @@ namespace MyEdit {
 
                 GetToken(EKind.Colon);
 
-                type = ReadType(null);
+                type = ReadType(null, false);
             }
 
             TTerm init = null;
@@ -325,7 +339,7 @@ namespace MyEdit {
                 init = Expression();
             }
 
-            return new TVariable(id.TextTkn, type, init);
+            return new TVariable(id, type, init);
         }
 
         public TVariableDeclaration ReadVariableDeclarationLine() {
@@ -413,7 +427,7 @@ namespace MyEdit {
             GetToken(EKind.for_);
 
             TToken id = GetToken(EKind.Identifier);
-            for1.LoopVariable = new TVariable(id.TextTkn);
+            for1.LoopVariable = new TVariable(id);
 
             GetToken(EKind.in_);
 
@@ -579,6 +593,7 @@ namespace MyEdit {
                     return ReadJumpLine();
 
                 case EKind.Identifier:
+                case EKind.base_:
                     if(NextTkn.Kind == EKind.Colon) {
 
                         return ReadFieldLine(cls, false);
@@ -591,6 +606,9 @@ namespace MyEdit {
 
                         return ReadAssignmentCallLine();
                     }
+
+                case EKind.operator_:
+                    return ReadFunctionLine(cls, false);
 
                 default:
                     break;
@@ -645,7 +663,8 @@ namespace MyEdit {
             }
         }
 
-        public void ParseFile() {
+        public void ParseFile(TSourceFile src) {
+
             PrjParser.ClearProject();
 
             List<object> obj_stack = new List<object>();
@@ -720,8 +739,10 @@ namespace MyEdit {
 
                                     StringWriter sw = new StringWriter();
                                     if (obj is TClass) {
+                                        TClass class_def = obj as TClass;
 
-                                        ClassLine(obj as TClass, sw);
+                                        ClassLine(class_def, sw);
+                                        src.ClassesSrc.Add(class_def);
                                     }
                                     else if (obj is TVariable) {
 
@@ -812,9 +833,12 @@ namespace MyEdit {
         }
 
         TTerm PrimaryExpression() {
+            TToken id;
+            TTerm[] args;
+
             switch (CurTkn.Kind) {
             case EKind.Identifier:
-                TToken id = GetToken(EKind.Identifier);
+                id = GetToken(EKind.Identifier);
 
                 if (CurTkn.Kind == EKind.LP) {
                     GetToken(EKind.LP);
@@ -823,11 +847,11 @@ namespace MyEdit {
 
                     GetToken(EKind.RP);
 
-                    return new TApply(id.TextTkn, expr_list);
+                    return new TApply(id, expr_list);
                 }
                 else {
 
-                    return new TReference(id.TextTkn);
+                    return new TReference(id);
                 }
 
             case EKind.NumberLiteral:
@@ -836,6 +860,54 @@ namespace MyEdit {
                 TToken tkn = GetToken(EKind.Undefined);
 
                 return new TLiteral(tkn.Kind, tkn.TextTkn);
+
+            case EKind.new_:
+                GetToken(EKind.new_);
+
+                TClass cls = ReadType(null, true);
+                if(CurTkn.Kind == EKind.LP) {
+
+                    GetToken(EKind.LP);
+
+                    args = ExpressionList().ToArray();
+
+                    GetToken(EKind.RP);
+
+                    return new TNewApply(EKind.NewInstance, cls, args);
+                }
+                else if (CurTkn.Kind == EKind.LB) {
+
+                    GetToken(EKind.LB);
+
+                    args = ExpressionList().ToArray();
+
+                    GetToken(EKind.RB);
+
+                    if(CurTkn.Kind == EKind.LC) {
+
+                        GetToken(EKind.LC);
+                        TTerm[] init = ExpressionList().ToArray();
+                        GetToken(EKind.RC);
+                    }
+
+                    return new TNewApply(EKind.NewArray, cls, args);
+                }
+                else {
+                    throw new TParseException();
+                }
+
+            case EKind.base_:
+                GetToken(EKind.base_);
+                GetToken(EKind.Dot);
+                id = GetToken(EKind.Identifier);
+                GetToken(EKind.LP);
+
+                args = ExpressionList().ToArray();
+
+                GetToken(EKind.RP);
+
+                return new TApply(EKind.base_, id, args);
+
             }
 
             throw new TParseException();
@@ -854,26 +926,26 @@ namespace MyEdit {
                     if (CurTkn.Kind == EKind.LP) {
                         GetToken(EKind.LP);
 
-                        TTerm[] expr_list = ExpressionList().ToArray();
+                        TTerm[] args = ExpressionList().ToArray();
 
                         GetToken(EKind.RP);
 
-                        t1 = new TMethodApply(t1, id.TextTkn, expr_list);
+                        t1 = new TDotApply(t1, id, args);
                     }
                     else {
 
-                        t1 = new TFieldReference(t1, id.TextTkn);
+                        t1 = new TDotReference(t1, id);
                     }
                 }
                 else {
 
                     GetToken(EKind.LB);
 
-                    TTerm t2 = Expression();
+                    TTerm[] args = ExpressionList().ToArray();
 
                     GetToken(EKind.RB);
 
-                    t1 = new TApply(EKind.Index, t1, t2);
+                    t1 = new TApply(EKind.Index, t1, args);
                 }
             }
 
@@ -1086,19 +1158,13 @@ namespace MyEdit {
 
         public void ArgsText(TApply app, StringWriter sw) {
             foreach (TTerm trm in app.Args) {
-                if (trm == app.Args[0]) {
-
-                    sw.Write("(");
-                }
-                else {
+                if (trm != app.Args[0]) {
 
                     sw.Write(", ");
                 }
 
                 TermText(trm, sw);
             }
-
-            sw.Write(")");
         }
 
         public void TermText(TTerm term, StringWriter sw) {
@@ -1110,10 +1176,9 @@ namespace MyEdit {
             else if (term is TReference) {
                 TReference ref1 = term as TReference;
 
-                if (term is TFieldReference) {
-                    TFieldReference fld_ref = term as TFieldReference;
+                if (ref1 is TDotReference) {
 
-                    TermText(fld_ref.TermFldRef, sw);
+                    TermText((ref1 as TDotReference).DotRef, sw);
                     sw.Write(".");
                 }
 
@@ -1122,24 +1187,49 @@ namespace MyEdit {
             else if (term is TApply) {
                 TApply app = term as TApply;
 
-                if (term is TMethodApply) {
-                    TMethodApply method_app = term as TMethodApply;
+                if (app is TDotApply) {
 
-                    TermText(method_app.TermApp, sw);
+                    TermText((app as TDotApply).DotApp, sw);
                     sw.Write(".");
                 }
 
                 switch (app.KindApp) {
                 case EKind.FunctionApply:
-                    TermText(app.FunctionRef, sw);
+                    TermText(app.FunctionApp, sw);
+                    sw.Write("(");
                     ArgsText(app, sw);
+                    sw.Write(")");
                     break;
 
                 case EKind.Index:
-                    TermText(app.Args[0], sw);
+                    TermText(app.FunctionApp, sw);
                     sw.Write("[");
-                    TermText(app.Args[1], sw);
+                    ArgsText(app, sw);
                     sw.Write("]");
+                    break;
+
+                case EKind.NewInstance:
+                    sw.Write("new ");
+                    ClassText((app as TNewApply).ClassApp, sw);
+                    sw.Write("(");
+                    ArgsText(app, sw);
+                    sw.Write(")");
+                    break;
+
+                case EKind.NewArray:
+                    sw.Write("new ");
+                    ClassText((app as TNewApply).ClassApp, sw);
+                    sw.Write("[");
+                    ArgsText(app, sw);
+                    sw.Write("]");
+                    break;
+
+                case EKind.base_:
+                    sw.Write("base.");
+                    TermText(app.FunctionApp, sw);
+                    sw.Write("(");
+                    ArgsText(app, sw);
+                    sw.Write(")");
                     break;
 
                 default:
@@ -1295,8 +1385,8 @@ namespace MyEdit {
             }
         }
 
-        public void ProjectText(TProject prj, StringWriter sw) {
-            foreach (TClass cls in prj.Classes) {
+        public void SourceFileText(TSourceFile src, StringWriter sw) {
+            foreach (TClass cls in src.ClassesSrc) {
                 ClassLine(cls, sw);
 
                 foreach (TField fld in cls.Fields) {
@@ -1306,7 +1396,14 @@ namespace MyEdit {
                 }
 
                 foreach (TFunction fnc in cls.Functions) {
-                    sw.Write("{0}{1}", Tab(1), fnc.NameVar);
+                    if(fnc.TokenVar.TokenType == ETokenType.Symbol) {
+
+                        sw.Write("{0}operator {1}", Tab(0), fnc.NameVar);
+                    }
+                    else {
+
+                        sw.Write("{0}{1}", Tab(1), fnc.NameVar);
+                    }
 
                     sw.Write("(");
                     foreach (TVariable var1 in fnc.ArgsFnc) {
@@ -1337,6 +1434,7 @@ namespace MyEdit {
         public string TextTkn;
         public int StartPos;
         public int EndPos;
+        public Exception ErrorTkn;
 
         public TToken(ETokenType token_type, EKind kind, string txt, int start_pos, int end_pos) {
             TokenType = token_type;
@@ -1359,6 +1457,12 @@ namespace MyEdit {
 
         public TParseException(string msg) {
             Debug.WriteLine(msg);
+        }
+    }
+
+    public class TResolveNameException : Exception {
+        public TResolveNameException(TReference ref1) {
+            ref1.TokenRef.ErrorTkn = this;
         }
     }
 }

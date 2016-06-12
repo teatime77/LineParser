@@ -7,16 +7,14 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TProject
 
-    public class TProject {
-        public List<TClass> Classes = new List<TClass>();
-
+    public partial class TProject {
+        public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
 
         public void ClearProject() {
-            Classes.Clear();
             ClassTable.Clear();
             ParameterizedClassTable.Clear();
             SpecializedClassTable.Clear();
@@ -34,8 +32,6 @@ namespace MyEdit {
 
                 Debug.WriteLine("class : {0}", cls.GetClassText(), "");
                 ClassTable.Add(name, cls);
-
-                Classes.Add(cls);
 
                 return cls;
             }
@@ -106,14 +102,14 @@ namespace MyEdit {
 
         public TVariable CopyVariable(TVariable var_src, Dictionary<string, TClass> dic) {
             TClass tp = SubstituteArgumentClass(var_src.TypeVar, dic);
-            TVariable var1 = new TVariable(var_src.NameVar, tp, null);
+            TVariable var1 = new TVariable(var_src.TokenVar, tp, null);
 
             return var1;
         }
 
         public TField CopyField(TClass cla1, TField fld_src, Dictionary<string, TClass> dic) {
             TClass tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
-            TField fld1 = new TField(fld_src.IsStatic, fld_src.NameVar, tp, null);
+            TField fld1 = new TField(fld_src.IsStatic, fld_src.TokenVar, tp, null);
 
             return fld1;
         }
@@ -122,7 +118,7 @@ namespace MyEdit {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
             TClass ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
-            TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.NameVar, args, ret_type);
+            TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.TokenVar, args, ret_type);
 
             return fnc;
         }

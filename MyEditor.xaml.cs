@@ -86,7 +86,9 @@ namespace MyEdit {
 
         TParser Parser;
 
-        TProject Project = new TProject();
+        TProject Project;
+
+        TSourceFile CurrentSourceFile;
 
         /*
             テキスト選択の開始位置
@@ -116,6 +118,11 @@ namespace MyEdit {
             // フォントを変更する場合は以下のコメントをはずしてください。
             //TextFormat.FontSize = 48;
             TextFormat.FontFamily = "ＭＳ ゴシック";
+
+            CurrentSourceFile = new TSourceFile();
+
+            Project = new TProject();
+            Project.SourceFiles.Add(CurrentSourceFile);
 
             Parser = new TParser(Project, Lines);
 
@@ -237,7 +244,7 @@ namespace MyEdit {
                     else {
 
                         args.DrawingSession.DrawText(str, x, y, ColorFromTokenType(token_type), TextFormat);
-
+                        
                         switch (under_line) {
                         case UnderlineType.None:
                         case UnderlineType.Undefined:
@@ -416,12 +423,14 @@ namespace MyEdit {
             // 字句型を更新します。
             UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
 
-            Parser.ParseFile();
+            Parser.ParseFile(CurrentSourceFile);
 
             StringWriter sw = new StringWriter();
             sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
-            Parser.ProjectText(Project, sw);
+            Parser.SourceFileText(CurrentSourceFile, sw);
             Debug.WriteLine(sw.ToString());
+
+            Project.ResolveName();
         }
 
         /*

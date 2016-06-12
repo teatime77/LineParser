@@ -10,6 +10,9 @@ namespace MyEdit {
         StringLiteral,
         CharLiteral,
 
+        NewInstance,
+        NewArray,
+
         Index,
 
         FunctionApply,
