@@ -236,6 +236,22 @@ namespace MyEdit {
 
                     float xe = (float)(x + sz.Width);
                     float yb = (float)(y + sz.Height);
+
+                    TToken tkn = null;
+                    if (line_idx < Lines.Count) {
+                        TLine line = Lines[line_idx];
+
+                        if (line.Tokens != null) {
+
+                            int k = phrase_start_pos - start_pos;
+                            var v = from t in line.Tokens where t.StartPos <= k && k < t.EndPos select t;
+                            if (v.Any()) {
+
+                                tkn = v.First();
+                            }
+                        }
+                    }
+
                     if (selected) {
 
                         args.DrawingSession.FillRectangle(x, y, (float)sz.Width, (float)sz.Height, Colors.Blue);
@@ -245,30 +261,37 @@ namespace MyEdit {
 
                         args.DrawingSession.DrawText(str, x, y, ColorFromTokenType(token_type), TextFormat);
                         
-                        switch (under_line) {
-                        case UnderlineType.None:
-                        case UnderlineType.Undefined:
-                            if(token_type == ETokenType.Error) {
+                        if(tkn != null && tkn.ErrorTkn != null) {
 
-                                args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Red, 1);
+                            args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Red, 1);
+                        }
+                        else {
+
+                            switch (under_line) {
+                            case UnderlineType.None:
+                            case UnderlineType.Undefined:
+                                if (token_type == ETokenType.Error) {
+
+                                    args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Red, 1);
+                                }
+                                break;
+
+                            case UnderlineType.Wave:
+                                args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Blue, 1);
+                                break;
+
+                            case UnderlineType.Thick:
+                                args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Black, 1);
+                                break;
+
+                            case UnderlineType.Thin:
+                                args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Green, 1);
+                                break;
+
+                            default:
+                                Debug.WriteLine("unknown under-line {0}", under_line);
+                                break;
                             }
-                            break;
-
-                        case UnderlineType.Wave:
-                            args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Blue, 1);
-                            break;
-
-                        case UnderlineType.Thick:
-                            args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Black, 1);
-                            break;
-
-                        case UnderlineType.Thin:
-                            args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Green, 1);
-                            break;
-
-                        default:
-                            Debug.WriteLine("unknown under-line {0}", under_line);
-                            break;
                         }
                     }
 

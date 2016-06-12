@@ -8,6 +8,14 @@ namespace MyEdit {
     //------------------------------------------------------------ TProject
 
     public partial class TProject {
+        public static TClass IntClass;
+        public static TClass FloatClass;
+        public static TClass DoubleClass;
+        public static TClass CharClass;
+        public static TClass StringClass;
+        public static TClass BoolClass;
+        public static TClass VoidClass;
+
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();

@@ -477,7 +477,7 @@ namespace MyEdit {
 
                 TTerm t2 = Expression();
 
-                TApply app1 = new TApply(opr.Kind, t1, t2);
+                TApply app1 = new TApply(opr, t1, t2);
 
                 GetToken(EKind.EOT);
 
@@ -664,6 +664,14 @@ namespace MyEdit {
         }
 
         public void ParseFile(TSourceFile src) {
+            Dictionary<string, int> dic = new Dictionary<string, int>();
+            dic.Add("int", 0);
+            dic.Add("float", 1);
+            dic.Add("double", 2);
+            dic.Add("char", 3);
+            dic.Add("string", 4);
+            dic.Add("bool", 5);
+            dic.Add("void", 6);
 
             PrjParser.ClearProject();
 
@@ -743,6 +751,33 @@ namespace MyEdit {
 
                                         ClassLine(class_def, sw);
                                         src.ClassesSrc.Add(class_def);
+
+                                        int sys_class;
+                                        if(dic.TryGetValue(class_def.ClassName, out sys_class)) {
+                                            switch (sys_class) {
+                                            case 0:
+                                                TProject.IntClass = class_def;
+                                                break;
+                                            case 1:
+                                                TProject.FloatClass = class_def;
+                                                break;
+                                            case 2:
+                                                TProject.DoubleClass = class_def;
+                                                break;
+                                            case 3:
+                                                TProject.CharClass = class_def;
+                                                break;
+                                            case 4:
+                                                TProject.StringClass = class_def;
+                                                break;
+                                            case 5:
+                                                TProject.BoolClass = class_def;
+                                                break;
+                                            case 6:
+                                                TProject.VoidClass = class_def;
+                                                break;
+                                            }
+                                        }
                                     }
                                     else if (obj is TVariable) {
 
@@ -859,10 +894,10 @@ namespace MyEdit {
             case EKind.CharLiteral:
                 TToken tkn = GetToken(EKind.Undefined);
 
-                return new TLiteral(tkn.Kind, tkn.TextTkn);
+                return new TLiteral(tkn);
 
             case EKind.new_:
-                GetToken(EKind.new_);
+                TToken new_tkn = GetToken(EKind.new_);
 
                 TClass cls = ReadType(null, true);
                 if(CurTkn.Kind == EKind.LP) {
@@ -873,7 +908,7 @@ namespace MyEdit {
 
                     GetToken(EKind.RP);
 
-                    return new TNewApply(EKind.NewInstance, cls, args);
+                    return new TNewApply(EKind.NewInstance, new_tkn, cls, args);
                 }
                 else if (CurTkn.Kind == EKind.LB) {
 
@@ -890,7 +925,7 @@ namespace MyEdit {
                         GetToken(EKind.RC);
                     }
 
-                    return new TNewApply(EKind.NewArray, cls, args);
+                    return new TNewApply(EKind.NewArray, new_tkn, cls, args);
                 }
                 else {
                     throw new TParseException();
@@ -939,13 +974,13 @@ namespace MyEdit {
                 }
                 else {
 
-                    GetToken(EKind.LB);
+                    TToken lb = GetToken(EKind.LB);
 
                     TTerm[] args = ExpressionList().ToArray();
 
                     GetToken(EKind.RB);
 
-                    t1 = new TApply(EKind.Index, t1, args);
+                    t1 = new TApply(lb, t1, args);
                 }
             }
 
@@ -958,7 +993,7 @@ namespace MyEdit {
             if (CurTkn.Kind == EKind.Inc || CurTkn.Kind == EKind.Dec) {
                 TToken opr = GetToken(EKind.Undefined);
 
-                return new TApply(opr.Kind, t1);
+                return new TApply(opr, t1);
             }
             else {
 
@@ -972,7 +1007,7 @@ namespace MyEdit {
 
                 TTerm t1 = PostIncDecExpression();
 
-                return new TApply(opr.Kind, t1);
+                return new TApply(opr, t1);
             }
             else {
 
@@ -992,7 +1027,7 @@ namespace MyEdit {
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = UnaryExpression();
 
-                    t1 = new TApply(opr.Kind, t1, t2);
+                    t1 = new TApply(opr, t1, t2);
                     break;
 
                 default:
@@ -1012,7 +1047,7 @@ namespace MyEdit {
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = MultiplicativeExpression();
 
-                    t1 = new TApply(opr.Kind, t1, t2);
+                    t1 = new TApply(opr, t1, t2);
                     break;
 
                 default:
@@ -1036,7 +1071,7 @@ namespace MyEdit {
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = AdditiveExpression();
 
-                    t1 = new TApply(opr.Kind, t1, t2);
+                    t1 = new TApply(opr, t1, t2);
                     break;
 
                 default:
@@ -1048,10 +1083,10 @@ namespace MyEdit {
         TTerm NotExpression() {
             if(CurTkn.Kind == EKind.Not_) {
 
-                GetToken(EKind.Not_);
+                TToken not_tkn = GetToken(EKind.Not_);
                 TTerm t1 = RelationalExpression();
 
-                return new TApply(EKind.Not_, t1);
+                return new TApply(not_tkn, t1);
             }
 
             return RelationalExpression();
@@ -1067,7 +1102,7 @@ namespace MyEdit {
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = NotExpression();
 
-                    t1 = new TApply(opr.Kind, t1, t2);
+                    t1 = new TApply(opr, t1, t2);
                     break;
 
                 default:
@@ -1086,7 +1121,7 @@ namespace MyEdit {
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = AndExpression();
 
-                    t1 = new TApply(opr.Kind, t1, t2);
+                    t1 = new TApply(opr, t1, t2);
                     break;
 
                 default:
@@ -1171,7 +1206,7 @@ namespace MyEdit {
             if (term is TLiteral) {
                 TLiteral lit = term as TLiteral;
 
-                sw.Write(lit.TextLit);
+                sw.Write(lit.TokenTrm.TextTkn);
             }
             else if (term is TReference) {
                 TReference ref1 = term as TReference;
@@ -1461,8 +1496,12 @@ namespace MyEdit {
     }
 
     public class TResolveNameException : Exception {
+        public TResolveNameException(TToken tkn) {
+            tkn.ErrorTkn = this;
+        }
+
         public TResolveNameException(TReference ref1) {
-            ref1.TokenRef.ErrorTkn = this;
+            ref1.TokenTrm.ErrorTkn = this;
         }
     }
 }

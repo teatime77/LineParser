@@ -56,6 +56,30 @@ namespace MyEdit {
 
     partial class TLiteral {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
+            switch (TokenTrm.TokenType) {
+            case ETokenType.Int:
+                TypeTrm = TProject.IntClass;
+                break;
+
+            case ETokenType.Float:
+                TypeTrm = TProject.FloatClass;
+                break;
+
+            case ETokenType.Double:
+                TypeTrm = TProject.DoubleClass;
+                break;
+
+            case ETokenType.Char_:
+                TypeTrm = TProject.CharClass;
+                break;
+
+            case ETokenType.String_:
+                TypeTrm = TProject.StringClass;
+                break;
+
+            default:
+                throw new TResolveNameException(TokenTrm);
+            }
         }
     }
 
@@ -86,58 +110,27 @@ namespace MyEdit {
 
                 TypeTrm = VarRef.TypeVar;
             }
+
+            if (TypeTrm == null) {
+                throw new TResolveNameException(this);
+            }
         }
     }
 
     partial class TApply {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
+            if(this is TDotApply) {
+
+                (this as TDotApply).DotApp.ResolveName(cls, vars);
+            }
+
             List<TClass> arg_types = new List<TClass>();
 
-            switch (KindApp) {
-            case EKind.NewInstance:
-                break;
-
-            case EKind.NewArray:
-                break;
-
-            case EKind.base_:
-                break;
-
-            case EKind.Inc:
-            case EKind.Dec:
-                break;
-
-            case EKind.Add:
-            case EKind.Sub:
-            case EKind.Mul:
-            case EKind.Div:
-            case EKind.Mod:
-
-                break;
-
-            case EKind.Eq:
-            case EKind.NE:
-            case EKind.LT:
-            case EKind.LE:
-            case EKind.GT:
-            case EKind.GE:
-                break;
-
-            case EKind.Not_:
-                break;
-
-            case EKind.And_:
-            case EKind.Or_:
-                break;
-
-            case EKind.Assign:
-            case EKind.AddEq:
-            case EKind.SubEq:
-            case EKind.DivEq:
-            case EKind.ModEq:
-                break;
-
+            foreach (TTerm t in Args) {
+                t.ResolveName(cls, vars);
+                arg_types.Add(t.TypeTrm);
             }
+
             if(FunctionApp is TReference) {
                 TReference fnc_ref = FunctionApp as TReference;
 
@@ -149,8 +142,70 @@ namespace MyEdit {
 
                     fnc_ref.VarRef = cls.MatchFunction(fnc_ref.NameRef, arg_types);
                 }
+                if(fnc_ref.VarRef == null) {
+                    throw new TResolveNameException(fnc_ref);
+                }
+
+                TypeTrm = fnc_ref.VarRef.TypeVar;
+            }
+            else {
+
+                switch (KindApp) {
+                case EKind.NewInstance:
+                    TypeTrm = (this as TNewApply).ClassApp;
+                    break;
+
+                case EKind.NewArray:
+                    break;
+
+                case EKind.base_:
+                    break;
+
+                case EKind.Inc:
+                case EKind.Dec:
+                    TypeTrm = Args[0].TypeTrm;
+                    break;
+
+                case EKind.Add:
+                case EKind.Sub:
+                case EKind.Mul:
+                case EKind.Div:
+                case EKind.Mod:
+
+                    TypeTrm = Args[0].TypeTrm;
+                    break;
+
+                case EKind.Eq:
+                case EKind.NE:
+                case EKind.LT:
+                case EKind.LE:
+                case EKind.GT:
+                case EKind.GE:
+                    TypeTrm = TProject.BoolClass;
+                    break;
+
+                case EKind.Not_:
+                    TypeTrm = TProject.BoolClass;
+                    break;
+
+                case EKind.And_:
+                case EKind.Or_:
+                    TypeTrm = TProject.BoolClass;
+                    break;
+
+                case EKind.Assign:
+                case EKind.AddEq:
+                case EKind.SubEq:
+                case EKind.DivEq:
+                case EKind.ModEq:
+                    TypeTrm = TProject.VoidClass;
+                    break;
+                }
             }
 
+            if(TypeTrm == null) {
+                throw new TResolveNameException(TokenTrm);
+            }
         }
     }
 

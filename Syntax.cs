@@ -141,6 +141,7 @@ namespace MyEdit {
     //------------------------------------------------------------ TTerm
 
     public abstract partial class TTerm {
+        public TToken TokenTrm;
         public TClass CastType;
         public TClass TypeTrm;
         public bool WithParenthesis;
@@ -150,22 +151,17 @@ namespace MyEdit {
     }
 
     public partial class TLiteral : TTerm {
-        public EKind KindLit;
-        public string TextLit;
-
-        public TLiteral(EKind kind, string text) {
-            KindLit = kind;
-            TextLit = text;
+        public TLiteral(TToken tkn) {
+            TokenTrm = tkn;
         }
     }
 
     public partial class TReference : TTerm {
-        public TToken TokenRef;
         public string NameRef;
         public TVariable VarRef;
 
         public TReference(TToken name) {
-            TokenRef = name;
+            TokenTrm = name;
             NameRef = name.TextTkn;
         }
     }
@@ -183,45 +179,43 @@ namespace MyEdit {
         public TTerm FunctionApp;
         public TTerm[] Args;
 
-        //public TApply(EKind opr_kind, TTerm t1, TTerm t2) {
-        //    KindApp = opr_kind;
-        //    Args = new TTerm[2];
-        //    Args[0] = t1;
-        //    Args[1] = t2;
-        //}
+        public TApply() {
+        }
 
-        //public TApply(EKind opr_kind, TTerm t1) {
-        //    KindApp = opr_kind;
-        //    Args = new TTerm[1];
-        //    Args[0] = t1;
-        //}
+        public TApply(TToken fnc, params TTerm[] args) {
+            TokenTrm = fnc;
+            if(fnc.Kind == EKind.Identifier) {
 
-        public TApply(TToken function_name, TTerm[] args) {
-            KindApp = EKind.FunctionApply;
-            FunctionApp = new TReference(function_name);
+                KindApp = EKind.FunctionApply;
+                FunctionApp = new TReference(fnc);
+            }
+            else {
+
+                KindApp = fnc.Kind;
+            }
             Args = args;
         }
 
-        public TApply(EKind kind, params TTerm[] args) {
+        public TApply(EKind kind, TToken function_name, TTerm[] args) {
+            TokenTrm = function_name;
             KindApp = kind;
-            Args = args;
-        }
-
-        public TApply(EKind kind, TToken function_name, TTerm[] args) : this(kind, args) {
             Debug.Assert(kind == EKind.base_);
             FunctionApp = new TReference(function_name);
+            Args = args;
         }
 
-        public TApply(EKind kind, TTerm function_app, TTerm[] args) : this(kind, args) {
-            Debug.Assert(kind == EKind.Index);
+        public TApply(TToken lb, TTerm function_app, TTerm[] args) {
+            Debug.Assert(lb.Kind == EKind.LB);
+            KindApp = EKind.Index;
             FunctionApp = function_app;
+            Args = args;
         }
     }
 
-    public class TDotApply : TApply {
+    public partial class TDotApply : TApply {
         public TTerm DotApp;
 
-        public TDotApply(TTerm trm, TToken function_name, TTerm[] args) : base(function_name, args) {
+        public TDotApply(TTerm trm, TToken fnc, TTerm[] args) : base(fnc, args) {
             DotApp = trm;
         }
     }
@@ -229,8 +223,12 @@ namespace MyEdit {
     public class TNewApply : TApply {
         public TClass ClassApp;
 
-        public TNewApply(EKind kind, TClass cls, TTerm[] args) : base(kind, args) {
+        public TNewApply(EKind kind, TToken class_token, TClass cls, TTerm[] args) {
+            TokenTrm = class_token;
             Debug.Assert(kind == EKind.NewInstance || kind == EKind.NewArray);
+            KindApp = kind;
+            Args = args;
+
             ClassApp = cls;
         }
     }

@@ -22,7 +22,9 @@ namespace MyEdit {
         VerbatimString, // 逐語的文字列 ( @"文字列" )
         Identifier,     // 識別子
         Keyword,        // キーワード
-        Number,         // 数値
+        Int,
+        Float,
+        Double,
         Symbol,         // 記号
         LineComment,    // 行コメント      ( // )
         BlockComment,   // ブロックコメント ( /* */ )
@@ -234,7 +236,6 @@ namespace MyEdit {
                     // 数字の場合
 
                     token_kind = EKind.NumberLiteral;
-                    token_type = ETokenType.Number;
 
                     if (ch1 == '0' && ch2 == 'x') {
                         // 16進数の場合
@@ -243,6 +244,8 @@ namespace MyEdit {
 
                         // 16進数字の終わりを探します。
                         for (; pos < text_len && IsHexDigit(text[pos]); pos++) ;
+
+                        token_type = ETokenType.Int;
                     }
                     else {
                         // 10進数の場合
@@ -257,6 +260,20 @@ namespace MyEdit {
 
                             // 10進数の終わりを探します。
                             for (; pos < text_len && char.IsDigit(text[pos]); pos++) ;
+
+                            if (pos + 1 < text_len && text[pos + 1] == 'f') {
+
+                                pos++;
+                                token_type = ETokenType.Float;
+                            }
+                            else {
+
+                                token_type = ETokenType.Double;
+                            }
+                        }
+                        else {
+
+                            token_type = ETokenType.Int;
                         }
                     }
                 }
