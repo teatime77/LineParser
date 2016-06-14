@@ -142,6 +142,12 @@ namespace MyEdit {
 
             // 再描画します。
             Win2DCanvas.Invalidate();
+
+            if (Project.Parser.Dirty) {
+
+                Project.Parser.ParseFile(Project.CurrentSourceFile);
+                Debug.WriteLine("TextUpdating 終了");
+            }
         }
 
         /*

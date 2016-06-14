@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MyEdit {
 
@@ -86,8 +87,15 @@ namespace MyEdit {
     partial class TReference {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
             if(this is TDotReference) {
+                TDotReference dot_ref = this as TDotReference;
 
-                VarRef = (this as TDotReference).DotRef.TypeTrm.FindField(NameRef);
+                dot_ref.DotRef.ResolveName(cls, vars);
+
+                VarRef = dot_ref.DotRef.TypeTrm.FindField(NameRef);
+                if(VarRef == null) {
+
+                    throw new TResolveNameException(this);
+                }
             }
             else {
 
@@ -243,6 +251,7 @@ namespace MyEdit {
 
     partial class TBlockStatement {
         public void ResolveNameBlock(TClass cls, List<TVariable> vars) {
+/*
             int vars_count = vars.Count;
 
             foreach (TStatement stmt in StatementsBlc) {
@@ -254,6 +263,7 @@ namespace MyEdit {
             }
 
             vars.RemoveRange(vars_count, vars.Count - vars_count);
+*/
         }
     }
 
@@ -292,9 +302,11 @@ namespace MyEdit {
     partial class TSwitch {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
             TermSwitch.ResolveName(cls, vars);
+/*
             foreach(TCase cas in Cases) {
                 cas.ResolveName(cls, vars);
             }
+*/
         }
     }
 

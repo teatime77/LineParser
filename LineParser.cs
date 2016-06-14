@@ -5,6 +5,7 @@ using Windows.UI;
 using System.IO;
 using System.Net;
 using System.Linq;
+using System.Threading.Tasks;
 
 /*--------------------------------------------------------------------------------
         1行の構文解析
@@ -20,6 +21,8 @@ namespace MyEdit {
         int TokenPos;
         TToken CurTkn;
         TToken NextTkn;
+        public bool Dirty;
+        public bool Running;
 
         // キーワードの文字列の辞書
         public Dictionary<string, EKind> KeywordMap;
@@ -84,7 +87,7 @@ namespace MyEdit {
                 }
                 else{
 
-                    Debug.WriteLine("総称型 : {0}", parameterized_class.GetClassText(), "");
+                    //Debug.WriteLine("総称型 : {0}", parameterized_class.GetClassText(), "");
                     PrjParser.ParameterizedClassTable.Add(parameterized_class.ClassName, parameterized_class);
                 }
                 PrjParser.RegClass(PrjParser.ClassTable, parameterized_class);
@@ -157,7 +160,7 @@ namespace MyEdit {
 
                 if (! (cls1 is TGenericClass)) {
 
-                    throw new TParseException("総称型以外に引数型があります。");
+                    throw new TParseException(cls1.ClassName + ":総称型以外に引数型があります。");
                 }
                 TGenericClass org_cla = cls1 as TGenericClass;
 
@@ -239,7 +242,7 @@ namespace MyEdit {
                 reg_class = new TGenericClass(cls2, dim_cnt);
                 reg_class.GenericType = EGeneric.SpecializedClass;
 
-                Debug.WriteLine("配列型 : {0}", reg_class.GetClassText(),"");
+                //Debug.WriteLine("配列型 : {0}", reg_class.GetClassText(),"");
                 PrjParser.ArrayClassTable.Add(class_text, reg_class);
             }
 
@@ -266,7 +269,7 @@ namespace MyEdit {
                 reg_class = new TGenericClass(org_class, param_classes);
                 reg_class.GenericType = EGeneric.SpecializedClass;
 
-                Debug.WriteLine("特化クラス : {0}", reg_class.GetClassText(), "");
+                //Debug.WriteLine("特化クラス : {0}", reg_class.GetClassText(), "");
                 PrjParser.SpecializedClassTable.Add(class_text, reg_class);
             }
 
@@ -663,7 +666,14 @@ namespace MyEdit {
             }
         }
 
-        public void ParseFile(TSourceFile src) {
+        public async void ParseFile(TSourceFile src) {
+            while (Running) {
+                await Task.Delay(1);
+            }
+            Running = true;
+            Dirty = false;
+            Debug.WriteLine("parse file : 開始");
+
             Dictionary<string, int> dic = new Dictionary<string, int>();
             dic.Add("int", 0);
             dic.Add("float", 1);
@@ -674,9 +684,19 @@ namespace MyEdit {
             dic.Add("void", 6);
 
             PrjParser.ClearProject();
+            src.ClassesSrc.Clear();
 
             List<object> obj_stack = new List<object>();
             for(int line_idx = 0; line_idx < Lines.Count; line_idx++) {
+                await Task.Delay(1);
+
+                //Debug.WriteLine("parse file : {0} {1}", line_idx, Dirty);
+                if (Dirty) {
+                    Debug.WriteLine("parse file : 中断");
+                    Running = false;
+                    return;
+                }
+
                 TLine line = Lines[line_idx];
 
                 line.Indent = -1;
@@ -709,7 +729,6 @@ namespace MyEdit {
                                     obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
                                 }
 
-                                List<TVariable> vars;
                                 TClass cls = null;
                                 TFunction parent_fnc = null;
                                 TBlockStatement parent_stmt = null;
@@ -721,6 +740,7 @@ namespace MyEdit {
                                 if (vcls.Any()) {
                                     cls = vcls.First();
                                 }
+                                line.ClassLine = cls;
 
                                 // スタックの中から関数を探します。
                                 var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
@@ -734,8 +754,6 @@ namespace MyEdit {
                                     parent_stmt = vstmt.First();
                                 }
 
-                                GetVariableClass(line_idx, out vars);
-
                                 object obj = ParseLine(cls, parent_fnc, line_top_idx, token_list);
                                 if (obj != null) {
 
@@ -745,11 +763,11 @@ namespace MyEdit {
                                     obj_stack.Add(obj);
                                     Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
 
-                                    StringWriter sw = new StringWriter();
+                                    //StringWriter sw = new StringWriter();
                                     if (obj is TClass) {
                                         TClass class_def = obj as TClass;
 
-                                        ClassLine(class_def, sw);
+                                        //ClassLineText(class_def, sw);
                                         src.ClassesSrc.Add(class_def);
 
                                         int sys_class;
@@ -794,11 +812,11 @@ namespace MyEdit {
                                                 cls.Functions.Add(fnc);
                                             }
                                         }
-                                        VariableText(obj as TVariable, sw);
+                                        //VariableText(obj as TVariable, sw);
                                     }
                                     else if (obj is TTerm) {
 
-                                        TermText(obj as TTerm, sw);
+                                        //TermText(obj as TTerm, sw);
                                     }
                                     else if (obj is TStatement) {
                                         TStatement stmt = obj as TStatement;
@@ -811,10 +829,10 @@ namespace MyEdit {
 
                                             parent_fnc.BlockFnc.StatementsBlc.Add(stmt);
                                         }
-                                        StatementText(stmt, sw, 0);
+                                        //StatementText(stmt, sw, 0);
                                     }
 
-                                    Debug.WriteLine(sw.ToString());
+                                    //Debug.WriteLine(sw.ToString());
 
                                 }
 
@@ -825,6 +843,36 @@ namespace MyEdit {
                     }
                 }
             }
+
+            Debug.WriteLine("名前解決 : 開始");
+            for (int line_idx = 0; line_idx < Lines.Count; line_idx++) {
+                await Task.Delay(1);
+                //Debug.WriteLine("名前解決 : {0} {1}", line_idx, Dirty);
+                if (Dirty) {
+                    Debug.WriteLine("名前解決 : 中断");
+                    Running = false;
+                    return;
+                }
+
+                TLine line = Lines[line_idx];
+                List<TVariable> vars;
+                GetVariableClass(line_idx, out vars);
+
+                if(line.ObjLine is TStatement) {
+                    TStatement stmt = line.ObjLine as TStatement;
+
+                    try {
+                        stmt.ResolveName(line.ClassLine, vars);
+                    }
+                    catch (TResolveNameException) {
+                    }
+                }
+            }
+            Debug.WriteLine("名前解決 : 終了");
+
+            PrjParser.Editor.InvalidateCanvas();
+
+            Running = false;
         }
 
         TToken GetToken(EKind type) {
@@ -1153,7 +1201,7 @@ namespace MyEdit {
         }
 
 
-        public void ClassLine(TClass cls, StringWriter sw) {
+        public void ClassLineText(TClass cls, StringWriter sw) {
             sw.Write("class {0}", cls.ClassName);
 
             for (int i = 0; i < cls.SuperClasses.Count; i++) {
@@ -1422,7 +1470,7 @@ namespace MyEdit {
 
         public void SourceFileText(TSourceFile src, StringWriter sw) {
             foreach (TClass cls in src.ClassesSrc) {
-                ClassLine(cls, sw);
+                ClassLineText(cls, sw);
 
                 foreach (TField fld in cls.Fields) {
                     sw.Write("\t");
@@ -1484,6 +1532,7 @@ namespace MyEdit {
         public int Indent;
         public TToken[] Tokens;
         public object ObjLine;
+        public TClass ClassLine;
     }
 
     public class TParseException : Exception {

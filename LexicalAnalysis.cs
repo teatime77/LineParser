@@ -437,7 +437,7 @@ namespace MyEdit {
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得ます。
-                line.Tokens = Parser.LexicalAnalysis(lex_string, last_token_type);
+                line.Tokens = Project.Parser.LexicalAnalysis(lex_string, last_token_type);
                 foreach(TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットします。

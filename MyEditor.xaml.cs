@@ -18,6 +18,7 @@ using Windows.System;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.UI.Input;
 using System.Collections;
+using System.Threading.Tasks;
 
 
 // The User Control item template is documented at http://go.microsoft.com/fwlink/?LinkId=234236
@@ -48,7 +49,7 @@ namespace MyEdit {
         // 選択したテキストをマウスで別の場所にドロップする位置
         int DropPos = -1;
 
-        List<TLine> Lines = new List<TLine>();
+        public List<TLine> Lines = new List<TLine>();
 
         // 1行の高さ
         double LineHeight = double.NaN;
@@ -84,11 +85,7 @@ namespace MyEdit {
         Stack<TDiff> UndoStack = new Stack<TDiff>();
         Stack<TDiff> RedoStack = new Stack<TDiff>();
 
-        TParser Parser;
-
         TProject Project;
-
-        TSourceFile CurrentSourceFile;
 
         /*
             テキスト選択の開始位置
@@ -119,12 +116,7 @@ namespace MyEdit {
             //TextFormat.FontSize = 48;
             TextFormat.FontFamily = "ＭＳ ゴシック";
 
-            CurrentSourceFile = new TSourceFile();
-
-            Project = new TProject();
-            Project.SourceFiles.Add(CurrentSourceFile);
-
-            Parser = new TParser(Project, Lines);
+            Project = new TProject(this);
 
             Lines.Add(new TLine());
         }
@@ -446,14 +438,13 @@ namespace MyEdit {
             // 字句型を更新します。
             UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
 
-            Parser.ParseFile(CurrentSourceFile);
+            //StringWriter sw = new StringWriter();
+            //sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
+            //Parser.SourceFileText(CurrentSourceFile, sw);
+            //Debug.WriteLine(sw.ToString());
 
-            StringWriter sw = new StringWriter();
-            sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
-            Parser.SourceFileText(CurrentSourceFile, sw);
-            Debug.WriteLine(sw.ToString());
-
-            Project.ResolveName();
+            Debug.WriteLine("Dirty ON --------------------------------------------------");
+            Project.Parser.Dirty = true;
         }
 
         /*
@@ -739,6 +730,12 @@ namespace MyEdit {
                     UndoRedo(e.VirtualKey == VirtualKey.Z);
                 }
                 break;
+            }
+
+            if (Project.Parser.Dirty) {
+
+                Project.Parser.ParseFile(Project.CurrentSourceFile);
+                Debug.WriteLine("CoreWindow KeyDown 終了");
             }
         }
 
@@ -1248,6 +1245,10 @@ namespace MyEdit {
             }
 
             // 再描画します。
+            Win2DCanvas.Invalidate();
+        }
+
+        public void InvalidateCanvas() {
             Win2DCanvas.Invalidate();
         }
     }
