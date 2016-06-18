@@ -533,25 +533,27 @@ namespace MyEdit {
                 NextTkn = EOTToken;
             }
 
-            if(CurTkn.Kind == EKind.static_) {
-
-                GetToken(EKind.static_);
-
-                switch (CurTkn.Kind) {
-                case EKind.function_:
-                    return ReadFunctionLine(cls, true);
-
-                case EKind.Identifier:
-                    return ReadFieldLine(cls, true);
-
-                default:
-                    throw new TParseException();
-                }
-            }
-
-            TTerm t1;
             object line_obj = null;
+
             try {
+                if (CurTkn.Kind == EKind.static_) {
+
+                    GetToken(EKind.static_);
+
+                    switch (CurTkn.Kind) {
+                    case EKind.function_:
+                        return ReadFunctionLine(cls, true);
+
+                    case EKind.Identifier:
+                        return ReadFieldLine(cls, true);
+
+                    default:
+                        throw new TParseException();
+                    }
+                }
+
+                TTerm t1;
+
                 switch (CurTkn.Kind) {
                 case EKind.class_:
                 case EKind.enum_:

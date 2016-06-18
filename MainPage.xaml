@@ -6,9 +6,47 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:MyEdit="using:MyEdit"
     x:Class="LineParser.MainPage"
-    mc:Ignorable="d">
+    mc:Ignorable="d" >
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <MyEdit:MyEditor x:Name="Editor1" Margin="0,100,0,0"/>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="1*" />
+            <ColumnDefinition Width="1*" />
+        </Grid.ColumnDefinitions>
+        <Pivot Grid.Column="0">
+            <PivotItem Header="プロジェクト">
+                <TextBlock Text="Content of pivot item 1."/>
+            </PivotItem>
+
+            <PivotItem Header="クラス">
+                <TextBlock Text="item 2."/>
+            </PivotItem>
+
+            <PivotItem Header="プロパティ">
+                <TextBlock Text="Content of pivot item 3."/>
+            </PivotItem>
+        </Pivot>
+
+        <Pivot Grid.Column="1">
+            <PivotItem Header="ソース １">
+                <MyEdit:MyEditor x:Name="Editor1" />
+            </PivotItem>
+
+            <PivotItem Header="ソース ２">
+                <MyEdit:MyEditor x:Name="Editor2" />
+            </PivotItem>
+        </Pivot>
+
+
+        <Pivot Grid.Column="2">
+            <PivotItem Header="ソース ３">
+                <MyEdit:MyEditor x:Name="Editor3" />
+            </PivotItem>
+
+            <PivotItem Header="ソース ４">
+                <MyEdit:MyEditor x:Name="Editor4" />
+            </PivotItem>
+        </Pivot>
     </Grid>
 </Page>

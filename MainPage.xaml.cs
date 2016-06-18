@@ -33,8 +33,14 @@ namespace LineParser
             TProject.Project = new TProject();
 
             Editor1.SourceFile.Parser = new TParser(TProject.Project);
+            Editor2.SourceFile.Parser = Editor1.SourceFile.Parser;
+            Editor3.SourceFile.Parser = Editor1.SourceFile.Parser;
+            Editor4.SourceFile.Parser = Editor1.SourceFile.Parser;
 
             TProject.Project.SourceFiles.Add(Editor1.SourceFile);
+            TProject.Project.SourceFiles.Add(Editor2.SourceFile);
+            TProject.Project.SourceFiles.Add(Editor3.SourceFile);
+            TProject.Project.SourceFiles.Add(Editor4.SourceFile);
         }
     }
 }
