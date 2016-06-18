@@ -206,6 +206,7 @@ namespace MyEdit {
 
         public TApply(TToken lb, TTerm function_app, TTerm[] args) {
             Debug.Assert(lb.Kind == EKind.LB);
+            TokenTrm = lb;
             KindApp = EKind.Index;
             FunctionApp = function_app;
             Args = args;

@@ -855,11 +855,18 @@ namespace MyEdit {
                 }
 
                 TLine line = Lines[line_idx];
-                List<TVariable> vars;
-                GetVariableClass(line_idx, out vars);
 
                 if(line.ObjLine is TStatement) {
                     TStatement stmt = line.ObjLine as TStatement;
+
+                    List<TVariable> vars;
+                    GetVariableClass(line_idx, out vars);
+
+                    // 名前解決のエラーをクリアします。
+                    var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
+                    foreach (TToken name_err_tkn in name_err_tkns) {
+                        name_err_tkn.ErrorTkn = null;
+                    }
 
                     try {
                         stmt.ResolveName(line.ClassLine, vars);

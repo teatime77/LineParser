@@ -261,7 +261,7 @@ namespace MyEdit {
                             // 10進数の終わりを探します。
                             for (; pos < text_len && char.IsDigit(text[pos]); pos++) ;
 
-                            if (pos + 1 < text_len && text[pos + 1] == 'f') {
+                            if (pos < text_len && text[pos] == 'f') {
 
                                 pos++;
                                 token_type = ETokenType.Float;
