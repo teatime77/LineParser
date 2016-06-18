@@ -425,7 +425,7 @@ namespace MyEdit {
             ETokenType last_token_type = (line_top == 0 ? ETokenType.Undefined : Chars[line_top - 1].CharType);
 
             for (int line_idx = start_line_idx; ; line_idx++) {
-                TLine line = Lines[line_idx];
+                TLine line = SourceFile.Lines[line_idx];
 
                 // 次の行の先頭位置または文書の終わり
                 int next_line_top = GetNextLineTopOrEOT(line_top);
@@ -437,7 +437,7 @@ namespace MyEdit {
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得ます。
-                line.Tokens = Project.Parser.LexicalAnalysis(lex_string, last_token_type);
+                line.Tokens = SourceFile.Parser.LexicalAnalysis(lex_string, last_token_type);
                 foreach(TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットします。

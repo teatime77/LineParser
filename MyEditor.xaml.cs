@@ -28,6 +28,12 @@ namespace MyEdit {
         // 改行文字
         const char LF = '\n';
 
+        // 矢印カーソル
+        static CoreCursor ArrowCoreCursor = new CoreCursor(CoreCursorType.Arrow, 1);
+
+        // Iカーソル
+        static CoreCursor IBeamCoreCursor = new CoreCursor(CoreCursorType.IBeam, 2);
+
         // 文書内のテキスト
         List<TChar> Chars = new List<TChar>();
 
@@ -48,8 +54,6 @@ namespace MyEdit {
 
         // 選択したテキストをマウスで別の場所にドロップする位置
         int DropPos = -1;
-
-        public List<TLine> Lines = new List<TLine>();
 
         // 1行の高さ
         double LineHeight = double.NaN;
@@ -75,17 +79,11 @@ namespace MyEdit {
         // 現在のイベントオブジェクト
         PointerEventArgs CurrentPointerEvent;
 
-        // 矢印カーソル
-        CoreCursor ArrowCoreCursor = new CoreCursor(CoreCursorType.Arrow, 1);
-
-        // Iカーソル
-        CoreCursor IBeamCoreCursor = new CoreCursor(CoreCursorType.IBeam, 2);
-
         // アンドゥとリドゥのスタック
         Stack<TDiff> UndoStack = new Stack<TDiff>();
         Stack<TDiff> RedoStack = new Stack<TDiff>();
 
-        TProject Project;
+        public TSourceFile SourceFile;
 
         /*
             テキスト選択の開始位置
@@ -116,9 +114,8 @@ namespace MyEdit {
             //TextFormat.FontSize = 48;
             TextFormat.FontFamily = "ＭＳ ゴシック";
 
-            Project = new TProject(this);
-
-            Lines.Add(new TLine());
+            SourceFile = new TSourceFile(this);
+            SourceFile.Lines.Add(new TLine());
         }
 
         /*
@@ -230,8 +227,8 @@ namespace MyEdit {
                     float yb = (float)(y + sz.Height);
 
                     TToken tkn = null;
-                    if (line_idx < Lines.Count) {
-                        TLine line = Lines[line_idx];
+                    if (line_idx < SourceFile.Lines.Count) {
+                        TLine line = SourceFile.Lines[line_idx];
 
                         if (line.Tokens != null) {
 
@@ -423,7 +420,7 @@ namespace MyEdit {
 
                 // 行を削除します。
                 for (int i = 0; i < old_LF_cnt - new_LF_cnt; i++) {
-                    Lines.RemoveAt(start_line_idx);
+                    SourceFile.Lines.RemoveAt(start_line_idx);
                 }
             }
             else if (old_LF_cnt < new_LF_cnt) {
@@ -431,7 +428,7 @@ namespace MyEdit {
 
                 // 行を挿入します。
                 for(int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
-                    Lines.Insert(start_line_idx, new TLine());
+                    SourceFile.Lines.Insert(start_line_idx, new TLine());
                 }
             }
 
@@ -444,7 +441,7 @@ namespace MyEdit {
             //Debug.WriteLine(sw.ToString());
 
             Debug.WriteLine("Dirty ON --------------------------------------------------");
-            Project.Parser.Dirty = true;
+            SourceFile.Parser.Dirty = true;
         }
 
         /*
@@ -732,9 +729,9 @@ namespace MyEdit {
                 break;
             }
 
-            if (Project.Parser.Dirty) {
+            if (SourceFile.Parser.Dirty) {
 
-                Project.Parser.ParseFile(Project.CurrentSourceFile);
+                SourceFile.Parser.ParseFile(SourceFile);
                 Debug.WriteLine("CoreWindow KeyDown 終了");
             }
         }
@@ -1236,7 +1233,7 @@ namespace MyEdit {
             MyNotifyTextChanged(sel_start, sel_end, new_text.Length);
 
             if (!double.IsNaN(LineHeight)) {
-                double document_height = Lines.Count * LineHeight;
+                double document_height = SourceFile.Lines.Count * LineHeight;
 
                 if (EditCanvas.Height != document_height) {
 

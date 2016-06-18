@@ -15,7 +15,6 @@ namespace MyEdit {
     partial class TParser {
         const int TabSize = 4;
         static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
-        public List<TLine> Lines;
         TProject PrjParser;
         TToken[] TokenList;
         int TokenPos;
@@ -36,9 +35,8 @@ namespace MyEdit {
         public Dictionary<EKind, string> KindString = new Dictionary<EKind, string>();
 
 
-        public TParser(TProject prj, List<TLine> lines) {
+        public TParser(TProject prj) {
             PrjParser = prj;
-            Lines = lines;
 
             // 字句解析の初期処理をします。
             InitializeLexicalAnalysis();
@@ -626,13 +624,13 @@ namespace MyEdit {
             return line_obj;
         }
 
-        void GetVariableClass(int current_line_idx, out List<TVariable> vars) {
+        void GetVariableClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
             vars = new List<TVariable>();
 
-            int min_indent = Lines[current_line_idx].Indent;
+            int min_indent = src.Lines[current_line_idx].Indent;
 
             for (int line_idx = current_line_idx; 0 <= line_idx; line_idx--) {
-                TLine line = Lines[line_idx];
+                TLine line = src.Lines[line_idx];
 
                 if (line.ObjLine != null && line.Indent <= min_indent) {
 
@@ -687,7 +685,7 @@ namespace MyEdit {
             src.ClassesSrc.Clear();
 
             List<object> obj_stack = new List<object>();
-            for(int line_idx = 0; line_idx < Lines.Count; line_idx++) {
+            for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 await Task.Delay(1);
 
                 //Debug.WriteLine("parse file : {0} {1}", line_idx, Dirty);
@@ -697,7 +695,7 @@ namespace MyEdit {
                     return;
                 }
 
-                TLine line = Lines[line_idx];
+                TLine line = src.Lines[line_idx];
 
                 line.Indent = -1;
                 line.ObjLine = null;
@@ -845,7 +843,7 @@ namespace MyEdit {
             }
 
             Debug.WriteLine("名前解決 : 開始");
-            for (int line_idx = 0; line_idx < Lines.Count; line_idx++) {
+            for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 await Task.Delay(1);
                 //Debug.WriteLine("名前解決 : {0} {1}", line_idx, Dirty);
                 if (Dirty) {
@@ -854,13 +852,13 @@ namespace MyEdit {
                     return;
                 }
 
-                TLine line = Lines[line_idx];
+                TLine line = src.Lines[line_idx];
 
                 if(line.ObjLine is TStatement) {
                     TStatement stmt = line.ObjLine as TStatement;
 
                     List<TVariable> vars;
-                    GetVariableClass(line_idx, out vars);
+                    GetVariableClass(src, line_idx, out vars);
 
                     // 名前解決のエラーをクリアします。
                     var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
@@ -877,7 +875,7 @@ namespace MyEdit {
             }
             Debug.WriteLine("名前解決 : 終了");
 
-            PrjParser.Editor.InvalidateCanvas();
+            src.Editor.InvalidateCanvas();
 
             Running = false;
         }

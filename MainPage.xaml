@@ -9,6 +9,6 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <MyEdit:MyEditor Margin="0,100,0,0"/>
+        <MyEdit:MyEditor x:Name="Editor1" Margin="0,100,0,0"/>
     </Grid>
 </Page>

@@ -363,5 +363,13 @@ namespace MyEdit {
 
     public class TSourceFile {
         public List<TClass> ClassesSrc = new List<TClass>();
+        public List<TLine> Lines = new List<TLine>();
+        public MyEditor Editor;
+
+        public TParser Parser;
+
+        public TSourceFile(MyEditor editor) {
+            Editor = editor;
+        }
     }
 }

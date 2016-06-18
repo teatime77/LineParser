@@ -1,5 +1,7 @@
-﻿using System;
+﻿using MyEdit;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -25,6 +27,14 @@ namespace LineParser
         public MainPage()
         {
             this.InitializeComponent();
+
+            Debug.Assert(Editor1 != null && Editor1.SourceFile != null);
+
+            TProject.Project = new TProject();
+
+            Editor1.SourceFile.Parser = new TParser(TProject.Project);
+
+            TProject.Project.SourceFiles.Add(Editor1.SourceFile);
         }
     }
 }

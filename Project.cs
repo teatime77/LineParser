@@ -8,6 +8,8 @@ namespace MyEdit {
     //------------------------------------------------------------ TProject
 
     public partial class TProject {
+        public static TProject Project;
+
         public static TClass IntClass;
         public static TClass FloatClass;
         public static TClass DoubleClass;
@@ -16,22 +18,13 @@ namespace MyEdit {
         public static TClass BoolClass;
         public static TClass VoidClass;
 
-        public MyEditor Editor;
-        public TParser Parser;
-        public TSourceFile CurrentSourceFile;
-
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
 
-        public TProject(MyEditor editor) {
-            Editor = editor;
-            Parser = new TParser(this, editor.Lines);
-
-            CurrentSourceFile = new TSourceFile();
-            SourceFiles.Add(CurrentSourceFile);
+        public TProject() {
         }
 
         public void ClearProject() {
