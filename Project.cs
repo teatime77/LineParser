@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Windows.Storage;
 
 namespace MyEdit {
 
@@ -25,6 +26,24 @@ namespace MyEdit {
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
 
         public TProject() {
+        }
+
+        public void OpenProject() {
+            StorageFolder localFolder = ApplicationData.Current.LocalFolder;
+            string[] project_files = File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", System.Text.Encoding.UTF8);
+            foreach (string file_name in project_files) {
+                Debug.WriteLine(file_name);
+
+                string path = localFolder.Path + @"\" + file_name;
+
+                TSourceFile src = new TSourceFile(path);
+
+                src.Parser = TCSharpParser.CSharpParser;
+
+                src.Texts = File.ReadAllText(path, System.Text.Encoding.UTF8).Replace("\r\n", "\n");
+
+                SourceFiles.Add(src);
+            }
         }
 
         public void ClearProject() {

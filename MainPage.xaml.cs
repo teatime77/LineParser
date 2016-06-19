@@ -28,19 +28,42 @@ namespace LineParser
         {
             this.InitializeComponent();
 
-            Debug.Assert(Editor1 != null && Editor1.SourceFile != null);
+            TProject prj = new TProject();
 
-            TProject.Project = new TProject();
+            TProject.Project = prj;
 
-            Editor1.SourceFile.Parser = new TParser(TProject.Project);
-            Editor2.SourceFile.Parser = Editor1.SourceFile.Parser;
-            Editor3.SourceFile.Parser = Editor1.SourceFile.Parser;
-            Editor4.SourceFile.Parser = Editor1.SourceFile.Parser;
+            TParser.theParser = new TParser(prj);
+            TCSharpParser.CSharpParser = new TCSharpParser(prj);
 
-            TProject.Project.SourceFiles.Add(Editor1.SourceFile);
-            TProject.Project.SourceFiles.Add(Editor2.SourceFile);
-            TProject.Project.SourceFiles.Add(Editor3.SourceFile);
-            TProject.Project.SourceFiles.Add(Editor4.SourceFile);
+            prj.OpenProject();
+
+            for(int i = 0; i < prj.SourceFiles.Count; i++) {
+                TSourceFile src = prj.SourceFiles[i];
+
+                Pivot pivot;
+
+                if(i < prj.SourceFiles.Count / 2) {
+
+                    pivot = LeftEditors;
+                }
+                else {
+
+                    pivot = RightEditors;
+                }
+
+                PivotItem item = new PivotItem();
+                item.Header = Path.GetFileName(src.PathSrc);
+
+                MyEditor editor = new MyEditor();
+
+                src.Parser = TCSharpParser.CSharpParser;
+
+                item.Content = editor;
+
+                pivot.Items.Add(item);
+
+                editor.SetSource(src);
+            }
         }
     }
 }

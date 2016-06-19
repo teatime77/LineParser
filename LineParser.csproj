@@ -99,6 +99,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Compile.cs" />
+    <Compile Include="CSharpParser.cs" />
     <Compile Include="Define.cs" />
     <Compile Include="IME.cs" />
     <Compile Include="LexicalAnalysis.cs" />

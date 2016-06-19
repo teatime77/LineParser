@@ -28,25 +28,10 @@
             </PivotItem>
         </Pivot>
 
-        <Pivot Grid.Column="1">
-            <PivotItem Header="ソース １">
-                <MyEdit:MyEditor x:Name="Editor1" />
-            </PivotItem>
-
-            <PivotItem Header="ソース ２">
-                <MyEdit:MyEditor x:Name="Editor2" />
-            </PivotItem>
+        <Pivot x:Name="LeftEditors" Grid.Column="1">
         </Pivot>
 
-
-        <Pivot Grid.Column="2">
-            <PivotItem Header="ソース ３">
-                <MyEdit:MyEditor x:Name="Editor3" />
-            </PivotItem>
-
-            <PivotItem Header="ソース ４">
-                <MyEdit:MyEditor x:Name="Editor4" />
-            </PivotItem>
+        <Pivot x:Name="RightEditors" Grid.Column="2">
         </Pivot>
     </Grid>
 </Page>

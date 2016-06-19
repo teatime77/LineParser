@@ -20,6 +20,7 @@ namespace MyEdit {
         Char_,          // 文字
         String_,        // 文字列
         VerbatimString, // 逐語的文字列 ( @"文字列" )
+        VerbatimStringContinued, // "で閉じてない逐語的文字列
         Identifier,     // 識別子
         Keyword,        // キーワード
         Int,
@@ -28,6 +29,7 @@ namespace MyEdit {
         Symbol,         // 記号
         LineComment,    // 行コメント      ( // )
         BlockComment,   // ブロックコメント ( /* */ )
+        BlockCommentContinued,   // */で閉じてないブロックコメント
         Error,          // エラー
     }
 
@@ -140,13 +142,11 @@ namespace MyEdit {
                     ch2 = '\0';
                 }
 
-                if (pos == 0 && (prev_token_type == ETokenType.BlockComment || prev_token_type == ETokenType.VerbatimString)) {
-                    // 文字列の最初で直前がブロックコメントか逐語的文字列の場合
+                if (pos == 0 && (prev_token_type == ETokenType.BlockCommentContinued || prev_token_type == ETokenType.VerbatimStringContinued)) {
+                    // 文字列の最初で直前が閉じてないブロックコメントか逐語的文字列の場合
 
-                    if (prev_token_type == ETokenType.BlockComment) {
-                        // ブロックコメントの場合
-
-                        token_type = ETokenType.BlockComment;
+                    if (prev_token_type == ETokenType.BlockCommentContinued) {
+                        // 閉じてないブロックコメントの場合
 
                         // ブロックコメントの終わりを探します。
                         int k = text.IndexOf("*/");
@@ -154,11 +154,13 @@ namespace MyEdit {
                         if (k != -1) {
                             // ブロックコメントの終わりがある場合
 
+                            token_type = ETokenType.BlockComment;
                             pos = k + 2;
                         }
                         else {
                             // ブロックコメントの終わりがない場合
 
+                            token_type = ETokenType.BlockCommentContinued;
                             pos = text_len;
                         }
                     }
@@ -166,7 +168,6 @@ namespace MyEdit {
                         // 逐語的文字列の場合
 
                         token_kind = EKind.StringLiteral;
-                        token_type = ETokenType.VerbatimString;
 
                         // 逐語的文字列の終わりを探します。
                         int k = text.IndexOf('\"');
@@ -174,11 +175,13 @@ namespace MyEdit {
                         if (k != -1) {
                             // 逐語的文字列の終わりがある場合
 
+                            token_type = ETokenType.VerbatimString;
                             pos = k + 1;
                         }
                         else {
                             // 逐語的文字列の終わりがない場合
 
+                            token_type = ETokenType.VerbatimStringContinued;
                             pos = text_len;
                         }
                     }
@@ -195,7 +198,6 @@ namespace MyEdit {
                     // 逐語的文字列の場合
 
                     token_kind = EKind.StringLiteral;
-                    token_type = ETokenType.VerbatimString;
 
                     // 逐語的文字列の終わりの位置
                     int k = text.IndexOf('\"', pos + 2);
@@ -203,11 +205,13 @@ namespace MyEdit {
                     if (k != -1) {
                         // 逐語的文字列の終わりがある場合
 
+                        token_type = ETokenType.VerbatimString;
                         pos = k + 1;
                     }
                     else {
                         // 逐語的文字列の終わりがない場合
 
+                        token_type = ETokenType.VerbatimStringContinued;
                         pos = text_len;
                     }
                 }
@@ -359,19 +363,19 @@ namespace MyEdit {
                 else if (ch1 == '/' && ch2 == '*') {
                     // ブロックコメントの場合
 
-                    token_type = ETokenType.BlockComment;
-
                     // ブロックコメントの終わりを探します。
                     int idx = text.IndexOf("*/", pos + 2);
 
                     if (idx != -1) {
                         // ブロックコメントの終わりがある場合
 
+                        token_type = ETokenType.BlockComment;
                         pos = idx + 2;
                     }
                     else {
                         // ブロックコメントの終わりがない場合
 
+                        token_type = ETokenType.BlockCommentContinued;
                         pos = text_len;
                     }
                 }
@@ -409,15 +413,13 @@ namespace MyEdit {
             // 各文字の字句型の配列を返します。
             return token_list.ToArray();
         }
-
     }
 
     partial class MyEditor { 
-
         /*
             字句型を更新します。
         */
-        void UpdateTokenType(int start_line_idx, int sel_start, int sel_end) {
+        public void UpdateTokenType(int start_line_idx, int sel_start, int sel_end) {
             // 行の先頭位置
             int line_top = GetLineTop(sel_start);
 
@@ -425,7 +427,17 @@ namespace MyEdit {
             ETokenType last_token_type = (line_top == 0 ? ETokenType.Undefined : Chars[line_top - 1].CharType);
 
             for (int line_idx = start_line_idx; ; line_idx++) {
-                TLine line = SourceFile.Lines[line_idx];
+                TLine line;
+                
+                if(line_idx < SourceFile.Lines.Count) {
+
+                    line = SourceFile.Lines[line_idx];
+                }
+                else {
+
+                    line = new TLine();
+                    SourceFile.Lines.Add(line);
+                }
 
                 // 次の行の先頭位置または文書の終わり
                 int next_line_top = GetNextLineTopOrEOT(line_top);
@@ -469,8 +481,8 @@ namespace MyEdit {
                         else {
                             // 最後の字句型が違う場合
 
-                            if (last_token_type_before != ETokenType.BlockComment && last_token_type_before != ETokenType.VerbatimString &&
-                               last_token_type != ETokenType.BlockComment && last_token_type != ETokenType.VerbatimString) {
+                            if (last_token_type_before != ETokenType.BlockCommentContinued && last_token_type_before != ETokenType.VerbatimStringContinued &&
+                               last_token_type != ETokenType.BlockCommentContinued && last_token_type != ETokenType.VerbatimStringContinued) {
                                 // 変更前も変更後の最後の字句が複数行にまたがらない場合
 
                                 break;
@@ -538,6 +550,7 @@ namespace MyEdit {
             case ETokenType.Char_:
             case ETokenType.String_:
             case ETokenType.VerbatimString:
+            case ETokenType.VerbatimStringContinued:
                 return Colors.Red;
 
             case ETokenType.Keyword:
@@ -545,6 +558,7 @@ namespace MyEdit {
 
             case ETokenType.LineComment:
             case ETokenType.BlockComment:
+            case ETokenType.BlockCommentContinued:
                 return Colors.Green;
 
             default:

@@ -49,7 +49,7 @@ namespace MyEdit {
             UpdateEditContext();
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
         /*
@@ -72,7 +72,7 @@ namespace MyEdit {
             }
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
         /*
             editContextを作り直します。
@@ -141,7 +141,7 @@ namespace MyEdit {
             PushUndoRedoStack(ev.Range.StartCaretPosition, ev.Range.EndCaretPosition, ev.Text, UndoStack);
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
 
             if (SourceFile.Parser.Dirty) {
 
@@ -272,7 +272,7 @@ namespace MyEdit {
             }
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
         /*

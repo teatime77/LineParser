@@ -35,7 +35,7 @@ namespace MyEdit {
         static CoreCursor IBeamCoreCursor = new CoreCursor(CoreCursorType.IBeam, 2);
 
         // 文書内のテキスト
-        List<TChar> Chars = new List<TChar>();
+        public List<TChar> Chars = new List<TChar>();
 
         // 描画した図形のリスト
         List<TShape> DrawList = new List<TShape>();
@@ -112,10 +112,9 @@ namespace MyEdit {
 
             // フォントを変更する場合は以下のコメントをはずしてください。
             //TextFormat.FontSize = 48;
-            TextFormat.FontFamily = "ＭＳ ゴシック";
-
-            SourceFile = new TSourceFile(this);
-            SourceFile.Lines.Add(new TLine());
+            TextFormat.FontSize = 16;
+            //TextFormat.FontFamily = "ＭＳ ゴシック";
+            TextFormat.FontFamily = "Consolas";
         }
 
         /*
@@ -380,7 +379,7 @@ namespace MyEdit {
             MyNotifyTextChanged(src_diff.DiffPos, src_diff.DiffPos + src_diff.InsertedCount, src_diff.RemovedChars.Length);
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
         /*
@@ -828,7 +827,7 @@ namespace MyEdit {
                     }
 
                     // 再描画します。
-                    Win2DCanvas.Invalidate();
+                    InvalidateCanvas();
                     yield return 0;
 
                     break;
@@ -868,7 +867,7 @@ namespace MyEdit {
                     CoreApplication.GetCurrentView().CoreWindow.PointerCursor = IBeamCoreCursor;
 
                     // 再描画します。
-                    Win2DCanvas.Invalidate();
+                    InvalidateCanvas();
                     yield break;
 
                 default:
@@ -885,7 +884,7 @@ namespace MyEdit {
             Debug.WriteLine("ドラッグの選択の始め {0}", start_pos);
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
             yield return 0;
 
             while (true) {
@@ -902,7 +901,7 @@ namespace MyEdit {
                         Debug.WriteLine("ドラッグして選択 {0}", pos);
 
                         // 再描画します。
-                        Win2DCanvas.Invalidate();
+                        InvalidateCanvas();
                     }
                     break;
 
@@ -943,7 +942,7 @@ namespace MyEdit {
             MyNotifySelectionChanged();
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
         /*
@@ -1058,7 +1057,7 @@ namespace MyEdit {
             MyEditor.WriteLine("<<--- ViewChanged");
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
 
@@ -1104,7 +1103,7 @@ namespace MyEdit {
         /*
             次の行の先頭位置または文書の終わりを返します。
         */
-        int GetNextLineTopOrEOT(int current_pos) {
+        public int GetNextLineTopOrEOT(int current_pos) {
             int i = GetNextLineTop(current_pos);
 
             return (i != -1 ? i : Chars.Count);
@@ -1208,15 +1207,26 @@ namespace MyEdit {
                 MyNotifySelectionChanged();
 
                 // 再描画します。
-                Win2DCanvas.Invalidate();
+                InvalidateCanvas();
             }
         }
 
         /*
             指定した範囲のテキストを返します。
         */
-        string StringFromRange(int start_pos, int end_pos) {
+        public string StringFromRange(int start_pos, int end_pos) {
             return new string((from c in Chars.GetRange(start_pos, Math.Min(Chars.Count, end_pos) - start_pos) select c.Chr).ToArray());
+        }
+
+        void UpdateEditCanvasSize() {
+            if (!double.IsNaN(LineHeight)) {
+                double document_height = SourceFile.Lines.Count * LineHeight;
+
+                if (EditCanvas.Height != document_height) {
+
+                    EditCanvas.Height = document_height;
+                }
+            }
         }
 
         /*
@@ -1232,21 +1242,28 @@ namespace MyEdit {
             // テキストの変更をIMEに伝えます。
             MyNotifyTextChanged(sel_start, sel_end, new_text.Length);
 
-            if (!double.IsNaN(LineHeight)) {
-                double document_height = SourceFile.Lines.Count * LineHeight;
-
-                if (EditCanvas.Height != document_height) {
-
-                    EditCanvas.Height = document_height;
-                }
-            }
+            UpdateEditCanvasSize();
 
             // 再描画します。
-            Win2DCanvas.Invalidate();
+            InvalidateCanvas();
         }
 
         public void InvalidateCanvas() {
+            UpdateEditCanvasSize();
             Win2DCanvas.Invalidate();
+        }
+
+        public void SetSource(TSourceFile src) {
+            SourceFile = src;
+            src.Editors.Add(this);
+
+            Chars.AddRange(from c in src.Texts select new TChar(c));
+
+            src.Lines.Clear();
+
+            UpdateTokenType(0, 0, Chars.Count);
+
+            UpdateEditCanvasSize();
         }
     }
 

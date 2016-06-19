@@ -20,6 +20,13 @@ namespace MyEdit {
         SpecializedClass
     }
 
+    public class TUsing {
+        public List<string> Packages = new List<string>();
+    }
+
+    public class TNamespace {
+    }
+
     //------------------------------------------------------------ TClass
 
     public partial class TClass {
@@ -362,14 +369,16 @@ namespace MyEdit {
     }
 
     public class TSourceFile {
+        public string PathSrc;
+        public string Texts;
         public List<TClass> ClassesSrc = new List<TClass>();
         public List<TLine> Lines = new List<TLine>();
-        public MyEditor Editor;
+        public List<MyEditor> Editors = new List<MyEditor>();
 
         public TParser Parser;
 
-        public TSourceFile(MyEditor editor) {
-            Editor = editor;
+        public TSourceFile(string path) {
+            PathSrc = path;
         }
     }
 }

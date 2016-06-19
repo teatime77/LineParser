@@ -13,13 +13,14 @@ using System.Threading.Tasks;
 
 namespace MyEdit {
     partial class TParser {
-        const int TabSize = 4;
-        static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
-        TProject PrjParser;
-        TToken[] TokenList;
-        int TokenPos;
-        TToken CurTkn;
-        TToken NextTkn;
+        public const int TabSize = 4;
+        public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
+        public static TParser theParser;
+        public TProject PrjParser;
+        public TToken[] TokenList;
+        public int TokenPos;
+        public TToken CurTkn;
+        public TToken NextTkn;
         public bool Dirty;
         public bool Running;
 
@@ -274,6 +275,30 @@ namespace MyEdit {
             return reg_class;
         }
 
+        public virtual void LineEnd() {
+            GetToken(EKind.EOT);
+        }
+
+        public TUsing ReadUsing() {
+            TUsing using1 = new TUsing();
+
+            GetToken(EKind.using_);
+
+            while (true) {
+                TToken id = GetToken(EKind.Identifier);
+
+                using1.Packages.Add(id.TextTkn);
+                if(CurTkn.Kind != EKind.Dot) {
+                    break;
+                }
+                GetToken(EKind.Dot);
+            }
+
+            LineEnd();
+
+            return using1;
+        }
+
         public TFunction ReadFunctionLine(TClass parent_class, bool is_static) {
             TToken fnc_name;
             
@@ -499,6 +524,7 @@ namespace MyEdit {
                 TToken tkn = token_list[i];
                 switch (tkn.TokenType) {
                 case ETokenType.BlockComment:
+                case ETokenType.BlockCommentContinued:
                 case ETokenType.LineComment:
                 case ETokenType.White:
                     break;
@@ -536,8 +562,11 @@ namespace MyEdit {
             object line_obj = null;
 
             try {
-                if (CurTkn.Kind == EKind.static_) {
+                switch (CurTkn.Kind) {
+                case EKind.using_:
+                    return ReadUsing();
 
+                case EKind.static_:
                     GetToken(EKind.static_);
 
                     switch (CurTkn.Kind) {
@@ -550,11 +579,7 @@ namespace MyEdit {
                     default:
                         throw new TParseException();
                     }
-                }
 
-                TTerm t1;
-
-                switch (CurTkn.Kind) {
                 case EKind.class_:
                 case EKind.enum_:
                     return ReadClassLine();
@@ -597,7 +622,7 @@ namespace MyEdit {
 
                 case EKind.Identifier:
                 case EKind.base_:
-                    if(NextTkn.Kind == EKind.Colon) {
+                    if (NextTkn.Kind == EKind.Colon) {
 
                         return ReadFieldLine(cls, false);
                     }
@@ -617,7 +642,7 @@ namespace MyEdit {
                     break;
                 }
 
-                t1 = Expression();
+                TTerm t1 = Expression();
             }
             catch (TParseException) {
 
@@ -626,7 +651,7 @@ namespace MyEdit {
             return line_obj;
         }
 
-        void GetVariableClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
+        public void GetVariableClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
             vars = new List<TVariable>();
 
             int min_indent = src.Lines[current_line_idx].Indent;
@@ -717,8 +742,10 @@ namespace MyEdit {
                             switch (line_top_token.TokenType) {
                             case ETokenType.Undefined:
                             case ETokenType.VerbatimString:
+                            case ETokenType.VerbatimStringContinued:
                             case ETokenType.LineComment:
                             case ETokenType.BlockComment:
+                            case ETokenType.BlockCommentContinued:
                             case ETokenType.Error:
                                 break;
 
@@ -877,12 +904,14 @@ namespace MyEdit {
             }
             Debug.WriteLine("名前解決 : 終了");
 
-            src.Editor.InvalidateCanvas();
+            foreach(MyEditor editor in src.Editors) {
+                editor.InvalidateCanvas();
+            }
 
             Running = false;
         }
 
-        TToken GetToken(EKind type) {
+        public TToken GetToken(EKind type) {
 
             if(type != EKind.Undefined && type != CurTkn.Kind) {
 
@@ -898,9 +927,15 @@ namespace MyEdit {
 
                     CurTkn = TokenList[TokenPos];
 
-                    if (CurTkn.TokenType != ETokenType.BlockComment && CurTkn.TokenType != ETokenType.LineComment && CurTkn.TokenType != ETokenType.White) {
-
+                    switch (CurTkn.TokenType) {
+                    case ETokenType.White:
+                    case ETokenType.BlockComment:
+                    case ETokenType.BlockCommentContinued:
+                    case ETokenType.LineComment:
                         break;
+
+                    default:
+                        goto while_end;
                     }
                 }
                 else {
@@ -909,6 +944,7 @@ namespace MyEdit {
                     break;
                 }
             }
+            while_end:
 
             if (TokenPos + 1 < TokenList.Length) {
 
@@ -922,7 +958,7 @@ namespace MyEdit {
             return tkn;
         }
 
-        TTerm PrimaryExpression() {
+        public TTerm PrimaryExpression() {
             TToken id;
             TTerm[] args;
 
@@ -1003,7 +1039,7 @@ namespace MyEdit {
             throw new TParseException();
         }
 
-        TTerm DotIndexExpression() {
+        public TTerm DotIndexExpression() {
             TTerm t1 = PrimaryExpression();
 
             while(CurTkn.Kind == EKind.Dot || CurTkn.Kind == EKind.LB) {
@@ -1042,7 +1078,7 @@ namespace MyEdit {
             return t1;
         }
 
-        TTerm PostIncDecExpression() {
+        public TTerm PostIncDecExpression() {
             TTerm t1 = DotIndexExpression();
 
             if (CurTkn.Kind == EKind.Inc || CurTkn.Kind == EKind.Dec) {
@@ -1056,7 +1092,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm UnaryExpression() {
+        public TTerm UnaryExpression() {
             if (CurTkn.Kind == EKind.Add || CurTkn.Kind == EKind.Sub) {
                 TToken opr = GetToken(EKind.Undefined);
 
@@ -1070,7 +1106,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm MultiplicativeExpression() {
+        public TTerm MultiplicativeExpression() {
             TTerm t1 = UnaryExpression();
 
             while (true) {
@@ -1091,7 +1127,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm AdditiveExpression() {
+        public TTerm AdditiveExpression() {
             TTerm t1 = MultiplicativeExpression();
 
             while (true) {
@@ -1111,7 +1147,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm RelationalExpression() {
+        public TTerm RelationalExpression() {
             TTerm t1 = AdditiveExpression();
 
             while (true) {
@@ -1135,7 +1171,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm NotExpression() {
+        public TTerm NotExpression() {
             if(CurTkn.Kind == EKind.Not_) {
 
                 TToken not_tkn = GetToken(EKind.Not_);
@@ -1147,7 +1183,7 @@ namespace MyEdit {
             return RelationalExpression();
         }
 
-        TTerm AndExpression() {
+        public TTerm AndExpression() {
             TTerm t1 = NotExpression();
 
             while (true) {
@@ -1166,7 +1202,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm OrExpression() {
+        public TTerm OrExpression() {
             TTerm t1 = AndExpression();
 
             while (true) {
@@ -1185,7 +1221,7 @@ namespace MyEdit {
             }
         }
 
-        List<TTerm> ExpressionList() {
+        public List<TTerm> ExpressionList() {
             List<TTerm> expr_list = new List<TTerm>();
 
             while (true) {
@@ -1203,7 +1239,7 @@ namespace MyEdit {
             }
         }
 
-        TTerm Expression() {
+        public TTerm Expression() {
             return OrExpression();
         }
 
