@@ -36,11 +36,7 @@ namespace MyEdit {
 
                 string path = localFolder.Path + @"\" + file_name;
 
-                TSourceFile src = new TSourceFile(path);
-
-                src.Parser = TCSharpParser.CSharpParser;
-
-                src.Texts = File.ReadAllText(path, System.Text.Encoding.UTF8).Replace("\r\n", "\n");
+                TSourceFile src = new TSourceFile(path, TCSharpParser.CSharpParser);
 
                 SourceFiles.Add(src);
             }

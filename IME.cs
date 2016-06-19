@@ -222,7 +222,7 @@ namespace MyEdit {
                 TShape phrase_shape = draw_list.First();
 
                 // 描画した語句の先頭から選択位置までのテキストのサイズを得ます。
-                Size sz = MeasureText(StringFromRange(phrase_shape.StartPos, SelCurrent), TextFormat);
+                Size sz = MeasureText(SourceFile.StringFromRange(phrase_shape.StartPos, SelCurrent), TextFormat);
 
                 // 選択位置のテキストを囲む矩形を計算します。
                 Rect text_rect;
@@ -303,7 +303,7 @@ namespace MyEdit {
             CoreTextEditContextを作るとこれが呼ばれます。
         */
         private void EditContext_TextRequested(CoreTextEditContext sender, CoreTextTextRequestedEventArgs ev) {
-            ev.Request.Text = StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
+            ev.Request.Text = SourceFile.StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
 
             MyEditor.WriteLine("<<--- TextRequested : {0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
         }

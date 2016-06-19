@@ -367,18 +367,4 @@ namespace MyEdit {
             KindJmp = kind;
         }
     }
-
-    public class TSourceFile {
-        public string PathSrc;
-        public string Texts;
-        public List<TClass> ClassesSrc = new List<TClass>();
-        public List<TLine> Lines = new List<TLine>();
-        public List<MyEditor> Editors = new List<MyEditor>();
-
-        public TParser Parser;
-
-        public TSourceFile(string path) {
-            PathSrc = path;
-        }
-    }
 }

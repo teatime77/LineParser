@@ -19,15 +19,13 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.UI.Input;
 using System.Collections;
 using System.Threading.Tasks;
+using System.Net;
 
 
 // The User Control item template is documented at http://go.microsoft.com/fwlink/?LinkId=234236
 
 namespace MyEdit {
     public sealed partial class MyEditor : UserControl {
-        // 改行文字
-        const char LF = '\n';
-
         // 矢印カーソル
         static CoreCursor ArrowCoreCursor = new CoreCursor(CoreCursorType.Arrow, 1);
 
@@ -183,7 +181,7 @@ namespace MyEdit {
             int pos;
 
             for(pos = 0; pos < Chars.Count && line_idx < start_line_idx; pos++) {
-                if(Chars[pos].Chr == LF) {
+                if(Chars[pos].Chr == TSourceFile.LF) {
                     line_idx++;
                     if(line_idx == start_line_idx) {
                         pos++;
@@ -212,7 +210,7 @@ namespace MyEdit {
                     bool selected = (sel_start <= pos && pos < sel_end);
 
                     int phrase_start_pos = pos;
-                    for (; pos < Chars.Count && Chars[pos].Chr != LF && Chars[pos].Underline == under_line && Chars[pos].CharType == token_type && (sel_start <= pos && pos < sel_end) == selected; pos++) {
+                    for (; pos < Chars.Count && Chars[pos].Chr != TSourceFile.LF && Chars[pos].Underline == under_line && Chars[pos].CharType == token_type && (sel_start <= pos && pos < sel_end) == selected; pos++) {
                         sw.Write(Chars[pos].Chr);
                     }
                     //String str = new string((from c in Chars select c.Chr).ToArray());
@@ -247,7 +245,7 @@ namespace MyEdit {
                     }
                     else {
 
-                        args.DrawingSession.DrawText(str, x, y, ColorFromTokenType(token_type), TextFormat);
+                        args.DrawingSession.DrawText(str, x, y, TSourceFile.ColorFromTokenType(token_type), TextFormat);
                         
                         if(tkn != null && tkn.ErrorTkn != null) {
 
@@ -287,7 +285,7 @@ namespace MyEdit {
 
                     x += (float)sz.Width;
 
-                    if (Chars.Count <= pos || Chars[pos].Chr == LF) {
+                    if (Chars.Count <= pos || Chars[pos].Chr == TSourceFile.LF) {
 
                         break;
                     }
@@ -387,10 +385,10 @@ namespace MyEdit {
         */
         void PushUndoRedoStack(int sel_start, int sel_end, string new_text, Stack<TDiff> dst_stack) {
             // 開始行のインデックス
-            int start_line_idx = GetLineIndex(sel_start);
+            int start_line_idx = SourceFile.GetLineIndex(sel_start);
 
             // 変更範囲にある改行文字の個数
-            int old_LF_cnt = GetLFCount(sel_start, sel_end);
+            int old_LF_cnt = SourceFile.GetLFCount(sel_start, sel_end);
 
             // 変更情報を作ります。
             TDiff diff = new TDiff(sel_start, sel_end - sel_start, new_text.Length);
@@ -412,7 +410,7 @@ namespace MyEdit {
             SelCurrent  = SelOrigin;
 
             // 新しく挿入した文字列に含まれる改行文字の個数
-            int new_LF_cnt = (from x in new_text where x == LF select x).Count();//   GetLFCount(sel_start, sel_start + new_text.Length);
+            int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();//   GetLFCount(sel_start, sel_start + new_text.Length);
 
             if(new_LF_cnt < old_LF_cnt) {
                 // 行が減った場合
@@ -432,7 +430,7 @@ namespace MyEdit {
             }
 
             // 字句型を更新します。
-            UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
+            SourceFile.UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
 
             //StringWriter sw = new StringWriter();
             //sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
@@ -473,13 +471,13 @@ namespace MyEdit {
 
             case VirtualKey.Up: { // 上矢印(↑)
                     // 現在の行の先頭位置を得ます。
-                    current_line_top = GetLineTop(SelCurrent);
+                    current_line_top = SourceFile.GetLineTop(SelCurrent);
 
                     if (current_line_top != 0) {
                         // 現在の行の先頭が文書の最初でない場合
 
                         // 直前の行の先頭位置を得ます。
-                        int prev_line_top = GetLineTop(current_line_top - 2);
+                        int prev_line_top = SourceFile.GetLineTop(current_line_top - 2);
 
                         // 直前の行の文字数
                         int prev_line_len = (current_line_top - 1) - prev_line_top;
@@ -495,17 +493,17 @@ namespace MyEdit {
 
             case VirtualKey.Down: { // 下矢印(↓)
                     // 現在の行の先頭位置を得ます。
-                    current_line_top = GetLineTop(SelCurrent);
+                    current_line_top = SourceFile.GetLineTop(SelCurrent);
 
                     // 次の行の先頭位置を得ます。
-                    next_line_top = GetNextLineTop(SelCurrent);
+                    next_line_top = SourceFile.GetNextLineTop(SelCurrent);
 
                     if (next_line_top != -1) {
                         // 次の行がある場合
 
 
                         // 次の次の行の先頭位置を得ます。
-                        int next_next_line_top = GetNextLineTop(next_line_top);
+                        int next_next_line_top = SourceFile.GetNextLineTop(next_line_top);
 
                         // 次の行の文字数
                         int next_line_len;
@@ -541,7 +539,7 @@ namespace MyEdit {
                     // Controlキーが押されてない場合
 
                     // 現在の行の先頭位置を得ます。
-                    new_sel_current = GetLineTop(SelCurrent);
+                    new_sel_current = SourceFile.GetLineTop(SelCurrent);
                 }
                 break;
 
@@ -556,19 +554,19 @@ namespace MyEdit {
                     // Controlキーが押されてない場合
 
                     // 現在の行の最終位置を得ます。
-                    new_sel_current = GetLineEnd(SelCurrent);
+                    new_sel_current = SourceFile.GetLineEnd(SelCurrent);
                 }               
                 break;
 
             case VirtualKey.PageUp: {
                     int line_diff = 0;
                     for (int i = SelCurrent; 0 < i; i--) {
-                        if (Chars[i].Chr == LF) {
+                        if (Chars[i].Chr == TSourceFile.LF) {
 
                             line_diff++;
                             if (ViewLineCount <= line_diff) {
 
-                                int line_idx = GetLFCount(0, i);
+                                int line_idx = SourceFile.GetLFCount(0, i);
                                 Debug.WriteLine("PageUp {0}", line_diff);
                                 new_sel_current = i;
                                 EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
@@ -582,12 +580,12 @@ namespace MyEdit {
             case VirtualKey.PageDown: {
                     int line_diff = 0;
                     for (int i = SelCurrent; i < Chars.Count; i++) {
-                        if (Chars[i].Chr == LF) {
+                        if (Chars[i].Chr == TSourceFile.LF) {
 
                             line_diff++;
                             if (ViewLineCount <= line_diff) {
 
-                                int line_idx = GetLFCount(0, i);
+                                int line_idx = SourceFile.GetLFCount(0, i);
                                 Debug.WriteLine("PageDown {0}", line_diff);
                                 new_sel_current = i;
                                 EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
@@ -684,7 +682,7 @@ namespace MyEdit {
                         // Ctrl+Shift+Cの場合 ( HTMLテキストをクリップボードにコピーします。 )
 
                         // 選択範囲からHTML文字列を作ります。
-                        clipboard_str = HTMLStringFromRange(SelStart, SelEnd);
+                        clipboard_str = SourceFile.HTMLStringFromRange(SelStart, SelEnd);
                     }
                     else {
                         // Ctrl+Cの場合 ( プレーンテキストをクリップボードにコピーします。 )
@@ -1078,62 +1076,6 @@ namespace MyEdit {
         }
 
         /*
-            行の先頭位置を返します。
-        */
-        int GetLineTop(int current_pos) {
-            int i;
-
-            for (i = current_pos - 1; 0 <= i && Chars[i].Chr != LF; i--) ;
-            return i + 1;
-        }
-
-        /*
-            次の行の先頭位置を返します。
-        */
-        int GetNextLineTop(int current_pos) {
-            for (int i = current_pos; i < Chars.Count; i++) {
-                if (Chars[i].Chr == LF) {
-                    return i + 1;
-                }
-            }
-
-            return -1;
-        }
-
-        /*
-            次の行の先頭位置または文書の終わりを返します。
-        */
-        public int GetNextLineTopOrEOT(int current_pos) {
-            int i = GetNextLineTop(current_pos);
-
-            return (i != -1 ? i : Chars.Count);
-        }
-
-        /*
-            行のインデックスを返します。
-        */
-        int GetLineIndex(int pos) {
-            return (from x in Chars.GetRange(0, pos) where x.Chr == LF select x).Count();
-        }
-
-        /*
-            行の最終位置を返します。
-            行の最終位置は改行文字の位置または文書の最後の位置です。
-        */
-        int GetLineEnd(int current_pos) {
-            int i = GetNextLineTop(current_pos);
-
-            return (i != -1 ? i - 1 : Chars.Count);
-        }
-
-        /*
-            指定した範囲にある改行文字の個数を返します。
-        */
-        int GetLFCount(int start_pos, int end_pos) {
-            return (from x in Chars.GetRange(start_pos, Math.Min(Chars.Count, end_pos) - start_pos) where x.Chr == LF select x).Count();
-        }
-
-        /*
             文字列のサイズを計算します。
         */
         Size MeasureText(string str, CanvasTextFormat text_format) {
@@ -1211,13 +1153,6 @@ namespace MyEdit {
             }
         }
 
-        /*
-            指定した範囲のテキストを返します。
-        */
-        public string StringFromRange(int start_pos, int end_pos) {
-            return new string((from c in Chars.GetRange(start_pos, Math.Min(Chars.Count, end_pos) - start_pos) select c.Chr).ToArray());
-        }
-
         void UpdateEditCanvasSize() {
             if (!double.IsNaN(LineHeight)) {
                 double document_height = SourceFile.Lines.Count * LineHeight;
@@ -1257,13 +1192,7 @@ namespace MyEdit {
             SourceFile = src;
             src.Editors.Add(this);
 
-            Chars.AddRange(from c in src.Texts select new TChar(c));
-
-            src.Lines.Clear();
-
-            UpdateTokenType(0, 0, Chars.Count);
-
-            UpdateEditCanvasSize();
+            Chars = src.Chars;
         }
     }
 
