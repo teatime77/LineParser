@@ -37,32 +37,26 @@ namespace LineParser
 
             prj.OpenProject();
 
-            for(int i = 0; i < prj.SourceFiles.Count; i++) {
-                TSourceFile src = prj.SourceFiles[i];
+            foreach(TSourceFile src in prj.SourceFiles) {
+                string file_name = Path.GetFileName(src.PathSrc);
 
-                Pivot pivot;
+                lst_SourceFiles.Items.Add(file_name);
+            }
+        }
 
-                if(i < prj.SourceFiles.Count / 2) {
+        private void lst_SourceFiles_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
+            int idx = lst_SourceFiles.SelectedIndex;
 
-                    pivot = LeftEditors;
-                }
-                else {
+            if(0 <= idx && idx < TProject.Project.SourceFiles.Count) {
+                TSourceFile src = TProject.Project.SourceFiles[idx];
 
-                    pivot = RightEditors;
-                }
-
-                PivotItem item = new PivotItem();
-                item.Header = Path.GetFileName(src.PathSrc);
-
-                MyEditor editor = new MyEditor();
+                MyEditor editor = LeftEditor;
 
                 src.Parser = TCSharpParser.CSharpParser;
 
-                item.Content = editor;
-
-                pivot.Items.Add(item);
-
                 editor.SetSource(src);
+                editor.Focus(FocusState.Programmatic);
+                editor.InvalidateCanvas();
             }
         }
     }

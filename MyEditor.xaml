@@ -21,7 +21,15 @@
         <!--
         <Button x:Name="OverlappedButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0" GotFocus="OverlappedButton_GotFocus" LostFocus="OverlappedButton_LostFocus" />
         -->
-        <RadioButton x:Name="OverlappedButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0" GotFocus="OverlappedButton_GotFocus" LostFocus="OverlappedButton_LostFocus" Margin="0,0,16,16" PointerEntered="OverlappedButton_PointerEntered" PointerExited="OverlappedButton_PointerExited" />
+        <RadioButton x:Name="OverlappedButton" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Opacity="0" GotFocus="OverlappedButton_GotFocus" LostFocus="OverlappedButton_LostFocus" Margin="0,0,16,16" PointerEntered="OverlappedButton_PointerEntered" PointerExited="OverlappedButton_PointerExited" >
+            <FlyoutBase.AttachedFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem Text="Menu A" />
+                    <MenuFlyoutItem Text="Menu B" />
+                    <MenuFlyoutItem Text="Menu C" />
+                </MenuFlyout>
+            </FlyoutBase.AttachedFlyout>
+        </RadioButton>
 
         <!--
         <Slider VerticalAlignment="Bottom" Height="20" />

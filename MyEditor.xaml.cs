@@ -560,39 +560,43 @@ namespace MyEdit {
 
             case VirtualKey.PageUp: {
                     int line_diff = 0;
-                    for (int i = SelCurrent; 0 < i; i--) {
+                    int i;
+                    for (i = Math.Min(SelCurrent, Chars.Count - 1) ; 0 < i; i--) {
                         if (Chars[i].Chr == TSourceFile.LF) {
 
                             line_diff++;
                             if (ViewLineCount <= line_diff) {
 
-                                int line_idx = SourceFile.GetLFCount(0, i);
-                                Debug.WriteLine("PageUp {0}", line_diff);
-                                new_sel_current = i;
-                                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                                 break;
                             }
                         }
                     }
+
+                    int line_idx = SourceFile.GetLFCount(0, i);
+                    Debug.WriteLine("PageUp {0}", line_diff);
+                    new_sel_current = i;
+                    EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 }
                 break;
 
             case VirtualKey.PageDown: {
                     int line_diff = 0;
-                    for (int i = SelCurrent; i < Chars.Count; i++) {
+                    int i;
+                    for (i = SelCurrent; i < Chars.Count; i++) {
                         if (Chars[i].Chr == TSourceFile.LF) {
 
                             line_diff++;
                             if (ViewLineCount <= line_diff) {
 
-                                int line_idx = SourceFile.GetLFCount(0, i);
-                                Debug.WriteLine("PageDown {0}", line_diff);
-                                new_sel_current = i;
-                                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                                 break;
                             }
                         }
                     }
+
+                    int line_idx = SourceFile.GetLFCount(0, i);
+                    Debug.WriteLine("PageDown {0}", line_diff);
+                    new_sel_current = i;
+                    EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 }
                 break;
             }
@@ -614,6 +618,10 @@ namespace MyEdit {
             }
 
             switch (e.VirtualKey) {
+            case VirtualKey.F1:
+                Flyout.ShowAttachedFlyout(OverlappedButton);
+                break;
+
             case VirtualKey.Left:   // 左矢印(←)
             case VirtualKey.Right:  // 右矢印(→)
             case VirtualKey.Up:     // 上矢印(↑)
@@ -1189,10 +1197,24 @@ namespace MyEdit {
         }
 
         public void SetSource(TSourceFile src) {
+            if(SourceFile != null) {
+                SourceFile.Editors.Remove(this);
+            }
+
             SourceFile = src;
             src.Editors.Add(this);
 
+            int old_text_length = Chars.Count;
             Chars = src.Chars;
+
+            SelOrigin = 0;
+            SelCurrent = 0;
+            EditScroll.ScrollToVerticalOffset(0);
+
+            if (editContext != null) {
+
+                MyNotifyTextChanged(0, old_text_length, Chars.Count);
+            }
         }
     }
 

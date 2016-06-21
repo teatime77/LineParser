@@ -16,7 +16,7 @@
         </Grid.ColumnDefinitions>
         <Pivot Grid.Column="0">
             <PivotItem Header="プロジェクト">
-                <TextBlock Text="Content of pivot item 1."/>
+                <ListBox x:Name="lst_SourceFiles" DoubleTapped="lst_SourceFiles_DoubleTapped" />
             </PivotItem>
 
             <PivotItem Header="クラス">
@@ -28,10 +28,7 @@
             </PivotItem>
         </Pivot>
 
-        <Pivot x:Name="LeftEditors" Grid.Column="1">
-        </Pivot>
-
-        <Pivot x:Name="RightEditors" Grid.Column="2">
-        </Pivot>
+        <MyEdit:MyEditor x:Name="LeftEditor" Grid.Column="1" />
+        <MyEdit:MyEditor x:Name="RightEditor" Grid.Column="2" />
     </Grid>
 </Page>
