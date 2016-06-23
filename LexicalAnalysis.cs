@@ -401,8 +401,11 @@ namespace MyEdit {
                     }
                 }
 
-                string s = text.Substring(start_pos, pos - start_pos);
-                token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
+                if (token_type != ETokenType.White) {
+
+                    string s = text.Substring(start_pos, pos - start_pos);
+                    token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
+                }
 
                 // 各文字の字句型の配列に字句型をセットします。
                 //for (int k = start_pos; k < pos; k++) {

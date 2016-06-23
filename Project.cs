@@ -42,6 +42,44 @@ namespace MyEdit {
             }
         }
 
+        public void RegisterClassNames() {
+            List<string> class_names = new List<string>();
+
+            foreach(TSourceFile src in SourceFiles) {
+                foreach(TLine line in src.Lines) {
+                    if(line.Tokens != null) {
+                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_);
+                        if(idx != -1) {
+                            if(idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+
+                                string name = line.Tokens[idx + 1].TextTkn;
+                                if (!class_names.Contains(name)) {
+
+                                    class_names.Add(name);
+                                    Debug.WriteLine("class {0}", name, "");
+                                }
+                            }
+                            else {
+
+                                Debug.WriteLine("class syntax error");
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (TSourceFile src in SourceFiles) {
+                foreach (TLine line in src.Lines) {
+                    if (line.Tokens != null) {
+                        var v = from x in line.Tokens where x.Kind == EKind.Identifier && class_names.Contains(x.TextTkn) select x;
+                        foreach(TToken tkn in v) {
+                            tkn.Kind = EKind.ClassName;
+                        }
+                    }
+                }
+            }
+        }
+
         public void ClearProject() {
             ClassTable.Clear();
             ParameterizedClassTable.Clear();

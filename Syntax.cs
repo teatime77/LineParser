@@ -25,6 +25,11 @@ namespace MyEdit {
     }
 
     public class TNamespace {
+        public string NamespaceName;
+
+        public TNamespace(string name) {
+            NamespaceName = name;
+        }
     }
 
     //------------------------------------------------------------ TClass

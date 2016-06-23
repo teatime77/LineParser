@@ -47,9 +47,12 @@ namespace MyEdit {
             return new string(' ', nest * TabSize);
         }
 
+        public virtual void LCopt() {
+        }
+
         public TClass ReadClassLine() {
             GetToken(EKind.class_);
-            TToken id = GetToken(EKind.Identifier);
+            TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             TClass cls;
 
@@ -118,17 +121,27 @@ namespace MyEdit {
                     }
                 }
             }
+
+            LCopt();
             GetToken(EKind.EOT);
 
             return cls;
         }
 
-        public TField ReadFieldLine(TClass parent_class, bool is_static) {
+        public TField ReadFieldLine(TClass parent_class, bool is_static, TClass type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
-            GetToken(EKind.Colon);
+            TClass tp;
+            
+            if(type_prepend != null) {
 
-            TClass tp = ReadType(parent_class, false);
+                tp = type_prepend;
+            }
+            else {
+
+                GetToken(EKind.Colon);
+                tp = ReadType(parent_class, false);
+            }
 
             TTerm init = null;
             if (CurTkn.Kind == EKind.Assign) {
@@ -138,7 +151,7 @@ namespace MyEdit {
                 init = Expression();
             }
 
-            GetToken(EKind.EOT);
+            LineEnd();
 
             return new TField(is_static, id, tp, init);
         }
@@ -148,7 +161,7 @@ namespace MyEdit {
         }
 
         public TClass ReadType(TClass parent_class, bool new_class) {
-            TToken id = GetToken(EKind.Identifier);
+            TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
             TClass cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
 
             List<TClass> param_classes = null;
@@ -299,7 +312,18 @@ namespace MyEdit {
             return using1;
         }
 
-        public TFunction ReadFunctionLine(TClass parent_class, bool is_static) {
+        public TNamespace ReadNamespace() {
+            GetToken(EKind.namespace_);
+
+            TToken id = GetToken(EKind.Identifier);
+            GetToken(EKind.LC);
+            GetToken(EKind.EOT);
+
+            return new TNamespace(id.TextTkn);
+        }
+
+
+        public TFunction ReadFunctionLine(TClass parent_class, bool is_static, TClass ret_type_prepend) {
             TToken fnc_name;
             
             if(CurTkn.Kind == EKind.operator_) {
@@ -320,7 +344,7 @@ namespace MyEdit {
 
             List<TVariable> vars = new List<TVariable>();
             while (CurTkn.Kind != EKind.RP) {
-                TVariable var1 = ReadVariable();
+                TVariable var1 = ReadArgVariable();
                 vars.Add(var1);
 
                 if (CurTkn.Kind != EKind.Comma) {
@@ -334,27 +358,50 @@ namespace MyEdit {
             GetToken(EKind.RP);
 
             TClass ret_type = null;
-            if(CurTkn.Kind == EKind.Colon) {
+            if(ret_type_prepend == null && CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
                 ret_type = ReadType(parent_class, false);
             }
 
+            LCopt();
+
             GetToken(EKind.EOT);
 
             return new TFunction(is_static, fnc_name, vars.ToArray(), ret_type);
         }
 
-        public TVariable ReadVariable() {
+        public virtual TVariable ReadArgVariable() {
             TToken id = GetToken(EKind.Identifier);
 
             TClass type = null;
-            if(CurTkn.Kind == EKind.Colon) {
+            if (CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
                 type = ReadType(null, false);
+            }
+
+            return new TVariable(id, type, null);
+        }
+
+        public TVariable ReadVariable(TClass type_prepend) {
+            TToken id = GetToken(EKind.Identifier);
+
+            TClass type = null;
+            if (type_prepend != null) {
+
+                type = type_prepend;
+            }
+            else { 
+
+                if (CurTkn.Kind == EKind.Colon) {
+
+                    GetToken(EKind.Colon);
+
+                    type = ReadType(null, false);
+                }
             }
 
             TTerm init = null;
@@ -368,24 +415,30 @@ namespace MyEdit {
             return new TVariable(id, type, init);
         }
 
-        public TVariableDeclaration ReadVariableDeclarationLine() {
+        public virtual TVariableDeclaration ReadVariableDeclarationLine(TClass type_prepend) {
             TVariableDeclaration var_decl = new TVariableDeclaration();
 
-            GetToken(EKind.var_);
+            if(type_prepend == null) {
+
+                GetToken(EKind.var_);
+            }
 
             while (true) {
-                TVariable var1 = ReadVariable();
+                TVariable var1 = ReadVariable(type_prepend);
 
                 var_decl.Variables.Add(var1);
 
                 if(CurTkn.Kind != EKind.Comma) {
 
-                    GetToken(EKind.EOT);
-                    return var_decl;
+                    break;
                 }
 
                 GetToken(EKind.Comma);
             }
+
+            LineEnd();
+
+            return var_decl;
         }
 
         public TIfBlock ReadIfLine() {
@@ -481,7 +534,11 @@ namespace MyEdit {
                 jump.RetVal = Expression();
                 break;
 
-            case EKind.break_:
+            case EKind.break_:                
+                break;
+
+            case EKind.goto_:
+                GetToken(EKind.Identifier);
                 break;
             }
             GetToken(EKind.EOT);
@@ -561,31 +618,74 @@ namespace MyEdit {
 
             object line_obj = null;
 
+            bool is_static = false;
+
             try {
+                while (true) {
+                    switch (CurTkn.Kind) {
+                    case EKind.public_:
+                        GetToken(EKind.public_);
+                        break;
+
+                    case EKind.private_:
+                        GetToken(EKind.private_);
+                        break;
+
+                    case EKind.partial_:
+                        GetToken(EKind.partial_);
+                        break;
+
+                    case EKind.sealed_:
+                        GetToken(EKind.sealed_);
+                        break;
+
+                    case EKind.const_:
+                        GetToken(EKind.const_);
+                        break;
+
+                    case EKind.static_:
+                        GetToken(EKind.static_);
+                        is_static = true;
+                        break;
+
+                    case EKind.async_:
+                        GetToken(EKind.async_);
+                        break;
+
+                    case EKind.RC:
+                        GetToken(EKind.RC);
+                        if(CurTkn.Kind == EKind.SemiColon) {
+
+                            GetToken(EKind.SemiColon);
+                        }
+                        GetToken(EKind.EOT);
+                        return null;
+
+                    case EKind.get_:
+                        GetToken(EKind.get_);
+                        GetToken(EKind.LC);
+                        GetToken(EKind.EOT);
+                        return null;
+
+                    default:
+                        goto start_l;
+                    }
+                }
+                start_l:
+
                 switch (CurTkn.Kind) {
                 case EKind.using_:
                     return ReadUsing();
 
-                case EKind.static_:
-                    GetToken(EKind.static_);
-
-                    switch (CurTkn.Kind) {
-                    case EKind.function_:
-                        return ReadFunctionLine(cls, true);
-
-                    case EKind.Identifier:
-                        return ReadFieldLine(cls, true);
-
-                    default:
-                        throw new TParseException();
-                    }
+                case EKind.namespace_:
+                    return ReadNamespace();
 
                 case EKind.class_:
                 case EKind.enum_:
                     return ReadClassLine();
 
                 case EKind.var_:
-                    return ReadVariableDeclarationLine();
+                    return ReadVariableDeclarationLine(null);
 
                 case EKind.if_:
                     return ReadIfLine();
@@ -618,27 +718,56 @@ namespace MyEdit {
                 case EKind.yield_:
                 case EKind.throw_:
                 case EKind.break_:
+                case EKind.goto_:
                     return ReadJumpLine();
+
+                case EKind.ClassName: {
+                        TClass tp = ReadType(null, false);
+
+                        if(CurTkn.Kind != EKind.Identifier) {
+                            throw new TParseException();
+                        }
+
+                        if(NextTkn.Kind == EKind.LP) {
+
+                            return ReadFunctionLine(cls, is_static, tp);
+                        }
+                        else {
+
+                            if (parent_fnc == null) {
+
+                                return ReadFieldLine(cls, is_static, tp);
+                            }
+                            else {
+
+                                return ReadVariableDeclarationLine(tp);
+                            }
+                        }
+                    }
 
                 case EKind.Identifier:
                 case EKind.base_:
                     if (NextTkn.Kind == EKind.Colon) {
 
-                        return ReadFieldLine(cls, false);
+                        return ReadFieldLine(cls, is_static, null);
                     }
                     else if (parent_fnc == null) {
 
-                        return ReadFunctionLine(cls, false);
+                        return ReadFunctionLine(cls, is_static, null);
                     }
                     else {
 
                         return ReadAssignmentCallLine();
                     }
 
+                case EKind.this_:
+                    return ReadAssignmentCallLine();
+
                 case EKind.operator_:
-                    return ReadFunctionLine(cls, false);
+                    return ReadFunctionLine(cls, is_static, null);
 
                 default:
+                    Debug.WriteLine("行頭 {0}", CurTkn.Kind);
                     break;
                 }
 
@@ -909,6 +1038,14 @@ namespace MyEdit {
             }
 
             Running = false;
+        }
+
+        public TToken GetToken2(EKind kind1, EKind kind2) {
+            if(CurTkn.Kind != kind1 && CurTkn.Kind != kind2) {
+
+                throw new TParseException();
+            }
+            return GetToken(EKind.Undefined);
         }
 
         public TToken GetToken(EKind type) {
@@ -1573,6 +1710,7 @@ namespace MyEdit {
 
     public class TLine {
         public int Indent;
+        public string TextLine;
         public TToken[] Tokens;
         public object ObjLine;
         public TClass ClassLine;

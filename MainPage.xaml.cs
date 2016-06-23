@@ -37,7 +37,12 @@ namespace LineParser
 
             prj.OpenProject();
 
+            prj.RegisterClassNames();
+
             foreach(TSourceFile src in prj.SourceFiles) {
+
+                src.Parser.ParseFile(src);
+
                 string file_name = Path.GetFileName(src.PathSrc);
 
                 lst_SourceFiles.Items.Add(file_name);

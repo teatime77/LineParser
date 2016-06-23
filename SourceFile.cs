@@ -123,13 +123,13 @@ namespace MyEdit {
                 int next_line_top = GetNextLineTopOrEOT(line_top);
 
                 // 行の先頭位置から次の行の先頭位置または文書の終わりまでの文字列
-                string lex_string = StringFromRange(line_top, next_line_top);
+                line.TextLine = StringFromRange(line_top, next_line_top);
 
                 // 変更前の最後の字句型
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得ます。
-                line.Tokens = Parser.LexicalAnalysis(lex_string, last_token_type);
+                line.Tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
                 foreach (TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットします。

@@ -18,9 +18,20 @@ namespace MyEdit {
         public TCSharpParser(TProject prj) : base(prj) {
         }
 
+        public override void LCopt() {
+            GetToken(EKind.LC);
+        }
+
         public override void LineEnd() {
             GetToken(EKind.SemiColon);
             GetToken(EKind.EOT);
+        }
+
+        public override TVariable ReadArgVariable() {
+            TClass type = ReadType(null, false);
+            TToken id = GetToken(EKind.Identifier);
+
+            return new TVariable(id, type, null);
         }
     }
 }
