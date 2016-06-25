@@ -35,6 +35,8 @@ namespace LineParser
             TParser.theParser = new TParser(prj);
             TCSharpParser.CSharpParser = new TCSharpParser(prj);
 
+            prj.ClearProject();
+
             prj.OpenProject();
 
             prj.RegisterClassNames();

@@ -127,6 +127,17 @@ namespace MyEdit {
             }
         }
 
+        public void RegGenericClass(Dictionary<string, TGenericClass> dic, TGenericClass cls) {
+            if (dic.ContainsKey(cls.ClassName)) {
+
+                dic[cls.ClassName] = cls;
+            }
+            else {
+
+                dic.Add(cls.ClassName, cls);
+            }
+        }
+
         public TGenericClass GetSpecializedClass(TGenericClass cls, List<TClass> vtp) {
             string class_text = cls.GetClassText();
 

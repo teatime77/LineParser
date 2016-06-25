@@ -83,15 +83,7 @@ namespace MyEdit {
 
                 parameterized_class.GenericType = EGeneric.ParameterizedClass;
 
-                if(PrjParser.ParameterizedClassTable.ContainsKey(parameterized_class.ClassName)){
-
-                    PrjParser.ParameterizedClassTable[parameterized_class.ClassName] = parameterized_class;
-                }
-                else{
-
-                    //Debug.WriteLine("総称型 : {0}", parameterized_class.GetClassText(), "");
-                    PrjParser.ParameterizedClassTable.Add(parameterized_class.ClassName, parameterized_class);
-                }
+                PrjParser.RegGenericClass(PrjParser.ParameterizedClassTable, parameterized_class);
                 PrjParser.RegClass(PrjParser.ClassTable, parameterized_class);
 
                 cls = parameterized_class;
@@ -106,7 +98,7 @@ namespace MyEdit {
                 GetToken(EKind.Colon);
                 while (true) {
 
-                    TToken super_class_name = GetToken(EKind.Identifier);
+                    TToken super_class_name = GetToken2(EKind.Identifier, EKind.ClassName);
 
                     TClass super_class = PrjParser.GetClassByName(super_class_name.TextTkn);
                     cls.SuperClasses.Add(super_class);
@@ -323,21 +315,27 @@ namespace MyEdit {
         }
 
 
-        public TFunction ReadFunctionLine(TClass parent_class, bool is_static, TClass ret_type_prepend) {
+        public TFunction ReadFunctionLine(TClass parent_class, TToken constructor_token, TClass constructor_class, bool is_static, TClass ret_type_prepend) {
             TToken fnc_name;
             
-            if(CurTkn.Kind == EKind.operator_) {
-
-                GetToken(EKind.operator_);
-                fnc_name = GetToken(EKind.Undefined);
-                if(fnc_name.TokenType != ETokenType.Symbol) {
-                    throw new TParseException();
-                }
-                
+            if(constructor_class != null) {
+                fnc_name = constructor_token;
             }
             else {
 
-                fnc_name = GetToken(EKind.Identifier);
+                if (CurTkn.Kind == EKind.operator_) {
+
+                    GetToken(EKind.operator_);
+                    fnc_name = GetToken(EKind.Undefined);
+                    if (fnc_name.TokenType != ETokenType.Symbol) {
+                        throw new TParseException();
+                    }
+
+                }
+                else {
+
+                    fnc_name = GetToken(EKind.Identifier);
+                }
             }
 
             GetToken(EKind.LP);
@@ -722,15 +720,21 @@ namespace MyEdit {
                     return ReadJumpLine();
 
                 case EKind.ClassName: {
+                        TToken class_token = CurTkn;
                         TClass tp = ReadType(null, false);
 
-                        if(CurTkn.Kind != EKind.Identifier) {
+                        if (CurTkn.Kind == EKind.LP) {
+
+                            return ReadFunctionLine(cls, class_token, tp, is_static, tp);
+                        }
+
+                        if (CurTkn.Kind != EKind.Identifier) {
                             throw new TParseException();
                         }
 
                         if(NextTkn.Kind == EKind.LP) {
 
-                            return ReadFunctionLine(cls, is_static, tp);
+                            return ReadFunctionLine(cls, null, null, is_static, tp);
                         }
                         else {
 
@@ -753,7 +757,7 @@ namespace MyEdit {
                     }
                     else if (parent_fnc == null) {
 
-                        return ReadFunctionLine(cls, is_static, null);
+                        return ReadFunctionLine(cls, null, null, is_static, null);
                     }
                     else {
 
@@ -764,7 +768,7 @@ namespace MyEdit {
                     return ReadAssignmentCallLine();
 
                 case EKind.operator_:
-                    return ReadFunctionLine(cls, is_static, null);
+                    return ReadFunctionLine(cls, null, null, is_static, null);
 
                 default:
                     Debug.WriteLine("行頭 {0}", CurTkn.Kind);
@@ -826,7 +830,7 @@ namespace MyEdit {
             }
             Running = true;
             Dirty = false;
-            Debug.WriteLine("parse file : 開始");
+            Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             Dictionary<string, int> dic = new Dictionary<string, int>();
             dic.Add("int", 0);
@@ -837,7 +841,6 @@ namespace MyEdit {
             dic.Add("bool", 5);
             dic.Add("void", 6);
 
-            PrjParser.ClearProject();
             src.ClassesSrc.Clear();
 
             List<object> obj_stack = new List<object>();
@@ -910,6 +913,7 @@ namespace MyEdit {
                                     parent_stmt = vstmt.First();
                                 }
 
+                                Debug.Write(string.Format("行解析 {0}", line.TextLine));
                                 object obj = ParseLine(cls, parent_fnc, line_top_idx, token_list);
                                 if (obj != null) {
 
@@ -1132,7 +1136,14 @@ namespace MyEdit {
 
                     GetToken(EKind.LP);
 
-                    args = ExpressionList().ToArray();
+                    if(CurTkn.Kind == EKind.RP) {
+
+                        args = new TTerm[0];
+                    }
+                    else {
+
+                        args = ExpressionList().ToArray();
+                    }
 
                     GetToken(EKind.RP);
 
