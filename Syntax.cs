@@ -20,6 +20,15 @@ namespace MyEdit {
         SpecializedClass
     }
 
+
+    public enum EAggregateFunction {
+        Sum,
+        Max,
+        Min,
+        Average
+    }
+
+
     public class TUsing {
         public List<string> Packages = new List<string>();
     }
@@ -39,6 +48,7 @@ namespace MyEdit {
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
         public string ClassText = null;
+        public TFunction DelegateFnc;
 
         public List<TClass> SuperClasses = new List<TClass>();
         public List<TField> Fields = new List<TField>();
@@ -46,6 +56,10 @@ namespace MyEdit {
 
         public TClass(string name) {
             ClassName = name;
+        }
+
+        public TClass(TFunction fnc) {
+            DelegateFnc = fnc;
         }
 
         public virtual string GetClassText() {
@@ -113,6 +127,9 @@ namespace MyEdit {
         public TClass TypeVar;
         public TTerm InitValue;
 
+        public TVariable() {
+        }
+
         public TVariable(TToken name) {
             TokenVar = name;
             NameVar = name.TextTkn;
@@ -124,6 +141,11 @@ namespace MyEdit {
             TypeVar = type;
             InitValue = init;
         }
+
+        public TVariable(string name, TClass type) {
+            NameVar = name;
+            TypeVar = type;
+        }
     }
 
     public class TMember : TVariable {
@@ -133,20 +155,30 @@ namespace MyEdit {
         public TMember(bool is_static, TToken name, TClass tp, TTerm init) : base(name, tp, init) {
             IsStatic = is_static;
         }
+
+        public TMember() : base() {
+        }
     }
 
     public class TField : TMember {
+        public TField(TClass parent_class, bool is_static, TToken name, TClass tp, TTerm init) : base(is_static, name, tp, init) {
 
-        public TField(bool is_static, TToken name, TClass tp, TTerm init) : base(is_static, name, tp, init) {
         }
     }
 
     public partial class TFunction : TMember {
         public TVariable[] ArgsFnc;
+        public TApply BaseApp;
         public TBlock BlockFnc = new TBlock();
+        public TTerm LambdaFnc;
 
-        public TFunction(bool is_static, TToken name, TVariable[]args, TClass ret_type) : base(is_static, name, ret_type, null) {
+        public TFunction(bool is_static, TToken name, TVariable[]args, TClass ret_type, TApply base_app) : base(is_static, name, ret_type, null) {
             ArgsFnc = args;
+            BaseApp = base_app;
+        }
+
+        public TFunction(string name, TTerm trm) : base() {
+            LambdaFnc = trm;
         }
     }
 
@@ -171,10 +203,20 @@ namespace MyEdit {
     public partial class TReference : TTerm {
         public string NameRef;
         public TVariable VarRef;
+        public TClass ClassRef;
 
         public TReference(TToken name) {
             TokenTrm = name;
             NameRef = name.TextTkn;
+        }
+
+        public TReference(TClass cls) {
+            NameRef = cls.ClassName;
+            ClassRef = cls;
+        }
+
+        public TReference(TVariable var1) {
+            VarRef = var1;
         }
     }
 
@@ -227,32 +269,53 @@ namespace MyEdit {
 
     public partial class TDotApply : TApply {
         public TTerm DotApp;
+        public TClass DotClass;
 
         public TDotApply(TTerm trm, TToken fnc, TTerm[] args) : base(fnc, args) {
             DotApp = trm;
+        }
+
+        public TDotApply(TClass cls, TToken fnc, TTerm[] args) : base(fnc, args) {
+            DotClass = cls;
         }
     }
 
     public class TNewApply : TApply {
         public TClass ClassApp;
+        public List<TTerm> InitList;
 
-        public TNewApply(EKind kind, TToken class_token, TClass cls, TTerm[] args) {
+        public TNewApply(EKind kind, TToken class_token, TClass cls, TTerm[] args, List<TTerm> init) {
             TokenTrm = class_token;
             Debug.Assert(kind == EKind.NewInstance || kind == EKind.NewArray);
             KindApp = kind;
             Args = args;
+            if(init == null) {
+
+                InitList = new List<TTerm>();
+            }
+            else {
+
+            }
 
             ClassApp = cls;
         }
     }
 
     public partial class TQuery : TTerm {
+        public TVariable VarQry;
+        public TTerm SeqQry;
+        public TTerm CndQry;
+
     }
 
     public class TFrom : TQuery {
+        public TTerm SelFrom;
+        public TTerm TakeFrom;
+        public TTerm InnerFrom;
     }
 
     public class TAggregate : TQuery {
+        public TTerm IntoAggr;
     }
 
     //------------------------------------------------------------ TStatement
@@ -353,15 +416,28 @@ namespace MyEdit {
 
     public partial class TCatch : TBlockStatement {
         public TVariable CatchVariable;
+
+        public TCatch(TVariable var1) {
+            CatchVariable = var1;
+        }
     }
 
     public partial class TWhile : TBlockStatement {
         public TTerm WhileCondition;
     }
 
-    public partial class TFor : TBlockStatement {
+    public abstract class TAbsFor : TBlockStatement {
         public TVariable LoopVariable;
+    }
+
+    public partial class TForEach : TAbsFor {
         public TTerm ListFor;
+    }
+
+    public partial class TFor : TAbsFor {
+        public TStatement InitStatement;
+        public TTerm ConditionFor;
+        public TStatement PostStatement;
     }
 
     public partial class TJump : TStatement {
@@ -370,6 +446,13 @@ namespace MyEdit {
 
         public TJump(EKind kind) {
             KindJmp = kind;
+        }
+    }
+
+    public class TAttribute : TStatement {
+        public TClass Attr;
+        public TAttribute(TClass attr) {
+            Attr = attr;
         }
     }
 }

@@ -117,9 +117,13 @@ namespace MyEdit {
             TermNavi(wh.WhileCondition, args);
         }
 
-        public virtual void ForNavi(TFor for1, params object[] args) {
+        public virtual void ForEachNavi(TForEach for1, params object[] args) {
             TermNavi(for1.ListFor, args);
             VariableNavi(for1.LoopVariable, args);
+        }
+
+        public virtual void ForNavi(TFor for1, params object[] args) {
+            TermNavi(for1.ConditionFor, args);
         }
 
         public virtual void JumpNavi(TJump jmp, params object[] args) {

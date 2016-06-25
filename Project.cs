@@ -48,7 +48,7 @@ namespace MyEdit {
             foreach(TSourceFile src in SourceFiles) {
                 foreach(TLine line in src.Lines) {
                     if(line.Tokens != null) {
-                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_);
+                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
                         if(idx != -1) {
                             if(idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
 
@@ -186,7 +186,7 @@ namespace MyEdit {
 
         public TField CopyField(TClass cla1, TField fld_src, Dictionary<string, TClass> dic) {
             TClass tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
-            TField fld1 = new TField(fld_src.IsStatic, fld_src.TokenVar, tp, null);
+            TField fld1 = new TField(cla1, fld_src.IsStatic, fld_src.TokenVar, tp, null);
 
             return fld1;
         }
@@ -195,7 +195,7 @@ namespace MyEdit {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
             TClass ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
-            TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.TokenVar, args, ret_type);
+            TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.TokenVar, args, ret_type, null);
 
             return fnc;
         }

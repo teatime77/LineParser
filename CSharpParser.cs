@@ -18,8 +18,20 @@ namespace MyEdit {
         public TCSharpParser(TProject prj) : base(prj) {
         }
 
+        public override void LPopt() {
+            GetToken(EKind.LP);
+        }
+
+        public override void RPopt() {
+            GetToken(EKind.RP);
+        }
+
         public override void LCopt() {
             GetToken(EKind.LC);
+        }
+
+        public override void Colonopt() {
+            GetToken(EKind.Colon);
         }
 
         public override void LineEnd() {
@@ -28,6 +40,20 @@ namespace MyEdit {
         }
 
         public override TVariable ReadArgVariable() {
+            switch (CurTkn.Kind) {
+            case EKind.ref_:
+                GetToken(EKind.ref_);
+                break;
+
+            case EKind.out_:
+                GetToken(EKind.out_);
+                break;
+
+            case EKind.params_:
+                GetToken(EKind.params_);
+                break;
+            }
+
             TClass type = ReadType(null, false);
             TToken id = GetToken(EKind.Identifier);
 

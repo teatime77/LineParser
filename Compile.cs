@@ -51,8 +51,8 @@ namespace MyEdit {
     //------------------------------------------------------------ TTerm
 
     partial class TTerm {
-        public abstract void ResolveName(TClass cls, List<TVariable> vars);
-
+        public virtual void ResolveName(TClass cls, List<TVariable> vars) {
+        }
     }
 
     partial class TLiteral {
@@ -225,7 +225,8 @@ namespace MyEdit {
     //------------------------------------------------------------ TStatement
 
     partial class TStatement {
-        public abstract void ResolveName(TClass cls, List<TVariable> vars);
+        public virtual void ResolveName(TClass cls, List<TVariable> vars) {
+        }
     }
 
     partial class TAssignment {
@@ -333,8 +334,7 @@ namespace MyEdit {
         }
     }
 
-
-    partial class TFor {
+    partial class TForEach {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
             ListFor.ResolveName(cls, vars);
             LoopVariable.ResolveName(cls, vars);
@@ -342,6 +342,34 @@ namespace MyEdit {
             vars.Add(LoopVariable);
             ResolveNameBlock(cls, vars);
             vars.RemoveAt(vars.Count - 1);
+        }
+    }
+
+    partial class TFor {
+        public override void ResolveName(TClass cls, List<TVariable> vars) {
+            if(InitStatement != null) {
+
+                InitStatement.ResolveName(cls, vars);
+            }
+
+            if(LoopVariable != null) {
+
+                vars.Add(LoopVariable);
+            }
+
+            if (ConditionFor != null) {
+
+                ConditionFor.ResolveName(cls, vars);
+            }
+
+            if(PostStatement != null) {
+                PostStatement.ResolveName(cls, vars);
+            }
+
+            if (LoopVariable != null) {
+
+                vars.RemoveAt(vars.Count - 1);
+            }
         }
     }
 

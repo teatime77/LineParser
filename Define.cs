@@ -57,6 +57,7 @@ namespace MyEdit {
         Or_,
         And_,
         Not_,
+        Lambda,
 
         abstract_,
         as_,
@@ -380,7 +381,6 @@ namespace MyEdit {
                 EKind.var_,
                 EKind.where_,
                 EKind.yield_,
-
             };
 
             Debug.Assert(keyword_list.Length == token_list.Length);
@@ -435,6 +435,8 @@ namespace MyEdit {
             AddSymbol("||", EKind.Or_);
             AddSymbol("&&", EKind.And_);
             AddSymbol("!", EKind.Not_);
+
+            AddSymbol("=>", EKind.Lambda);
         }
 
         void AddSymbol(string s, EKind kind) {

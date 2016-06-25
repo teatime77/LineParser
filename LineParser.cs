@@ -16,6 +16,10 @@ namespace MyEdit {
         public const int TabSize = 4;
         public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
         public static TParser theParser;
+
+        [ThreadStatic]
+        public TClass LookaheadClass;
+
         public TProject PrjParser;
         public TToken[] TokenList;
         public int TokenPos;
@@ -47,7 +51,29 @@ namespace MyEdit {
             return new string(' ', nest * TabSize);
         }
 
+        public virtual void LPopt() {
+        }
+
+        public virtual void RPopt() {
+        }
+
         public virtual void LCopt() {
+        }
+
+        public virtual void Colonopt() {
+        }
+
+        public TClass ReadEnumLine() {
+            GetToken(EKind.enum_);
+            TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
+
+            TClass cls = PrjParser.GetClassByName(id.TextTkn);
+            cls.KindClass = EClass.Enum;
+
+            LCopt();
+            GetToken(EKind.EOT);
+
+            return cls;
         }
 
         public TClass ReadClassLine() {
@@ -145,11 +171,16 @@ namespace MyEdit {
 
             LineEnd();
 
-            return new TField(is_static, id, tp, init);
+            return new TField(parent_class, is_static, id, tp, init);
         }
 
-        public TClass ReadEnumLine() {
-            return null;
+        public TField ReadEnumFieldLine(TClass parent_class) {
+            TToken id = GetToken(EKind.Identifier);
+
+            OptGetToken(EKind.Comma);
+            GetToken(EKind.EOT);
+
+            return new TField(parent_class, false, id, parent_class, null);
         }
 
         public TClass ReadType(TClass parent_class, bool new_class) {
@@ -174,7 +205,7 @@ namespace MyEdit {
                 while (true) {
                     TClass param_class = ReadType(parent_class, false);
 
-                    if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && ((TGenericClass)parent_class).ContainsArgumentClass) {
+                    if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && (parent_class as TGenericClass).ContainsArgumentClass) {
 
                         contains_argument_class = true;
                     }
@@ -355,22 +386,52 @@ namespace MyEdit {
 
             GetToken(EKind.RP);
 
-            TClass ret_type = null;
-            if(ret_type_prepend == null && CurTkn.Kind == EKind.Colon) {
+            TClass ret_type = ret_type_prepend;
+            TApply base_app = null;
+
+            if(CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
-                ret_type = ReadType(parent_class, false);
+                if(ret_type_prepend == null) {
+
+                    ret_type = ReadType(parent_class, false);
+                }
+                else if(constructor_class != null) {
+
+                    if(CurTkn.Kind == EKind.base_) {
+
+                        base_app = PrimaryExpression() as TApply;
+                    }
+                    else {
+                        throw new TParseException();
+                    }
+                }
             }
 
             LCopt();
 
             GetToken(EKind.EOT);
 
-            return new TFunction(is_static, fnc_name, vars.ToArray(), ret_type);
+            return new TFunction(is_static, fnc_name, vars.ToArray(), ret_type, base_app);
         }
 
         public virtual TVariable ReadArgVariable() {
+            switch (CurTkn.Kind) {
+            case EKind.ref_:
+                GetToken(EKind.ref_);
+                break;
+
+            case EKind.out_:
+                GetToken(EKind.out_);
+                break;
+
+            case EKind.params_:
+                GetToken(EKind.params_);
+                break;
+
+            }
+
             TToken id = GetToken(EKind.Identifier);
 
             TClass type = null;
@@ -413,7 +474,7 @@ namespace MyEdit {
             return new TVariable(id, type, init);
         }
 
-        public virtual TVariableDeclaration ReadVariableDeclarationLine(TClass type_prepend) {
+        public virtual TVariableDeclaration ReadVariableDeclarationLine(TClass type_prepend, bool in_for) {
             TVariableDeclaration var_decl = new TVariableDeclaration();
 
             if(type_prepend == null) {
@@ -434,7 +495,10 @@ namespace MyEdit {
                 GetToken(EKind.Comma);
             }
 
-            LineEnd();
+            if(!in_for && TokenList[TokenList.Length - 1].Kind != EKind.LC) {
+
+                LineEnd();
+            }
 
             return var_decl;
         }
@@ -443,8 +507,11 @@ namespace MyEdit {
             TIfBlock if_block = new TIfBlock();
 
             GetToken(EKind.if_);
+            LPopt();
 
             if_block.ConditionIf = Expression();
+            RPopt();
+            LCopt();
 
             GetToken(EKind.EOT);
             return if_block;
@@ -457,8 +524,12 @@ namespace MyEdit {
 
             if(CurTkn.Kind == EKind.if_) {
 
+                GetToken(EKind.if_);
+                LPopt();
                 if_block.ConditionIf = Expression();
+                RPopt();
             }
+            LCopt();
             GetToken(EKind.EOT);
 
             return if_block;
@@ -469,7 +540,10 @@ namespace MyEdit {
 
             GetToken(EKind.switch_);
 
+            LPopt();
             switch1.TermSwitch = Expression();
+            RPopt();
+            LCopt();
             GetToken(EKind.EOT);
 
             return switch1;
@@ -483,6 +557,10 @@ namespace MyEdit {
             List<TTerm> expr_list = ExpressionList();
             case1.TermsCase.AddRange(expr_list);
 
+            Colonopt();
+            if(CurTkn.Kind == EKind.LC) {
+                GetToken(EKind.LC);
+            }
             GetToken(EKind.EOT);
             return case1;
         }
@@ -492,32 +570,106 @@ namespace MyEdit {
 
             GetToken(EKind.while_);
 
+            LPopt();
             while1.WhileCondition = Expression();
+            RPopt();
 
+            LCopt();
             GetToken(EKind.EOT);
             return while1;
+        }
+
+        public TForEach ReadForEachLine() {
+            TForEach for1 = new TForEach();
+
+            GetToken(EKind.foreach_);
+            LPopt();
+
+            if(CurTkn.Kind == EKind.ClassName) {
+
+                for1.LoopVariable = ReadArgVariable();
+            }
+            else {
+
+                TToken id = GetToken(EKind.Identifier);
+                for1.LoopVariable = new TVariable(id);
+            }
+
+            GetToken(EKind.in_);
+
+            for1.ListFor = Expression();
+
+            RPopt();
+            LCopt();
+            GetToken(EKind.EOT);
+
+            return for1;
         }
 
         public TFor ReadForLine() {
             TFor for1 = new TFor();
 
             GetToken(EKind.for_);
+            GetToken(EKind.LP);
 
-            TToken id = GetToken(EKind.Identifier);
-            for1.LoopVariable = new TVariable(id);
+            if (CurTkn.Kind != EKind.SemiColon) {
 
-            GetToken(EKind.in_);
+                if (CurTkn.Kind == EKind.ClassName) {
+                    TClass tp = ReadType(null, false);
 
-            for1.ListFor = Expression();
+                    for1.InitStatement = ReadVariableDeclarationLine(tp, true);
+                    for1.LoopVariable = (for1.InitStatement as TVariableDeclaration).Variables[0];
+                }
+                else {
 
+                    for1.InitStatement = ReadAssignmentCallLine(true) as TStatement;
+                }
+            }
+
+            GetToken(EKind.SemiColon);
+
+            if (CurTkn.Kind != EKind.SemiColon) {
+
+                for1.ConditionFor = Expression();
+            }
+
+            GetToken(EKind.SemiColon);
+
+            if(CurTkn.Kind != EKind.RP) {
+
+                for1.PostStatement = ReadAssignmentCallLine(true) as TStatement;
+            }
+
+            GetToken(EKind.RP);
+            GetToken2(EKind.LC, EKind.SemiColon);
             GetToken(EKind.EOT);
+
             return for1;
         }
 
         public TTry ReadTryLine() {
             GetToken(EKind.try_);
+            LCopt();
             GetToken(EKind.EOT);
             return new TTry();
+        }
+
+        public TCatch ReadCatchLine() {
+            GetToken(EKind.catch_);
+            LPopt();
+
+            TClass tp = ReadType(null, false);
+
+            string name = "";
+            if(CurTkn.Kind == EKind.Identifier) {
+                name = GetToken(EKind.Identifier).TextTkn;
+            }
+
+            RPopt();
+            LCopt();
+            GetToken(EKind.EOT);
+
+            return new TCatch(new TVariable(name, tp));
         }
 
         public TJump ReadJumpLine() {
@@ -529,7 +681,10 @@ namespace MyEdit {
             case EKind.return_:
             case EKind.yield_:
             case EKind.throw_:
-                jump.RetVal = Expression();
+                if(CurTkn.Kind != EKind.SemiColon && CurTkn.Kind != EKind.EOT) {
+
+                    jump.RetVal = Expression();
+                }
                 break;
 
             case EKind.break_:                
@@ -539,12 +694,15 @@ namespace MyEdit {
                 GetToken(EKind.Identifier);
                 break;
             }
-            GetToken(EKind.EOT);
+
+            LineEnd();
 
             return jump;
         }
 
-        public TStatement ReadAssignmentCallLine() {
+        public object ReadAssignmentCallLine(bool in_for) {
+            TAssignment asn = null;
+
             TTerm t1 = Expression();
 
             switch (CurTkn.Kind) {
@@ -560,14 +718,26 @@ namespace MyEdit {
 
                 TApply app1 = new TApply(opr, t1, t2);
 
-                GetToken(EKind.EOT);
-
-                return new TAssignment(app1);
+                asn = new TAssignment(app1);
+                break;
             }
 
-            GetToken(EKind.EOT);
+            if(!in_for) {
 
-            if(!(t1 is TApply)) {
+                if(CurTkn.Kind == EKind.Comma) {
+                    GetToken(EKind.Comma);
+                    GetToken(EKind.EOT);
+                    return t1;
+                }
+
+                LineEnd();
+            }
+
+            if(asn != null) {
+                return asn;
+            }
+
+            if (!(t1 is TApply)) {
                 throw new TParseException();
             }
 
@@ -592,7 +762,7 @@ namespace MyEdit {
             return -1;
         }
 
-        public object ParseLine(TClass cls, TFunction parent_fnc, int line_top_idx, TToken[] token_list) {
+        public object ParseLine(TClass cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
             TokenList = token_list;
             TokenPos = line_top_idx;
 
@@ -619,6 +789,22 @@ namespace MyEdit {
             bool is_static = false;
 
             try {
+                if(parent_stmt is TVariableDeclaration) {
+                    TVariable var1 = (parent_stmt as TVariableDeclaration).Variables[0];
+
+                    if(! (var1.InitValue is TNewApply)) {
+                        throw new TParseException();
+                    }
+
+                    TTerm ele = Expression();
+
+                    OptGetToken(EKind.Comma);
+
+                    (var1.InitValue as TNewApply).InitList.Add(ele);
+
+                    return ele;
+                }
+
                 while (true) {
                     switch (CurTkn.Kind) {
                     case EKind.public_:
@@ -644,6 +830,14 @@ namespace MyEdit {
                     case EKind.static_:
                         GetToken(EKind.static_);
                         is_static = true;
+                        break;
+
+                    case EKind.virtual_:
+                        GetToken(EKind.virtual_);
+                        break;
+
+                    case EKind.override_:
+                        GetToken(EKind.override_);
                         break;
 
                     case EKind.async_:
@@ -678,12 +872,22 @@ namespace MyEdit {
                 case EKind.namespace_:
                     return ReadNamespace();
 
-                case EKind.class_:
                 case EKind.enum_:
+                    return ReadEnumLine();
+
+                case EKind.class_:
                     return ReadClassLine();
 
+                case EKind.delegate_: {
+
+                        GetToken(EKind.delegate_);
+                        TClass tp = ReadType(null, false);
+                        TFunction fnc = ReadFunctionLine(cls, null, null, false, tp);
+                        return new TClass(fnc);
+                    }
+
                 case EKind.var_:
-                    return ReadVariableDeclarationLine(null);
+                    return ReadVariableDeclarationLine(null, false);
 
                 case EKind.if_:
                     return ReadIfLine();
@@ -705,6 +909,9 @@ namespace MyEdit {
 
                 case EKind.for_:
                     return ReadForLine();
+
+                case EKind.foreach_:
+                    return ReadForEachLine();
 
                 case EKind.try_:
                     return ReadTryLine();
@@ -729,10 +936,12 @@ namespace MyEdit {
                         }
 
                         if (CurTkn.Kind != EKind.Identifier) {
-                            throw new TParseException();
+
+                            LookaheadClass = tp;
+                            return ReadAssignmentCallLine(false);
                         }
 
-                        if(NextTkn.Kind == EKind.LP) {
+                        if (NextTkn.Kind == EKind.LP) {
 
                             return ReadFunctionLine(cls, null, null, is_static, tp);
                         }
@@ -744,13 +953,18 @@ namespace MyEdit {
                             }
                             else {
 
-                                return ReadVariableDeclarationLine(tp);
+                                return ReadVariableDeclarationLine(tp, false);
                             }
                         }
                     }
 
                 case EKind.Identifier:
                 case EKind.base_:
+                    if(cls != null && cls.KindClass == EClass.Enum) {
+
+                        return ReadEnumFieldLine(cls);
+                    }
+
                     if (NextTkn.Kind == EKind.Colon) {
 
                         return ReadFieldLine(cls, is_static, null);
@@ -761,14 +975,20 @@ namespace MyEdit {
                     }
                     else {
 
-                        return ReadAssignmentCallLine();
+                        return ReadAssignmentCallLine(false);
                     }
 
                 case EKind.this_:
-                    return ReadAssignmentCallLine();
+                    return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
                     return ReadFunctionLine(cls, null, null, is_static, null);
+
+                case EKind.LB:
+                    GetToken(EKind.LB);
+                    TClass attr = ReadType(null, false);
+                    GetToken(EKind.RB);
+                    return new TAttribute(attr);
 
                 default:
                     Debug.WriteLine("行頭 {0}", CurTkn.Kind);
@@ -914,7 +1134,7 @@ namespace MyEdit {
                                 }
 
                                 Debug.Write(string.Format("行解析 {0}", line.TextLine));
-                                object obj = ParseLine(cls, parent_fnc, line_top_idx, token_list);
+                                object obj = ParseLine(cls, parent_fnc, parent_stmt, line_top_idx, token_list);
                                 if (obj != null) {
 
                                     while(obj_stack.Count < line.Indent) {
@@ -1044,14 +1264,6 @@ namespace MyEdit {
             Running = false;
         }
 
-        public TToken GetToken2(EKind kind1, EKind kind2) {
-            if(CurTkn.Kind != kind1 && CurTkn.Kind != kind2) {
-
-                throw new TParseException();
-            }
-            return GetToken(EKind.Undefined);
-        }
-
         public TToken GetToken(EKind type) {
 
             if(type != EKind.Undefined && type != CurTkn.Kind) {
@@ -1099,13 +1311,68 @@ namespace MyEdit {
             return tkn;
         }
 
+        public TToken GetToken2(EKind kind1, EKind kind2) {
+            if (CurTkn.Kind != kind1 && CurTkn.Kind != kind2) {
+
+                throw new TParseException();
+            }
+            return GetToken(EKind.Undefined);
+        }
+
+        public void OptGetToken(EKind kind) {
+            if (CurTkn.Kind == kind) {
+
+                GetToken(kind);
+            }
+        }
+
+        public TFrom FromExpression() {
+            TFrom from1 = new TFrom();
+
+            GetToken(EKind.from_);
+
+            TToken id1 = GetToken(EKind.Identifier);
+            from1.VarQry = new TVariable(id1);
+
+            GetToken(EKind.in_);
+            from1.SeqQry = Expression();
+
+            if(CurTkn.Kind == EKind.select_) {
+                GetToken(EKind.select_);
+                from1.SelFrom = Expression();
+            }
+
+            if (CurTkn.Kind == EKind.where_) {
+                GetToken(EKind.where_);
+                from1.CndQry = Expression();
+            }
+
+            if(CurTkn.Kind == EKind.from_) {
+                from1.InnerFrom = FromExpression();
+            }
+
+            return from1;
+        }
+
         public TTerm PrimaryExpression() {
             TToken id;
             TTerm[] args;
+            TClass cls;
+
+            if(LookaheadClass != null) {
+                TReference ref_class = new TReference(LookaheadClass);
+                LookaheadClass = null;
+                return ref_class;
+            }
 
             switch (CurTkn.Kind) {
             case EKind.Identifier:
-                id = GetToken(EKind.Identifier);
+            case EKind.this_:
+            case EKind.true_:
+            case EKind.false_:
+            case EKind.null_:
+            case EKind.base_:
+                id = GetToken(EKind.Undefined);
 
                 if (CurTkn.Kind == EKind.LP) {
                     GetToken(EKind.LP);
@@ -1116,10 +1383,29 @@ namespace MyEdit {
 
                     return new TApply(id, expr_list);
                 }
+                else if(CurTkn.Kind == EKind.Lambda) {
+                    GetToken(EKind.Lambda);
+
+                    TTerm ret = Expression();
+                    TFunction fnc = new TFunction(id.TextTkn, ret);
+
+                    return new TReference(fnc);
+                }
                 else {
 
                     return new TReference(id);
                 }
+
+            case EKind.LP:
+                GetToken(EKind.LP);
+
+                TTerm term = Expression();
+
+                GetToken(EKind.RP);
+
+                term.WithParenthesis = true;
+                return term;
+
 
             case EKind.NumberLiteral:
             case EKind.StringLiteral:
@@ -1131,23 +1417,16 @@ namespace MyEdit {
             case EKind.new_:
                 TToken new_tkn = GetToken(EKind.new_);
 
-                TClass cls = ReadType(null, true);
+                cls = ReadType(null, true);
                 if(CurTkn.Kind == EKind.LP) {
 
                     GetToken(EKind.LP);
 
-                    if(CurTkn.Kind == EKind.RP) {
-
-                        args = new TTerm[0];
-                    }
-                    else {
-
-                        args = ExpressionList().ToArray();
-                    }
+                    args = ExpressionList().ToArray();
 
                     GetToken(EKind.RP);
 
-                    return new TNewApply(EKind.NewInstance, new_tkn, cls, args);
+                    return new TNewApply(EKind.NewInstance, new_tkn, cls, args, null);
                 }
                 else if (CurTkn.Kind == EKind.LB) {
 
@@ -1157,31 +1436,33 @@ namespace MyEdit {
 
                     GetToken(EKind.RB);
 
-                    if(CurTkn.Kind == EKind.LC) {
+                    List<TTerm> init = null;
+                    if (CurTkn.Kind == EKind.LC) {
 
                         GetToken(EKind.LC);
-                        TTerm[] init = ExpressionList().ToArray();
-                        GetToken(EKind.RC);
+
+                        if(CurTkn.Kind != EKind.EOT) {
+
+                            init = ExpressionList();
+                            GetToken(EKind.RC);
+                        }
                     }
 
-                    return new TNewApply(EKind.NewArray, new_tkn, cls, args);
+                    return new TNewApply(EKind.NewArray, new_tkn, cls, args, init);
                 }
                 else {
                     throw new TParseException();
                 }
 
-            case EKind.base_:
-                GetToken(EKind.base_);
-                GetToken(EKind.Dot);
-                id = GetToken(EKind.Identifier);
-                GetToken(EKind.LP);
+            case EKind.ClassName:
+                id = CurTkn;
+                cls = ReadType(null, false);
 
-                args = ExpressionList().ToArray();
+                //!!!!!!!!!! idとclsは違う !!!!!!!!!!
+                return new TReference(cls);
 
-                GetToken(EKind.RP);
-
-                return new TApply(EKind.base_, id, args);
-
+            case EKind.from_:
+                return FromExpression();
             }
 
             throw new TParseException();
@@ -1306,11 +1587,17 @@ namespace MyEdit {
                 case EKind.LE:
                 case EKind.GT:
                 case EKind.GE:
+                case EKind.is_:
 
                     TToken opr = GetToken(EKind.Undefined);
                     TTerm t2 = AdditiveExpression();
 
                     t1 = new TApply(opr, t1, t2);
+                    break;
+
+                case EKind.as_:
+                    GetToken(EKind.as_);
+                    t1.CastType = ReadType(null, false);
                     break;
 
                 default:
@@ -1372,7 +1659,20 @@ namespace MyEdit {
         public List<TTerm> ExpressionList() {
             List<TTerm> expr_list = new List<TTerm>();
 
+            if (CurTkn.Kind == EKind.RP || CurTkn.Kind == EKind.RB || CurTkn.Kind == EKind.RC) {
+                return expr_list;
+            }
+
             while (true) {
+                switch (CurTkn.Kind) {
+                case EKind.out_:
+                    GetToken(EKind.out_);
+                    break;
+
+                case EKind.ref_:
+                    GetToken(EKind.ref_);
+                    break;
+                }
                 TTerm t1 = Expression();
                 expr_list.Add(t1);
 
@@ -1617,13 +1917,36 @@ namespace MyEdit {
                         StatementText(cas, sw, nest);
                     }
                 }
-                else if (stmt is TFor) {
-                    TFor for1 = stmt as TFor;
+                else if (stmt is TForEach) {
+                    TForEach for1 = stmt as TForEach;
 
-                    sw.Write("{0}for ", Tab(nest));
+                    sw.Write("{0}foreach ", Tab(nest));
                     VariableText(for1.LoopVariable, sw);
                     sw.Write(" in ");
                     TermText(for1.ListFor, sw);
+                    sw.WriteLine();
+                }
+                else if (stmt is TFor) {
+                    TFor for1 = stmt as TFor;
+
+                    sw.Write("{0}for(", Tab(nest));
+                    if(for1.InitStatement != null) {
+
+                        StatementText(for1.InitStatement, sw, 0);
+                    }
+                    sw.Write(" ; ");
+
+                    if(for1.ConditionFor != null) {
+
+                        TermText(for1.ConditionFor, sw);
+                    }
+                    sw.Write(" ; ");
+
+                    if (for1.PostStatement != null) {
+
+                        StatementText(for1.PostStatement, sw, 0);
+                    }
+                    sw.Write("){");
                     sw.WriteLine();
                 }
                 else if (stmt is TWhile) {
@@ -1742,7 +2065,9 @@ namespace MyEdit {
         }
 
         public TResolveNameException(TReference ref1) {
-            ref1.TokenTrm.ErrorTkn = this;
+            if(ref1.TokenTrm != null) {
+                ref1.TokenTrm.ErrorTkn = this;
+            }
         }
     }
 }
