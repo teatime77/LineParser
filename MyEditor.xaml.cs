@@ -86,19 +86,15 @@ namespace MyEdit {
         /*
             テキスト選択の開始位置
         */
-        public int SelStart{
-            get {
-                return Math.Min(SelOrigin, SelCurrent);
-            }
+        public int SelStart(){
+            return Math.Min(SelOrigin, SelCurrent);
         }
 
         /*
             テキスト選択の終了位置
         */
-        public int SelEnd {
-            get {
-                return Math.Max(SelOrigin, SelCurrent);
-            }
+        public int SelEnd() {
+            return Math.Max(SelOrigin, SelCurrent);
         }
 
         /*
@@ -193,8 +189,8 @@ namespace MyEdit {
             float x_start = (float)ViewPadding.X;
             float y = (float)ViewPadding.Y;
 
-            int sel_start = SelStart;
-            int sel_end   = SelEnd;
+            int sel_start = SelStart();
+            int sel_end   = SelEnd();
 
             for (; ; pos++) {
                 StringWriter line_sw = new StringWriter();
@@ -642,7 +638,7 @@ namespace MyEdit {
                     if (SelOrigin != SelCurrent) {
 
                         // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelStart, SelEnd, "");
+                        ReplaceText(SelStart(), SelEnd(), "");
                     }
                     else if (0 < SelCurrent) {
 
@@ -657,7 +653,7 @@ namespace MyEdit {
                     if (SelOrigin != SelCurrent) {
 
                         // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelStart, SelEnd, "");
+                        ReplaceText(SelStart(), SelEnd(), "");
                     }
                     else if (SelCurrent < Chars.Count) {
 
@@ -670,7 +666,7 @@ namespace MyEdit {
             case VirtualKey.Enter: {
 
                     // 選択した範囲のテキストを別のテキストに置換します。
-                    ReplaceText(SelStart, SelEnd, "\n");
+                    ReplaceText(SelStart(), SelEnd(), "\n");
                 }
                 break;
 
@@ -690,13 +686,13 @@ namespace MyEdit {
                         // Ctrl+Shift+Cの場合 ( HTMLテキストをクリップボードにコピーします。 )
 
                         // 選択範囲からHTML文字列を作ります。
-                        clipboard_str = SourceFile.HTMLStringFromRange(SelStart, SelEnd);
+                        clipboard_str = SourceFile.HTMLStringFromRange(SelStart(), SelEnd());
                     }
                     else {
                         // Ctrl+Cの場合 ( プレーンテキストをクリップボードにコピーします。 )
 
                         // 選択範囲の文字列
-                        string text = new string((from x in Chars.GetRange(SelStart, SelEnd - SelStart) select x.Chr).ToArray());
+                        string text = new string((from x in Chars.GetRange(SelStart(), SelEnd() - SelStart()) select x.Chr).ToArray());
 
                         // LFをCRLFに変換した文字列
                         clipboard_str = text.Replace("\n", "\r\n");
@@ -718,7 +714,7 @@ namespace MyEdit {
                         string text = await dataPackageView.GetTextAsync();
 
                         // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelStart, SelEnd, text.Replace("\r\n", "\n"));
+                        ReplaceText(SelStart(), SelEnd(), text.Replace("\r\n", "\n"));
                     }
                 }
                 break;
@@ -820,7 +816,7 @@ namespace MyEdit {
 
                     // ポインターの座標からテキストの位置を得ます。
                     int drag_pos = TextPositionFromPointer(CurrentPointerEvent.CurrentPoint);
-                    if (drag_pos != -1 && !(SelStart <= drag_pos && drag_pos < SelEnd)) {
+                    if (drag_pos != -1 && !(SelStart() <= drag_pos && drag_pos < SelEnd())) {
                         // ポインターの下に選択部分以外のテキストがある場合
 
                         // ドロップ位置をセットします。ドロップ先に挿入カーソルを描画するのに使われます。
@@ -844,16 +840,16 @@ namespace MyEdit {
                     if (DropPos != -1) {
 
                         // 選択部分の文字列
-                        string sel_str = new string((from c in Chars.Skip(SelStart) select c.Chr).Take(SelEnd - SelStart).ToArray());
+                        string sel_str = new string((from c in Chars.Skip(SelStart()) select c.Chr).Take(SelEnd() - SelStart()).ToArray());
 
                         if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == 0) {
                             // Ctrlキーが押されてない場合
 
                             // 選択位置の後ろにドロップ位置があるならtrue
-                            bool drop_after_selection = (SelStart < DropPos);
+                            bool drop_after_selection = (SelStart() < DropPos);
 
                             // 選択されたテキストを削除します。
-                            ReplaceText(SelStart, SelEnd, "");
+                            ReplaceText(SelStart(), SelEnd(), "");
 
                             if (drop_after_selection) {
                                 // 選択位置の後ろにドロップ位置があるの場合
@@ -977,7 +973,7 @@ namespace MyEdit {
                 case EEvent.Timeout:
                     // 長押しの場合
 
-                    if (SelStart < start_pos && start_pos < SelEnd) {
+                    if (SelStart() < start_pos && start_pos < SelEnd()) {
                         // 選択部分を長押しした場合
 
                         for(IEnumerator drag_drop = DragDropHandler(e); drag_drop.MoveNext();) {

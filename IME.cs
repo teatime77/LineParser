@@ -170,8 +170,8 @@ namespace MyEdit {
         */
         private void EditContext_SelectionRequested(CoreTextEditContext sender, CoreTextSelectionRequestedEventArgs ev) {
             CoreTextRange rng;
-            rng.StartCaretPosition = SelStart;
-            rng.EndCaretPosition = SelEnd;
+            rng.StartCaretPosition = SelStart();
+            rng.EndCaretPosition = SelEnd();
 
             MyEditor.WriteLine("<<--- SelectionRequested : {0}-{1}", rng.StartCaretPosition, rng.EndCaretPosition);
 
@@ -321,8 +321,8 @@ namespace MyEdit {
         */
         void MyNotifySelectionChanged() {
             CoreTextRange new_range;
-            new_range.StartCaretPosition = SelStart;
-            new_range.EndCaretPosition = SelEnd;
+            new_range.StartCaretPosition = SelStart();
+            new_range.EndCaretPosition = SelEnd();
 
             MyEditor.WriteLine("--->> NotifySelectionChanged");
             editContext.NotifySelectionChanged(new_range);
