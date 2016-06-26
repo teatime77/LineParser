@@ -32,7 +32,6 @@ namespace MyEdit {
             StorageFolder localFolder = ApplicationData.Current.LocalFolder;
             string[] project_files = File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", System.Text.Encoding.UTF8);
             foreach (string file_name in project_files) {
-                Debug.WriteLine(file_name);
 
                 string path = localFolder.Path + @"\" + file_name;
 
@@ -56,7 +55,7 @@ namespace MyEdit {
                                 if (!class_names.Contains(name)) {
 
                                     class_names.Add(name);
-                                    Debug.WriteLine("class {0}", name, "");
+                                    //Debug.WriteLine("class {0}", name, "");
                                 }
                             }
                             else {

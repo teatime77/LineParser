@@ -805,8 +805,6 @@ namespace MyEdit {
                 NextTkn = EOTToken;
             }
 
-            object line_obj = null;
-
             bool is_static = false;
 
             try {
@@ -1002,7 +1000,6 @@ namespace MyEdit {
                             GetToken(EKind.Colon);
                             return new TLabelStatement(id);
                         }
-
                     }
                     else if (parent_fnc == null) {
 
@@ -1015,6 +1012,8 @@ namespace MyEdit {
 
                 case EKind.this_:
                 case EKind.await_:
+                case EKind.LP:
+                case EKind.StringLiteral:
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
@@ -1028,16 +1027,13 @@ namespace MyEdit {
 
                 default:
                     Debug.WriteLine("行頭 {0}", CurTkn.Kind);
-                    break;
+                    throw new TParseException();
                 }
-
-                TTerm t1 = Expression();
             }
             catch (TParseException) {
-
             }
 
-            return line_obj;
+            return null;
         }
 
         public void GetVariableClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
@@ -1089,7 +1085,7 @@ namespace MyEdit {
             }
             Running = true;
             Dirty = false;
-            Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
+            //Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             Dictionary<string, int> dic = new Dictionary<string, int>();
             dic.Add("int", 0);
@@ -1104,7 +1100,7 @@ namespace MyEdit {
 
             List<object> obj_stack = new List<object>();
             for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
-                await Task.Delay(1);
+                //await Task.Delay(1);
 
                 //Debug.WriteLine("parse file : {0} {1}", line_idx, Dirty);
                 if (Dirty) {

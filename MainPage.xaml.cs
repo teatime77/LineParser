@@ -25,6 +25,7 @@ namespace LineParser {
         public MainPage() {
             this.InitializeComponent();
 
+            Debug.WriteLine("メイン開始");
             TProject prj = new TProject();
 
             TProject.Project = prj;
@@ -38,7 +39,8 @@ namespace LineParser {
 
             prj.RegisterClassNames();
 
-            foreach(TSourceFile src in prj.SourceFiles) {
+            Debug.WriteLine("解析開始");
+            foreach (TSourceFile src in prj.SourceFiles) {
 
                 src.Parser.ParseFile(src);
 
@@ -46,6 +48,7 @@ namespace LineParser {
 
                 lst_SourceFiles.Items.Add(file_name);
             }
+            Debug.WriteLine("メイン終了");
         }
 
         private void lst_SourceFiles_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
