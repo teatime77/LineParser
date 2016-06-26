@@ -244,8 +244,8 @@ namespace MyEdit {
 
     partial class TVariableDeclaration {
         public override void ResolveName(TClass cls, List<TVariable> vars) {
-            foreach(TVariable var in Variables) {
-                var.ResolveName(cls, vars);
+            foreach(TVariable var1 in Variables) {
+                var1.ResolveName(cls, vars);
             }
         }
     }

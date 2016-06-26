@@ -48,7 +48,7 @@ namespace MyEdit {
             foreach(TSourceFile src in SourceFiles) {
                 foreach(TLine line in src.Lines) {
                     if(line.Tokens != null) {
-                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
+                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
                         if(idx != -1) {
                             if(idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
 
@@ -105,7 +105,7 @@ namespace MyEdit {
 
         public TClass GetParamClassByName(TClass cls, string name) {
             if (cls is TGenericClass) {
-                TGenericClass gen = (TGenericClass)cls;
+                TGenericClass gen = cls as TGenericClass;
 
                 var v = from c in gen.GenCla where c.ClassName == name select c;
                 if (v.Any()) {

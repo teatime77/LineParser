@@ -161,11 +161,14 @@ namespace MyEdit {
                         else {
                             // 最後の字句型が違う場合
 
-                            if (last_token_type_before != ETokenType.BlockCommentContinued && last_token_type_before != ETokenType.VerbatimStringContinued &&
-                               last_token_type != ETokenType.BlockCommentContinued && last_token_type != ETokenType.VerbatimStringContinued) {
-                                // 変更前も変更後の最後の字句が複数行にまたがらない場合
+                            if (last_token_type_before != ETokenType.BlockCommentContinued && last_token_type_before != ETokenType.VerbatimStringContinued) {
+                                // 変更前も最後の字句が複数行にまたがらない場合
 
-                                break;
+                                if (last_token_type != ETokenType.BlockCommentContinued && last_token_type != ETokenType.VerbatimStringContinued) {
+                                    // 変更後も最後の字句が複数行にまたがらない場合
+
+                                    break;
+                                }
                             }
                         }
                     }

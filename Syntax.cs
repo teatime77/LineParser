@@ -59,6 +59,7 @@ namespace MyEdit {
         }
 
         public TClass(TFunction fnc) {
+            ClassName = fnc.NameVar;
             DelegateFnc = fnc;
         }
 
@@ -446,6 +447,14 @@ namespace MyEdit {
 
         public TJump(EKind kind) {
             KindJmp = kind;
+        }
+    }
+
+    public class TLabelStatement : TStatement {
+        public TToken LabelToken;
+
+        public TLabelStatement(TToken lbl) {
+            LabelToken = lbl;
         }
     }
 

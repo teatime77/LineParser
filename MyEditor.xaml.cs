@@ -20,6 +20,7 @@ using Windows.UI.Input;
 using System.Collections;
 using System.Threading.Tasks;
 using System.Net;
+using Microsoft.Graphics.Canvas.UI.Xaml;
 
 
 // The User Control item template is documented at http://go.microsoft.com/fwlink/?LinkId=234236
@@ -132,7 +133,7 @@ namespace MyEdit {
         /*
             Win2DのCanvasControlの描画
         */
-        private void Win2DCanvas_Draw(Microsoft.Graphics.Canvas.UI.Xaml.CanvasControl sender, Microsoft.Graphics.Canvas.UI.Xaml.CanvasDrawEventArgs args) {
+        private void Win2DCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args) {
             MyEditor.WriteLine("<<--- Draw");
 
             DrawList.Clear();
@@ -209,8 +210,8 @@ namespace MyEdit {
                     for (; pos < Chars.Count && Chars[pos].Chr != TSourceFile.LF && Chars[pos].Underline == under_line && Chars[pos].CharType == token_type && (sel_start <= pos && pos < sel_end) == selected; pos++) {
                         sw.Write(Chars[pos].Chr);
                     }
-                    //String str = new string((from c in Chars select c.Chr).ToArray());
-                    String str = sw.ToString();
+                    //string str = new string((from c in Chars select c.Chr).ToArray());
+                    string str = sw.ToString();
 
                     line_sw.Write(str);
 
@@ -287,7 +288,7 @@ namespace MyEdit {
                     }
                 }
 
-                String line_str = line_sw.ToString();
+                string line_str = line_sw.ToString();
 
                 // 挿入カーソルの位置を得ます。
                 int cursor_pos;
@@ -929,12 +930,12 @@ namespace MyEdit {
 
             // 単語の始まりを探します。
             int phrase_start = start_pos;
-            for (; 0 <= phrase_start && (Char.IsLetterOrDigit(Chars[phrase_start].Chr) || Chars[phrase_start].Chr == '_'); phrase_start--) ;
+            for (; 0 <= phrase_start && (char.IsLetterOrDigit(Chars[phrase_start].Chr) || Chars[phrase_start].Chr == '_'); phrase_start--) ;
             phrase_start++;
 
             // 単語の終わりを探します。
             int phrase_end = start_pos;
-            for (; phrase_end < Chars.Count && (Char.IsLetterOrDigit(Chars[phrase_end].Chr) || Chars[phrase_end].Chr == '_'); phrase_end++) ;
+            for (; phrase_end < Chars.Count && (char.IsLetterOrDigit(Chars[phrase_end].Chr) || Chars[phrase_end].Chr == '_'); phrase_end++) ;
 
             // 単語の始まりと終わりを選択します
             SelOrigin = phrase_start;

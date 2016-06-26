@@ -33,9 +33,9 @@ namespace MyEdit {
             Action(fnc, args);
         }
 
-        public virtual void VariableNavi(TVariable var, params object[] args) {
-            Action(var.InitValue, args);
-            Action(var, args);
+        public virtual void VariableNavi(TVariable var1, params object[] args) {
+            Action(var1.InitValue, args);
+            Action(var1, args);
         }
 
         public virtual void TermNavi(TTerm term, params object[] args) {
@@ -75,8 +75,8 @@ namespace MyEdit {
         }
 
         public virtual void VariableDeclarationNavi(TVariableDeclaration var_decl, params object[] args) {
-            foreach(TVariable var in var_decl.Variables) {
-                VariableNavi(var);
+            foreach(TVariable var1 in var_decl.Variables) {
+                VariableNavi(var1);
             }
         }
 

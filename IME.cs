@@ -7,6 +7,7 @@ using System.Diagnostics;
 using Windows.UI.Text.Core;
 using Windows.ApplicationModel.Core;
 using Windows.ApplicationModel;
+using Windows.Globalization;
 using System.Threading.Tasks;
 
 namespace MyEdit {
@@ -114,7 +115,7 @@ namespace MyEdit {
             Debug.Write("<<--- InputLanguageChanged");
 
             // IMEの名前を得ます。
-            Windows.Globalization.Language lng = sender.InputLanguage;
+            Language lng = sender.InputLanguage;
             if (lng != null) {
 
                 Debug.Write(" Lang:{0}", lng.DisplayName);
@@ -129,6 +130,7 @@ namespace MyEdit {
             テキストの内容の変化を通知してきた。
         */
         private void EditContext_TextUpdating(CoreTextEditContext sender, CoreTextTextUpdatingEventArgs ev) {
+/*
             MyEditor.WriteLine("<<--- TextUpdating:({0},{1})->({2},{3}) [{4}] {5} {6}",
                 ev.Range.StartCaretPosition, ev.Range.EndCaretPosition,
                 ev.NewSelection.StartCaretPosition, ev.NewSelection.EndCaretPosition,
@@ -136,6 +138,7 @@ namespace MyEdit {
                 ev.Result,
                 MeasureText(ev.Text, TextFormat)
             );
+*/
 
             // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュします。
             PushUndoRedoStack(ev.Range.StartCaretPosition, ev.Range.EndCaretPosition, ev.Text, UndoStack);
@@ -154,11 +157,13 @@ namespace MyEdit {
             テキストの選択位置の変化を通知してきた。
         */
         private void EditContext_SelectionUpdating(CoreTextEditContext sender, CoreTextSelectionUpdatingEventArgs ev) {
+/*
             MyEditor.WriteLine("<<--- SelectionUpdating: cancel:{0} result:{1} ({2},{3})",
                 ev.IsCanceled,
                 ev.Result,
                 ev.Selection.StartCaretPosition, ev.Selection.EndCaretPosition
             );
+*/
 
             // アプリ内で持っているテキストの選択位置を更新します。
             SelOrigin = ev.Selection.StartCaretPosition;
@@ -247,6 +252,7 @@ namespace MyEdit {
             かな漢字変換の途中で表示するテキストの書式を指定してきた。
         */
         private void EditContext_FormatUpdating(CoreTextEditContext sender, CoreTextFormatUpdatingEventArgs ev) {
+/*
             MyEditor.WriteLine("<<--- FormatUpdating: BG:{0} cancel:{1} range:({2},{3}) reason:{4} result:{5} color:{6} under-line:({7},{8})",
                 (ev.BackgroundColor == null ? "null" : ev.BackgroundColor.Value.ToString()),
                 ev.IsCanceled,
@@ -257,6 +263,7 @@ namespace MyEdit {
                 (ev.UnderlineColor == null ? "null" : ev.UnderlineColor.Value.ToString()),
                 (ev.UnderlineType == null ? "null" : ev.UnderlineType.Value.ToString())
             );
+*/
 
             if (ev.UnderlineType != null) {
                 // 下線がnullでない場合
