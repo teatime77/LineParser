@@ -182,7 +182,7 @@ namespace LineParser {
                 typeof(TForEach),
                 typeof(TFor),
                 typeof(TJump),
-                typeof(TClass),
+                typeof(TType),
                 typeof(TProject),
                 typeof(TCSharpParser),
                 typeof(EKind),

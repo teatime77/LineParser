@@ -18,7 +18,7 @@ namespace MyEdit {
         public static TParser theParser;
 
         [ThreadStatic]
-        public TClass LookaheadClass;
+        public TType LookaheadClass;
 
         public TProject PrjParser;
         public TToken[] TokenList;
@@ -63,11 +63,11 @@ namespace MyEdit {
         public virtual void Colonopt() {
         }
 
-        public TClass ReadEnumLine() {
+        public TType ReadEnumLine() {
             GetToken(EKind.enum_);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
-            TClass cls = PrjParser.GetClassByName(id.TextTkn);
+            TType cls = PrjParser.GetClassByName(id.TextTkn);
             cls.KindClass = EClass.Enum;
 
             LCopt();
@@ -76,22 +76,22 @@ namespace MyEdit {
             return cls;
         }
 
-        public TClass ReadClassLine() {
+        public TType ReadClassLine() {
             GetToken2(EKind.class_, EKind.struct_);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
-            TClass cls;
+            TType cls;
 
             if (CurTkn.Kind == EKind.LT) {
                 // 総称型の場合
 
-                List<TClass> param_classes = new List<TClass>();
+                List<TType> param_classes = new List<TType>();
 
                 GetToken(EKind.LT);
                 while (true) {
                     TToken param_name = GetToken(EKind.Identifier);
 
-                    TClass param_class = new TClass(param_name.TextTkn);
+                    TType param_class = new TType(param_name.TextTkn);
                     param_class.GenericType = EGeneric.ArgumentClass;
 
                     param_classes.Add(param_class);
@@ -126,7 +126,7 @@ namespace MyEdit {
 
                     TToken super_class_name = GetToken2(EKind.Identifier, EKind.ClassName);
 
-                    TClass super_class = PrjParser.GetClassByName(super_class_name.TextTkn);
+                    TType super_class = PrjParser.GetClassByName(super_class_name.TextTkn);
                     cls.SuperClasses.Add(super_class);
 
                     if(CurTkn.Kind == EKind.Comma) {
@@ -146,10 +146,10 @@ namespace MyEdit {
             return cls;
         }
 
-        public TField ReadFieldLine(TClass parent_class, bool is_static, TClass type_prepend) {
+        public TField ReadFieldLine(TType parent_class, bool is_static, TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
-            TClass tp;
+            TType tp;
             
             if(type_prepend != null) {
 
@@ -174,7 +174,7 @@ namespace MyEdit {
             return new TField(parent_class, is_static, id, tp, init);
         }
 
-        public TField ReadEnumFieldLine(TClass parent_class) {
+        public TField ReadEnumFieldLine(TType parent_class) {
             TToken id = GetToken(EKind.Identifier);
 
             OptGetToken(EKind.Comma);
@@ -183,11 +183,11 @@ namespace MyEdit {
             return new TField(parent_class, false, id, parent_class, null);
         }
 
-        public TClass ReadType(TClass parent_class, bool new_class) {
+        public TType ReadType(TType parent_class, bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TClass cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
+            TType cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
 
-            List<TClass> param_classes = null;
+            List<TType> param_classes = null;
             bool contains_argument_class = false;
 
             if (CurTkn.Kind == EKind.LT) {
@@ -199,11 +199,11 @@ namespace MyEdit {
                 }
                 TGenericClass org_cla = cls1 as TGenericClass;
 
-                param_classes = new List<TClass>();
+                param_classes = new List<TType>();
 
                 GetToken(EKind.LT);
                 while (true) {
-                    TClass param_class = ReadType(parent_class, false);
+                    TType param_class = ReadType(parent_class, false);
 
                     if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && (parent_class as TGenericClass).ContainsArgumentClass) {
 
@@ -250,7 +250,7 @@ namespace MyEdit {
                 return tmp_class;
             }
 
-            TClass cls2 = null;
+            TType cls2 = null;
             if (param_classes == null) {
                 // 引数がない場合
 
@@ -284,11 +284,11 @@ namespace MyEdit {
             return reg_class;
         }
 
-        public TClass GetSpecializedClass(TGenericClass org_class, List<TClass> param_classes) {
+        public TType GetSpecializedClass(TGenericClass org_class, List<TType> param_classes) {
             StringWriter sw = new StringWriter();
             sw.Write(org_class.ClassName);
             sw.Write("<");
-            foreach(TClass c in param_classes) {
+            foreach(TType c in param_classes) {
                 if(c != param_classes[0]) {
                     sw.Write(",");
                 }
@@ -346,7 +346,7 @@ namespace MyEdit {
         }
 
 
-        public TFunction ReadFunctionLine(TClass parent_class, TToken constructor_token, TClass constructor_class, bool is_static, TClass ret_type_prepend) {
+        public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, bool is_static, TType ret_type_prepend) {
             TToken fnc_name;
             
             if(constructor_class != null) {
@@ -386,7 +386,7 @@ namespace MyEdit {
 
             GetToken(EKind.RP);
 
-            TClass ret_type = ret_type_prepend;
+            TType ret_type = ret_type_prepend;
             TApply base_app = null;
 
             if(CurTkn.Kind == EKind.Colon) {
@@ -441,7 +441,7 @@ namespace MyEdit {
 
             TToken id = GetToken(EKind.Identifier);
 
-            TClass type = null;
+            TType type = null;
             if (CurTkn.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
@@ -452,10 +452,10 @@ namespace MyEdit {
             return new TVariable(id, type, null);
         }
 
-        public TVariable ReadVariable(TClass type_prepend) {
+        public TVariable ReadVariable(TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
-            TClass type = null;
+            TType type = null;
             if (type_prepend != null) {
 
                 type = type_prepend;
@@ -481,7 +481,7 @@ namespace MyEdit {
             return new TVariable(id, type, init);
         }
 
-        public virtual TVariableDeclaration ReadVariableDeclarationLine(TClass type_prepend, bool in_for) {
+        public virtual TVariableDeclaration ReadVariableDeclarationLine(TType type_prepend, bool in_for) {
             TVariableDeclaration var_decl = new TVariableDeclaration();
 
             if(type_prepend == null) {
@@ -622,7 +622,7 @@ namespace MyEdit {
             if (CurTkn.Kind != EKind.SemiColon) {
 
                 if (CurTkn.Kind == EKind.ClassName) {
-                    TClass tp = ReadType(null, false);
+                    TType tp = ReadType(null, false);
 
                     for1.InitStatement = ReadVariableDeclarationLine(tp, true);
                     for1.LoopVariable = (for1.InitStatement as TVariableDeclaration).Variables[0];
@@ -665,7 +665,7 @@ namespace MyEdit {
             GetToken(EKind.catch_);
             LPopt();
 
-            TClass tp = ReadType(null, false);
+            TType tp = ReadType(null, false);
 
             string name = "";
             if(CurTkn.Kind == EKind.Identifier) {
@@ -783,7 +783,7 @@ namespace MyEdit {
             return -1;
         }
 
-        public object ParseLine(TClass cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
+        public object ParseLine(TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
             TokenList = token_list;
             TokenPos = line_top_idx;
 
@@ -905,9 +905,9 @@ namespace MyEdit {
                 case EKind.delegate_: {
 
                         GetToken(EKind.delegate_);
-                        TClass tp = ReadType(null, false);
+                        TType tp = ReadType(null, false);
                         TFunction fnc = ReadFunctionLine(cls, null, null, false, tp);
-                        return new TClass(fnc);
+                        return new TType(fnc);
                     }
 
                 case EKind.var_:
@@ -952,7 +952,7 @@ namespace MyEdit {
 
                 case EKind.ClassName: {
                         TToken class_token = CurTkn;
-                        TClass tp = ReadType(null, false);
+                        TType tp = ReadType(null, false);
 
                         if (CurTkn.Kind == EKind.LP) {
 
@@ -1014,6 +1014,7 @@ namespace MyEdit {
                 case EKind.await_:
                 case EKind.LP:
                 case EKind.StringLiteral:
+                case EKind.typeof_:
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
@@ -1021,7 +1022,7 @@ namespace MyEdit {
 
                 case EKind.LB:
                     GetToken(EKind.LB);
-                    TClass attr = ReadType(null, false);
+                    TType attr = ReadType(null, false);
                     GetToken(EKind.RB);
                     return new TAttribute(attr);
 
@@ -1068,7 +1069,7 @@ namespace MyEdit {
                         TCatch catch1 = line.ObjLine as TCatch;
                         vars.Add(catch1.CatchVariable);
                     }
-                    else if (line.ObjLine is TClass) {
+                    else if (line.ObjLine is TType) {
 
                         return;
                     }
@@ -1143,14 +1144,14 @@ namespace MyEdit {
                                     obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
                                 }
 
-                                TClass cls = null;
+                                TType cls = null;
                                 TFunction parent_fnc = null;
                                 TBlockStatement parent_stmt = null;
                                 List<object> obj_stack_rev = new List<object>(obj_stack);
                                 obj_stack_rev.Reverse();
 
                                 // スタックの中からクラスを探します。
-                                var vcls = from x in obj_stack_rev where x is TClass select x as TClass;
+                                var vcls = from x in obj_stack_rev where x is TType select x as TType;
                                 if (vcls.Any()) {
                                     cls = vcls.First();
                                 }
@@ -1179,8 +1180,8 @@ namespace MyEdit {
                                     Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
 
                                     //StringWriter sw = new StringWriter();
-                                    if (obj is TClass) {
-                                        TClass class_def = obj as TClass;
+                                    if (obj is TType) {
+                                        TType class_def = obj as TType;
 
                                         //ClassLineText(class_def, sw);
                                         src.ClassesSrc.Add(class_def);
@@ -1392,10 +1393,11 @@ namespace MyEdit {
         public TTerm PrimaryExpression() {
             TToken id;
             TTerm[] args;
-            TClass cls;
+            TType cls;
             TTerm term;
+            TToken opr;
 
-            if(LookaheadClass != null) {
+            if (LookaheadClass != null) {
                 TReference ref_class = new TReference(LookaheadClass);
                 LookaheadClass = null;
                 return ref_class;
@@ -1517,9 +1519,17 @@ namespace MyEdit {
                 return FromExpression();
 
             case EKind.await_:
-                TToken opr = GetToken(EKind.await_);
+                opr = GetToken(EKind.await_);
                 term = Expression();
                 return new TApply(opr, term);
+
+            case EKind.typeof_:
+                opr = GetToken(EKind.typeof_);
+                GetToken(EKind.LP);
+                cls = ReadType(null, false);
+                GetToken(EKind.RP);
+                return new TApply(opr, new TReference(cls));
+
             }
 
             throw new TParseException();
@@ -1792,7 +1802,7 @@ namespace MyEdit {
         }
 
 
-        public void ClassLineText(TClass cls, StringWriter sw) {
+        public void ClassLineText(TType cls, StringWriter sw) {
             sw.Write("class {0}", cls.ClassName);
 
             for (int i = 0; i < cls.SuperClasses.Count; i++) {
@@ -1810,7 +1820,7 @@ namespace MyEdit {
             sw.WriteLine();
         }
 
-        public void ClassText(TClass cls, StringWriter sw) {
+        public void ClassText(TType cls, StringWriter sw) {
             sw.Write(cls.GetClassText());
         }
 
@@ -2083,7 +2093,7 @@ namespace MyEdit {
         }
 
         public void SourceFileText(TSourceFile src, StringWriter sw) {
-            foreach (TClass cls in src.ClassesSrc) {
+            foreach (TType cls in src.ClassesSrc) {
                 ClassLineText(cls, sw);
 
                 foreach (TField fld in cls.Fields) {
@@ -2147,7 +2157,7 @@ namespace MyEdit {
         public string TextLine;
         public TToken[] Tokens;
         public object ObjLine;
-        public TClass ClassLine;
+        public TType ClassLine;
     }
 
     public class TParseException : Exception {

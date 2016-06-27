@@ -16,7 +16,7 @@ namespace MyEdit {
         public List<TChar> Chars = new List<TChar>();
 
         public string PathSrc;
-        public List<TClass> ClassesSrc = new List<TClass>();
+        public List<TType> ClassesSrc = new List<TType>();
         public List<TLine> Lines = new List<TLine>();
         public List<MyEditor> Editors = new List<MyEditor>();
 

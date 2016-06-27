@@ -41,24 +41,24 @@ namespace MyEdit {
         }
     }
 
-    //------------------------------------------------------------ TClass
+    //------------------------------------------------------------ TType
 
-    public partial class TClass {
+    public partial class TType {
         public EClass KindClass = EClass.Class;
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
         public string ClassText = null;
         public TFunction DelegateFnc;
 
-        public List<TClass> SuperClasses = new List<TClass>();
+        public List<TType> SuperClasses = new List<TType>();
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
 
-        public TClass(string name) {
+        public TType(string name) {
             ClassName = name;
         }
 
-        public TClass(TFunction fnc) {
+        public TType(TFunction fnc) {
             ClassName = fnc.NameVar;
             DelegateFnc = fnc;
         }
@@ -68,24 +68,24 @@ namespace MyEdit {
         }
     }
 
-    public class TGenericClass : TClass {
+    public class TGenericClass : TType {
         public TGenericClass OrgCla;
         public bool ContainsArgumentClass;
         public int DimCnt;
 
-        public List<TClass> GenCla;
+        public List<TType> GenCla;
 
-        public TGenericClass(string name, List<TClass> arg_classes) : base(name) {
+        public TGenericClass(string name, List<TType> arg_classes) : base(name) {
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TGenericClass org_class, List<TClass> arg_classes) : base(org_class.ClassName) {
+        public TGenericClass(TGenericClass org_class, List<TType> arg_classes) : base(org_class.ClassName) {
             OrgCla = org_class;
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TClass element_class, int dim_cnt) : base(element_class.ClassName) {
-            GenCla = new List<TClass>();
+        public TGenericClass(TType element_class, int dim_cnt) : base(element_class.ClassName) {
+            GenCla = new List<TType>();
             GenCla.Add(element_class);
         }
 
@@ -99,7 +99,7 @@ namespace MyEdit {
                 if(GenCla != null) {
 
                     sw.Write("<");
-                    foreach (TClass c in GenCla) {
+                    foreach (TType c in GenCla) {
                         if (c != GenCla[0]) {
                             sw.Write(",");
                         }
@@ -125,7 +125,7 @@ namespace MyEdit {
     public partial class TVariable {
         public TToken TokenVar;
         public string NameVar;
-        public TClass TypeVar;
+        public TType TypeVar;
         public TTerm InitValue;
 
         public TVariable() {
@@ -136,14 +136,14 @@ namespace MyEdit {
             NameVar = name.TextTkn;
         }
 
-        public TVariable(TToken name, TClass type, TTerm init) {
+        public TVariable(TToken name, TType type, TTerm init) {
             TokenVar = name;
             NameVar = name.TextTkn;
             TypeVar = type;
             InitValue = init;
         }
 
-        public TVariable(string name, TClass type) {
+        public TVariable(string name, TType type) {
             NameVar = name;
             TypeVar = type;
         }
@@ -151,9 +151,9 @@ namespace MyEdit {
 
     public class TMember : TVariable {
         public bool IsStatic;
-        public TClass ClassMember;
+        public TType ClassMember;
 
-        public TMember(bool is_static, TToken name, TClass tp, TTerm init) : base(name, tp, init) {
+        public TMember(bool is_static, TToken name, TType tp, TTerm init) : base(name, tp, init) {
             IsStatic = is_static;
         }
 
@@ -162,7 +162,7 @@ namespace MyEdit {
     }
 
     public class TField : TMember {
-        public TField(TClass parent_class, bool is_static, TToken name, TClass tp, TTerm init) : base(is_static, name, tp, init) {
+        public TField(TType parent_class, bool is_static, TToken name, TType tp, TTerm init) : base(is_static, name, tp, init) {
 
         }
     }
@@ -173,7 +173,7 @@ namespace MyEdit {
         public TBlock BlockFnc = new TBlock();
         public TTerm LambdaFnc;
 
-        public TFunction(bool is_static, TToken name, TVariable[]args, TClass ret_type, TApply base_app) : base(is_static, name, ret_type, null) {
+        public TFunction(bool is_static, TToken name, TVariable[]args, TType ret_type, TApply base_app) : base(is_static, name, ret_type, null) {
             ArgsFnc = args;
             BaseApp = base_app;
         }
@@ -187,8 +187,8 @@ namespace MyEdit {
 
     public abstract partial class TTerm {
         public TToken TokenTrm;
-        public TClass CastType;
-        public TClass TypeTrm;
+        public TType CastType;
+        public TType TypeTrm;
         public bool WithParenthesis;
         public bool IsType;
 
@@ -204,14 +204,14 @@ namespace MyEdit {
     public partial class TReference : TTerm {
         public string NameRef;
         public TVariable VarRef;
-        public TClass ClassRef;
+        public TType ClassRef;
 
         public TReference(TToken name) {
             TokenTrm = name;
             NameRef = name.TextTkn;
         }
 
-        public TReference(TClass cls) {
+        public TReference(TType cls) {
             NameRef = cls.ClassName;
             ClassRef = cls;
         }
@@ -270,22 +270,22 @@ namespace MyEdit {
 
     public partial class TDotApply : TApply {
         public TTerm DotApp;
-        public TClass DotClass;
+        public TType DotClass;
 
         public TDotApply(TTerm trm, TToken fnc, TTerm[] args) : base(fnc, args) {
             DotApp = trm;
         }
 
-        public TDotApply(TClass cls, TToken fnc, TTerm[] args) : base(fnc, args) {
+        public TDotApply(TType cls, TToken fnc, TTerm[] args) : base(fnc, args) {
             DotClass = cls;
         }
     }
 
     public class TNewApply : TApply {
-        public TClass ClassApp;
+        public TType ClassApp;
         public List<TTerm> InitList;
 
-        public TNewApply(EKind kind, TToken class_token, TClass cls, TTerm[] args, List<TTerm> init) {
+        public TNewApply(EKind kind, TToken class_token, TType cls, TTerm[] args, List<TTerm> init) {
             TokenTrm = class_token;
             Debug.Assert(kind == EKind.NewInstance || kind == EKind.NewArray);
             KindApp = kind;
@@ -459,8 +459,8 @@ namespace MyEdit {
     }
 
     public class TAttribute : TStatement {
-        public TClass Attr;
-        public TAttribute(TClass attr) {
+        public TType Attr;
+        public TAttribute(TType attr) {
             Attr = attr;
         }
     }

@@ -8,7 +8,7 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TVariable
     partial class TVariable {
-        public virtual void ResolveName(TClass cls, List<TVariable> vars) {
+        public virtual void ResolveName(TType cls, List<TVariable> vars) {
             if(InitValue != null) {
                 InitValue.ResolveName(cls, vars);
             }
@@ -19,7 +19,7 @@ namespace MyEdit {
         /*
             関数名と引数の数と型が一致したらtrueを返します。
         */
-        public bool Match(string name, List<TClass> arg_types, bool exact) {
+        public bool Match(string name, List<TType> arg_types, bool exact) {
             if (NameVar != name || arg_types.Count != ArgsFnc.Length) {
                 // 関数名か引数の数が違う場合
 
@@ -36,7 +36,7 @@ namespace MyEdit {
             return true;
         }
 
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(BlockFnc != null) {
 
                 int vars_count = vars.Count;
@@ -51,12 +51,12 @@ namespace MyEdit {
     //------------------------------------------------------------ TTerm
 
     partial class TTerm {
-        public virtual void ResolveName(TClass cls, List<TVariable> vars) {
+        public virtual void ResolveName(TType cls, List<TVariable> vars) {
         }
     }
 
     partial class TLiteral {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             switch (TokenTrm.TokenType) {
             case ETokenType.Int:
                 TypeTrm = TProject.IntClass;
@@ -85,7 +85,7 @@ namespace MyEdit {
     }
 
     partial class TReference {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(this is TDotReference) {
                 TDotReference dot_ref = this as TDotReference;
 
@@ -126,13 +126,13 @@ namespace MyEdit {
     }
 
     partial class TApply {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(this is TDotApply) {
 
                 (this as TDotApply).DotApp.ResolveName(cls, vars);
             }
 
-            List<TClass> arg_types = new List<TClass>();
+            List<TType> arg_types = new List<TType>();
 
             foreach (TTerm t in Args) {
                 t.ResolveName(cls, vars);
@@ -218,32 +218,32 @@ namespace MyEdit {
     }
 
     partial class TQuery {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
         }
     }
 
     //------------------------------------------------------------ TStatement
 
     partial class TStatement {
-        public virtual void ResolveName(TClass cls, List<TVariable> vars) {
+        public virtual void ResolveName(TType cls, List<TVariable> vars) {
         }
     }
 
     partial class TAssignment {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             RelAsn.ResolveName(cls, vars);
         }
     }
 
     partial class TCall {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             AppCall.ResolveName(cls, vars);
         }
     }
 
 
     partial class TVariableDeclaration {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             foreach(TVariable var1 in Variables) {
                 var1.ResolveName(cls, vars);
             }
@@ -251,7 +251,7 @@ namespace MyEdit {
     }
 
     partial class TBlockStatement {
-        public void ResolveNameBlock(TClass cls, List<TVariable> vars) {
+        public void ResolveNameBlock(TType cls, List<TVariable> vars) {
 /*
             int vars_count = vars.Count;
 
@@ -269,13 +269,13 @@ namespace MyEdit {
     }
 
     partial class TBlock {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             ResolveNameBlock(cls, vars);
         }
     }
 
     partial class TIfBlock {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(ConditionIf != null) {
                 ConditionIf.ResolveName(cls, vars);
             }
@@ -284,7 +284,7 @@ namespace MyEdit {
     }
 
     partial class TIf {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             foreach(TIfBlock if_block in IfBlocks) {
                 if_block.ResolveName(cls, vars);
             }
@@ -292,7 +292,7 @@ namespace MyEdit {
     }
 
     partial class TCase {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             foreach(TTerm t in TermsCase) {
                 t.ResolveName(cls, vars);
             }
@@ -301,7 +301,7 @@ namespace MyEdit {
     }
 
     partial class TSwitch {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             TermSwitch.ResolveName(cls, vars);
 /*
             foreach(TCase cas in Cases) {
@@ -312,13 +312,13 @@ namespace MyEdit {
     }
 
     partial class TTry {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             ResolveNameBlock(cls, vars);
         }
     }
 
     partial class TCatch {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             CatchVariable.ResolveName(cls, vars);
 
             vars.Add(CatchVariable);
@@ -328,14 +328,14 @@ namespace MyEdit {
     }
 
     partial class TWhile {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             WhileCondition.ResolveName(cls, vars);
             ResolveNameBlock(cls, vars);
         }
     }
 
     partial class TForEach {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             ListFor.ResolveName(cls, vars);
             LoopVariable.ResolveName(cls, vars);
 
@@ -346,7 +346,7 @@ namespace MyEdit {
     }
 
     partial class TFor {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(InitStatement != null) {
 
                 InitStatement.ResolveName(cls, vars);
@@ -374,19 +374,19 @@ namespace MyEdit {
     }
 
     partial class TJump {
-        public override void ResolveName(TClass cls, List<TVariable> vars) {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
             if(RetVal != null) {
                 RetVal.ResolveName(cls, vars);
             }
         }
     }
     
-    partial class TClass {
-        public bool IsSubClass(TClass tp) {
+    partial class TType {
+        public bool IsSubClass(TType tp) {
             if (SuperClasses.Contains(tp)) {
                 return true;
             }
-            foreach(TClass super_class in SuperClasses) {
+            foreach(TType super_class in SuperClasses) {
                 if (super_class.IsSubClass(tp)) {
                     return true;
                 }
@@ -395,19 +395,19 @@ namespace MyEdit {
             return false;
         }
 
-        public bool IsSuperClass(TClass tp) {
+        public bool IsSuperClass(TType tp) {
             return tp.IsSubClass(this);
         }
     }
 
-    partial class TClass {
+    partial class TType {
         public TField FindField(string name) {
             var v = from f in Fields where f.NameVar == name select f;
             if (v.Any()) {
                 return v.First();
             }
 
-            foreach (TClass super_class in SuperClasses) {
+            foreach (TType super_class in SuperClasses) {
                 TField fld = super_class.FindField(name);
                 if (fld != null) {
                     return fld;
@@ -417,7 +417,7 @@ namespace MyEdit {
             return null;
         }
         
-        public TFunction MatchFunction(string name, List<TClass> arg_types) {
+        public TFunction MatchFunction(string name, List<TType> arg_types) {
             // 関数名と引数の数と型が一致する関数を探します。
             var v1 = from f in Functions where f.Match(name, arg_types, true) select f;
             if (v1.Any()) {
@@ -430,7 +430,7 @@ namespace MyEdit {
                 return v2.First();
             }
 
-            foreach (TClass super_class in SuperClasses) {
+            foreach (TType super_class in SuperClasses) {
                 TFunction fnc = super_class.MatchFunction(name, arg_types);
                 if(fnc != null) {
                     return fnc;
@@ -456,7 +456,7 @@ namespace MyEdit {
     partial class TProject {
         public void ResolveName() {
             var classes = (from src in SourceFiles from c in src.ClassesSrc select c).Distinct();
-            foreach(TClass cls in classes) {
+            foreach(TType cls in classes) {
                 cls.ResolveName();
             }
         }

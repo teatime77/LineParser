@@ -9,7 +9,7 @@ namespace MyEdit {
     public abstract class TNavigation {
         public abstract void Action(object obj, params object[] args);
 
-        public virtual void ClassNavi(TClass cls, params object[] args) {
+        public virtual void ClassNavi(TType cls, params object[] args) {
             foreach(TField fld in cls.Fields) {
                 FieldNavi(fld, args);
             }
@@ -148,7 +148,7 @@ namespace MyEdit {
     public class TResolveNameNavi : TNavigation {
 
         public override void Action(object self, params object[] args) {
-            TClass cls = args[0] as TClass;
+            TType cls = args[0] as TType;
             List<TVariable> vars = args[1] as List<TVariable>;
 
             if (self is TTerm) {

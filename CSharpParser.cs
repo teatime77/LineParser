@@ -54,7 +54,7 @@ namespace MyEdit {
                 break;
             }
 
-            TClass type = ReadType(null, false);
+            TType type = ReadType(null, false);
             TToken id = GetToken(EKind.Identifier);
 
             return new TVariable(id, type, null);

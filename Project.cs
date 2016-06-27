@@ -11,16 +11,16 @@ namespace MyEdit {
     public partial class TProject {
         public static TProject Project;
 
-        public static TClass IntClass;
-        public static TClass FloatClass;
-        public static TClass DoubleClass;
-        public static TClass CharClass;
-        public static TClass StringClass;
-        public static TClass BoolClass;
-        public static TClass VoidClass;
+        public static TType IntClass;
+        public static TType FloatClass;
+        public static TType DoubleClass;
+        public static TType CharClass;
+        public static TType StringClass;
+        public static TType BoolClass;
+        public static TType VoidClass;
 
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
-        public Dictionary<string, TClass> ClassTable = new Dictionary<string, TClass>();
+        public Dictionary<string, TType> ClassTable = new Dictionary<string, TType>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
@@ -86,14 +86,14 @@ namespace MyEdit {
             ArrayClassTable.Clear();
         }
 
-        public TClass GetClassByName(string name) {
-            TClass cls;
+        public TType GetClassByName(string name) {
+            TType cls;
 
             if (ClassTable.TryGetValue(name, out cls)) {
                 return cls;
             }
             else {
-                cls = new TClass(name);
+                cls = new TType(name);
 
                 //Debug.WriteLine("class : {0}", cls.GetClassText(), "");
                 ClassTable.Add(name, cls);
@@ -102,7 +102,7 @@ namespace MyEdit {
             }
         }
 
-        public TClass GetParamClassByName(TClass cls, string name) {
+        public TType GetParamClassByName(TType cls, string name) {
             if (cls is TGenericClass) {
                 TGenericClass gen = cls as TGenericClass;
 
@@ -115,7 +115,7 @@ namespace MyEdit {
             return GetClassByName(name);
         }
 
-        public void RegClass(Dictionary<string, TClass> dic, TClass cls) {
+        public void RegClass(Dictionary<string, TType> dic, TType cls) {
             if (dic.ContainsKey(cls.ClassName)) {
 
                 dic[cls.ClassName] = cls;
@@ -137,7 +137,7 @@ namespace MyEdit {
             }
         }
 
-        public TGenericClass GetSpecializedClass(TGenericClass cls, List<TClass> vtp) {
+        public TGenericClass GetSpecializedClass(TGenericClass cls, List<TType> vtp) {
             string class_text = cls.GetClassText();
 
             TGenericClass gen1 = null;
@@ -150,7 +150,7 @@ namespace MyEdit {
             return gen1;
         }
 
-        public TClass SubstituteArgumentClass(TClass tp, Dictionary<string, TClass> dic) {
+        public TType SubstituteArgumentClass(TType tp, Dictionary<string, TType> dic) {
             if(!(tp is TGenericClass)) {
 
                 return tp;
@@ -159,9 +159,9 @@ namespace MyEdit {
             TGenericClass gen = tp as TGenericClass;
             bool changed = false;
 
-            List<TClass> vtp = new List<TClass>();
-            foreach(TClass tp2 in gen.GenCla) {
-                TClass tp3 = SubstituteArgumentClass(tp2, dic);
+            List<TType> vtp = new List<TType>();
+            foreach(TType tp2 in gen.GenCla) {
+                TType tp3 = SubstituteArgumentClass(tp2, dic);
                 if(tp3 != tp2) {
                     changed = true;
                 }
@@ -176,23 +176,23 @@ namespace MyEdit {
             return GetSpecializedClass(gen.OrgCla, vtp);
         }
 
-        public TVariable CopyVariable(TVariable var_src, Dictionary<string, TClass> dic) {
-            TClass tp = SubstituteArgumentClass(var_src.TypeVar, dic);
+        public TVariable CopyVariable(TVariable var_src, Dictionary<string, TType> dic) {
+            TType tp = SubstituteArgumentClass(var_src.TypeVar, dic);
             TVariable var1 = new TVariable(var_src.TokenVar, tp, null);
 
             return var1;
         }
 
-        public TField CopyField(TClass cla1, TField fld_src, Dictionary<string, TClass> dic) {
-            TClass tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
+        public TField CopyField(TType cla1, TField fld_src, Dictionary<string, TType> dic) {
+            TType tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
             TField fld1 = new TField(cla1, fld_src.IsStatic, fld_src.TokenVar, tp, null);
 
             return fld1;
         }
 
-        public TFunction CopyFunctionDeclaration(TClass cla1, TFunction fnc_src, Dictionary<string, TClass> dic) {
+        public TFunction CopyFunctionDeclaration(TType cla1, TFunction fnc_src, Dictionary<string, TType> dic) {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
-            TClass ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
+            TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
             TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.TokenVar, args, ret_type, null);
 
@@ -200,7 +200,7 @@ namespace MyEdit {
         }
 
         public void SetMemberOfSpecializedClass(TGenericClass cls) {
-            Dictionary<string, TClass> dic = new Dictionary<string, TClass>();
+            Dictionary<string, TType> dic = new Dictionary<string, TType>();
 
             for(int i = 0; i < cls.OrgCla.GenCla.Count; i++) {
                 dic.Add(cls.OrgCla.GenCla[i].ClassName, cls.GenCla[i]);
