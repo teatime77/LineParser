@@ -55,7 +55,7 @@ namespace MyEdit {
                                 if (!class_names.Contains(name)) {
 
                                     class_names.Add(name);
-                                    //Debug.WriteLine("class {0}", name, "");
+                                    //Debug.WriteLine("typeof({0}),", name, "");
                                 }
                             }
                             else {

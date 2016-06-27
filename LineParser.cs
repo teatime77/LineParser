@@ -1085,7 +1085,7 @@ namespace MyEdit {
             }
             Running = true;
             Dirty = false;
-            //Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
+            Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             Dictionary<string, int> dic = new Dictionary<string, int>();
             dic.Add("int", 0);
@@ -1260,9 +1260,8 @@ namespace MyEdit {
             }
 
 /*
-            Debug.WriteLine("名前解決 : 開始");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
-                await Task.Delay(1);
+                //await Task.Delay(1);
                 //Debug.WriteLine("名前解決 : {0} {1}", line_idx, Dirty);
                 if (Dirty) {
                     Debug.WriteLine("名前解決 : 中断");
@@ -1291,7 +1290,6 @@ namespace MyEdit {
                     }
                 }
             }
-            Debug.WriteLine("名前解決 : 終了");
 */
 
             foreach(MyEditor editor in src.Editors) {
