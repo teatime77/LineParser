@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace MyEdit {
     public enum EClass {
@@ -49,6 +50,7 @@ namespace MyEdit {
         public string ClassName;
         public string ClassText = null;
         public TFunction DelegateFnc;
+        public TypeInfo Info;
 
         public List<TType> SuperClasses = new List<TType>();
         public List<TField> Fields = new List<TField>();

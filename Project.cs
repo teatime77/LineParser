@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Graphics.Canvas.UI.Xaml;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Windows.Storage;
+using Windows.UI;
 
 namespace MyEdit {
 
@@ -24,8 +27,19 @@ namespace MyEdit {
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
+        public List<Assembly> AssemblyList = new List<Assembly>();
 
         public TProject() {
+        }
+
+        public void SetAssemblyList() {
+            AssemblyList.Add(typeof(ApplicationData).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(Assembly).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(CanvasControl).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(Color).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(Debug).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(File).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(Stack<int>).GetTypeInfo().Assembly);
         }
 
         public void OpenProject() {

@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Collections.Generic;
 using System;
-using Windows.UI;
 using System.IO;
-using System.Net;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -1260,7 +1258,14 @@ namespace MyEdit {
                 }
             }
 
-/*
+            foreach(MyEditor editor in src.Editors) {
+                editor.InvalidateCanvas();
+            }
+
+            Running = false;
+        }
+
+        public void ResolveName(TSourceFile src) {
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
                 //Debug.WriteLine("名前解決 : {0} {1}", line_idx, Dirty);
@@ -1291,13 +1296,6 @@ namespace MyEdit {
                     }
                 }
             }
-*/
-
-            foreach(MyEditor editor in src.Editors) {
-                editor.InvalidateCanvas();
-            }
-
-            Running = false;
         }
 
         public TToken GetToken(EKind type) {
