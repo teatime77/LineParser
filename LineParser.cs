@@ -18,6 +18,9 @@ namespace MyEdit {
         [ThreadStatic]
         public TType LookaheadClass;
 
+        [ThreadStatic]
+        public static TType CurrentClass;
+
         public TProject PrjParser;
         public TToken[] TokenList;
         public int TokenPos;
@@ -75,7 +78,7 @@ namespace MyEdit {
         }
 
         public TType ReadClassLine() {
-            GetToken2(EKind.class_, EKind.struct_);
+            GetToken(EKind.Undefined);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             TType cls;
@@ -140,6 +143,34 @@ namespace MyEdit {
 
             LCopt();
             GetToken(EKind.EOT);
+
+            if (cls.ClassName == "int") {
+                Project.IntClass = cls;
+            }
+            else if (cls.ClassName == "float") {
+                Project.FloatClass = cls;
+            }
+            else if (cls.ClassName == "double") {
+                Project.DoubleClass = cls;
+            }
+            else if (cls.ClassName == "char") {
+                Project.CharClass = cls;
+            }
+            else if (cls.ClassName == "string") {
+                Project.StringClass = cls;
+            }
+            else if (cls.ClassName == "bool") {
+                Project.BoolClass = cls;
+            }
+            else if (cls.ClassName == "void") {
+                Project.VoidClass = cls;
+            }
+            else if (cls.ClassName == "Enumerable") {
+                Project.EnumerableClass = cls as TGenericClass;
+            }
+            else if (cls.ClassName == "Array") {
+                Project.ArrayClass = cls as TGenericClass;
+            }
 
             return cls;
         }
@@ -898,6 +929,7 @@ namespace MyEdit {
 
                 case EKind.class_:
                 case EKind.struct_:
+                case EKind.interface_:
                     return ReadClassLine();
 
                 case EKind.delegate_: {
@@ -1059,9 +1091,12 @@ namespace MyEdit {
                         TFunction fnc = line.ObjLine as TFunction;
                         vars.AddRange(fnc.ArgsFnc);
                     }
-                    else if (line.ObjLine is TFor) {
-                        TFor for1 = line.ObjLine as TFor;
-                        vars.Add(for1.LoopVariable);
+                    else if (line.ObjLine is TAbsFor) {
+                        TAbsFor for1 = line.ObjLine as TAbsFor;
+                        if (for1.LoopVariable != null) {
+
+                            vars.Add(for1.LoopVariable);
+                        }
                     }
                     else if (line.ObjLine is TCatch) {
                         TCatch catch1 = line.ObjLine as TCatch;
@@ -1085,15 +1120,6 @@ namespace MyEdit {
             Running = true;
             Dirty = false;
             Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
-
-            Dictionary<string, int> dic = new Dictionary<string, int>();
-            dic.Add("int", 0);
-            dic.Add("float", 1);
-            dic.Add("double", 2);
-            dic.Add("char", 3);
-            dic.Add("string", 4);
-            dic.Add("bool", 5);
-            dic.Add("void", 6);
 
             src.ClassesSrc.Clear();
 
@@ -1152,8 +1178,18 @@ namespace MyEdit {
                                 var vcls = from x in obj_stack_rev where x is TType select x as TType;
                                 if (vcls.Any()) {
                                     cls = vcls.First();
+
+                                    if(cls is TGenericClass) {
+                                        TGenericClass gen = cls as TGenericClass;
+
+                                        var vtkn = from t in gen.GenCla from tk in line.Tokens where tk.TextTkn == t.ClassName select tk;
+                                        foreach(TToken tk in vtkn) {
+                                            tk.Kind = EKind.ClassName;
+                                        }
+                                    }
                                 }
                                 line.ClassLine = cls;
+                                CurrentClass = cls;
 
                                 // スタックの中から関数を探します。
                                 var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
@@ -1183,33 +1219,6 @@ namespace MyEdit {
 
                                         //ClassLineText(class_def, sw);
                                         src.ClassesSrc.Add(class_def);
-
-                                        int sys_class;
-                                        if(dic.TryGetValue(class_def.ClassName, out sys_class)) {
-                                            switch (sys_class) {
-                                            case 0:
-                                                Project.IntClass = class_def;
-                                                break;
-                                            case 1:
-                                                Project.FloatClass = class_def;
-                                                break;
-                                            case 2:
-                                                Project.DoubleClass = class_def;
-                                                break;
-                                            case 3:
-                                                Project.CharClass = class_def;
-                                                break;
-                                            case 4:
-                                                Project.StringClass = class_def;
-                                                break;
-                                            case 5:
-                                                Project.BoolClass = class_def;
-                                                break;
-                                            case 6:
-                                                Project.VoidClass = class_def;
-                                                break;
-                                            }
-                                        }
                                     }
                                     else if (obj is TVariable) {
 
@@ -1257,8 +1266,9 @@ namespace MyEdit {
                     }
                 }
             }
+            CurrentClass = null;
 
-            foreach(MyEditor editor in src.Editors) {
+            foreach (MyEditor editor in src.Editors) {
                 editor.InvalidateCanvas();
             }
 
@@ -1376,13 +1386,17 @@ namespace MyEdit {
                 from1.CndQry = Expression();
             }
 
-            if(CurTkn.Kind == EKind.select_) {
+            if (CurTkn.Kind == EKind.select_) {
                 GetToken(EKind.select_);
                 from1.SelFrom = Expression();
             }
 
-            if(CurTkn.Kind == EKind.from_) {
+            if (CurTkn.Kind == EKind.from_) {
                 from1.InnerFrom = FromExpression();
+            }
+
+            if(from1.SelFrom == null && from1.InnerFrom == null) {
+                throw new TParseException();
             }
 
             return from1;

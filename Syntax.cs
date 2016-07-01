@@ -52,7 +52,7 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TType
 
-    public partial class TType {
+    public partial class TType : TEnv {
         public EClass KindClass = EClass.Class;
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
@@ -80,12 +80,29 @@ namespace MyEdit {
         public virtual string GetClassText() {
             return ClassName;
         }
+
+        public TType ElementType() {
+            if(this is TGenericClass) {
+                TGenericClass gen = this as TGenericClass;
+
+                if(gen.GenCla.Count == 1) {
+
+                    if (ClassName == "List" || ClassName == "Array") {
+
+                        return gen.GenCla[0];
+                    }
+                }
+            }
+
+            return null;
+        }
     }
 
     public class TGenericClass : TType {
         public TGenericClass OrgCla;
         public bool ContainsArgumentClass;
         public int DimCnt;
+        public bool SetMember;
 
         public List<TType> GenCla;
 
@@ -98,9 +115,11 @@ namespace MyEdit {
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TType element_class, int dim_cnt) : base(element_class.ClassName) {
+        public TGenericClass(TType element_class, int dim_cnt) : base(Project.ArrayClass.ClassName) {
+            OrgCla = Project.ArrayClass;
             GenCla = new List<TType>();
             GenCla.Add(element_class);
+            DimCnt = dim_cnt;
         }
 
         public override string GetClassText() {
@@ -185,7 +204,21 @@ namespace MyEdit {
 
     public class TField : TMember {
         public TField(TType parent_class, bool is_static, TToken name, TType tp, TTerm init) : base(is_static, name, tp, init) {
+        }
 
+        public TField(TType parent_class, FieldInfo fld_info) {
+            NameVar = fld_info.Name;
+            TypeVar = Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
+        }
+
+        public TField(TType parent_class, PropertyInfo fld_info) {
+            NameVar = fld_info.Name;
+            TypeVar = Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
+        }
+
+        public TField(TType parent_class, EventInfo fld_info) {
+            NameVar = fld_info.Name;
+            TypeVar = Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
         }
     }
 
@@ -335,16 +368,15 @@ namespace MyEdit {
         public TVariable VarQry;
         public TTerm SeqQry;
         public TTerm CndQry;
-
     }
 
-    public class TFrom : TQuery {
+    public partial class TFrom : TQuery {
         public TTerm SelFrom;
         public TTerm TakeFrom;
         public TTerm InnerFrom;
     }
 
-    public class TAggregate : TQuery {
+    public partial class TAggregate : TQuery {
         public TTerm IntoAggr;
     }
 

@@ -1,4 +1,6 @@
-﻿using Microsoft.Graphics.Canvas.UI.Xaml;
+﻿using LineParser;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,7 +21,10 @@ namespace MyEdit {
         public TType StringClass;
         public TType BoolClass;
         public TType VoidClass;
+        public TGenericClass ArrayClass;
+        public TGenericClass EnumerableClass;
         public TType NullClass = new TType("null class");
+        public TType HandlerClass = new TType("handler class");
 
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public Dictionary<string, TType> ClassTable = new Dictionary<string, TType>();
@@ -32,6 +37,56 @@ namespace MyEdit {
         public TProject() {
         }
 
+        public void Build() {
+            TEnv.Project = this;
+
+            TParser.theParser = new TParser(this);
+            TCSharpParser.CSharpParser = new TCSharpParser(this);
+            TEnv.Parser = TCSharpParser.CSharpParser;
+
+            ClearProject();
+
+            SetAssemblyList();
+
+            OpenProject();
+
+            RegisterClassNames();
+
+            Debug.WriteLine("解析開始");
+            foreach (TSourceFile src in SourceFiles) {
+
+                src.Parser.ParseFile(src);
+
+                string file_name = Path.GetFileName(src.PathSrc);
+
+                if (file_name == "Sys.cs") {
+
+                    RegisterSysClass();
+                }
+
+            }
+
+            while (true) {
+
+                var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
+                if (vc.Any()) {
+
+                    foreach (TGenericClass gen in vc) {
+                        SetMemberOfSpecializedClass(gen);
+                    }
+                }
+                else {
+                    break;
+                }
+            }
+
+            foreach (TSourceFile src in SourceFiles) {
+                src.Parser.ResolveName(src);
+            }
+            Debug.WriteLine("メイン終了");
+
+        }
+
         public void SetAssemblyList() {
             AssemblyList.Add(typeof(ApplicationData).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Assembly).GetTypeInfo().Assembly);
@@ -40,6 +95,7 @@ namespace MyEdit {
             AssemblyList.Add(typeof(Debug).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(File).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Stack<int>).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(MainPage).GetTypeInfo().Assembly);
         }
 
         public void OpenProject() {
@@ -77,6 +133,7 @@ namespace MyEdit {
             dic.Add("Dictionary", "Dictionary`2");
             dic.Add("double", "Double");
             dic.Add("float", "Single");
+            dic.Add("IEnumerable", "IEnumerable`1");
             dic.Add("int", "Int32");
             dic.Add("List", "List`1");
             dic.Add("object", "Object");
@@ -87,16 +144,19 @@ namespace MyEdit {
             foreach (TType tp in ClassTable.Values) {
                 string name;
 
-                if (!dic.TryGetValue(tp.ClassName, out name)) {
-                    name = tp.ClassName;
-                }
-                var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
-                if (v.Any()) {
-                    tp.Info = v.First().GetTypeInfo();
-                    SysClassTable.Add(tp.Info, tp);
-                }
-                else {
-                    Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
+                if(tp.ClassName != "Enumerable") {
+
+                    if (!dic.TryGetValue(tp.ClassName, out name)) {
+                        name = tp.ClassName;
+                    }
+                    var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
+                    if (v.Any()) {
+                        tp.Info = v.First().GetTypeInfo();
+                        SysClassTable.Add(tp.Info, tp);
+                    }
+                    else {
+                        Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
+                    }
                 }
             }
         }
@@ -153,6 +213,15 @@ namespace MyEdit {
                 return cls;
             }
             else {
+                if(TParser.CurrentClass is TGenericClass) {
+                    TGenericClass gen = TParser.CurrentClass as TGenericClass;
+
+                    var v = from t in gen.GenCla where t.ClassName == name select t;
+                    if (v.Any()) {
+
+                        return v.First();
+                    }
+                }
                 cls = new TType(name);
 
                 //Debug.WriteLine("class : {0}", cls.GetClassText(), "");
@@ -213,7 +282,14 @@ namespace MyEdit {
         public TType SubstituteArgumentClass(TType tp, Dictionary<string, TType> dic) {
             if(!(tp is TGenericClass)) {
 
-                return tp;
+                TType tp2;
+
+                if(! dic.TryGetValue(tp.ClassName, out tp2)) {
+
+                    tp2 = tp;
+                }
+
+                return tp2;
             }
 
             TGenericClass gen = tp as TGenericClass;
@@ -266,8 +342,10 @@ namespace MyEdit {
                 dic.Add(cls.OrgCla.GenCla[i].ClassName, cls.GenCla[i]);
             }
 
-            cls.Fields = (from x in cls.Fields select CopyField(cls, x, dic)).ToList();
-            cls.Functions = (from x in cls.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
+            cls.Fields = (from x in cls.OrgCla.Fields select CopyField(cls, x, dic)).ToList();
+            cls.Functions = (from x in cls.OrgCla.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
+
+            cls.SetMember = true;
         }
     }
 

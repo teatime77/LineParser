@@ -23,38 +23,12 @@ namespace LineParser {
             Debug.WriteLine("メイン開始");
 
             MainProject = new TProject();
-            TEnv.Project = MainProject;
+            MainProject.Build();
 
-            TParser.theParser = new TParser(MainProject);
-            TCSharpParser.CSharpParser = new TCSharpParser(MainProject);
-            TEnv.Parser = TCSharpParser.CSharpParser;
-
-            MainProject.ClearProject();
-
-            MainProject.SetAssemblyList();
-
-            MainProject.OpenProject();
-
-            MainProject.RegisterClassNames();
-
-            Debug.WriteLine("解析開始");
             foreach (TSourceFile src in MainProject.SourceFiles) {
-
-                src.Parser.ParseFile(src);
-
                 string file_name = Path.GetFileName(src.PathSrc);
-
-                if(file_name == "Sys.cs") {
-
-                    MainProject.RegisterSysClass();
-                }
-
                 lst_SourceFiles.Items.Add(file_name);
             }
-            foreach (TSourceFile src in MainProject.SourceFiles) {
-                src.Parser.ResolveName(src);
-            }
-            Debug.WriteLine("メイン終了");
         }
 
         private void lst_SourceFiles_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {

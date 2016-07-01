@@ -13,6 +13,11 @@ namespace MyEdit {
         public virtual void ResolveName(TType cls, List<TVariable> vars) {
             if(InitValue != null) {
                 InitValue.ResolveName(cls, vars);
+
+                if (TypeVar == null) {
+
+                    TypeVar = InitValue.TypeTrm;
+                }
             }
         }
     }
@@ -118,6 +123,7 @@ namespace MyEdit {
                 VarRef = dot_ref.DotRef.TypeTrm.FindField(NameRef);
                 if(VarRef == null) {
 
+                    VarRef = dot_ref.DotRef.TypeTrm.FindField(NameRef);
                     throw new TResolveNameException(this);
                 }
             }
@@ -164,6 +170,13 @@ namespace MyEdit {
                         VarRef = cls.FindField(NameRef);
                         if (VarRef == null) {
 
+                            var fncs = from f in cls.Functions where f.NameVar == NameRef select f;
+                            if (fncs.Any()) {
+                                VarRef = fncs.First();
+                                TypeTrm = Project.HandlerClass;
+                                return;
+                            }
+
                             throw new TResolveNameException(this);
                         }
                     }
@@ -191,9 +204,16 @@ namespace MyEdit {
 
     partial class TApply {
         public override void ResolveName(TType cls, List<TVariable> vars) {
+            TType cur_type;
+
             if(this is TDotApply) {
 
                 (this as TDotApply).DotApp.ResolveName(cls, vars);
+
+                cur_type = (this as TDotApply).DotApp.TypeTrm;
+            }
+            else {
+                cur_type = cls;
             }
 
             List<TType> arg_types = new List<TType>();
@@ -206,33 +226,29 @@ namespace MyEdit {
             if(FunctionApp is TReference) {
                 TReference fnc_ref = FunctionApp as TReference;
 
-                if (this is TDotApply) {
+                if(KindApp == EKind.Index) {
 
-                    fnc_ref.VarRef = (this as TDotApply).DotApp.TypeTrm.MatchFunction(fnc_ref.NameRef, arg_types);
+                    fnc_ref.ResolveName(cur_type, vars);
                 }
                 else {
 
-                    fnc_ref.VarRef = cls.MatchFunction(fnc_ref.NameRef, arg_types);
+                    fnc_ref.VarRef = cur_type.MatchFunction(fnc_ref.NameRef, arg_types);
                 }
-                if(fnc_ref.VarRef == null) {
 
-                    if(fnc_ref.NameRef == "InitializeComponent") {
-                        TypeTrm = Project.VoidClass;
-                        return;
-                    }
-                    if (this is TDotApply) {
+                if (fnc_ref.VarRef == null) {
 
-                        fnc_ref.VarRef = (this as TDotApply).DotApp.TypeTrm.MatchFunction(fnc_ref.NameRef, arg_types);
-                    }
-                    else {
-
-                        fnc_ref.VarRef = cls.MatchFunction(fnc_ref.NameRef, arg_types);
-                    }
-
+                    ResolveName(cls, vars);
                     throw new TResolveNameException(fnc_ref);
                 }
 
-                TypeTrm = fnc_ref.VarRef.TypeVar;
+                if (KindApp == EKind.Index) {
+
+                    TypeTrm = fnc_ref.VarRef.TypeVar.ElementType();
+                }
+                else {
+
+                    TypeTrm = fnc_ref.VarRef.TypeVar;
+                }
             }
             else {
 
@@ -290,6 +306,7 @@ namespace MyEdit {
             }
 
             if(TypeTrm == null) {
+                ResolveName(cls, vars);
                 throw new TResolveNameException(TokenTrm);
             }
         }
@@ -297,6 +314,50 @@ namespace MyEdit {
 
     partial class TQuery {
         public override void ResolveName(TType cls, List<TVariable> vars) {
+            SeqQry.ResolveName(cls, vars);
+            VarQry.TypeVar = SeqQry.TypeTrm.ElementType();
+
+            if(CndQry != null) {
+                CndQry.ResolveName(cls, vars);
+            }
+        }
+    }
+
+    partial class TFrom {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
+            vars.Add(VarQry);
+            base.ResolveName(cls, vars);
+
+            SelFrom.ResolveName(cls, vars);
+
+            if (TakeFrom != null) {
+                TakeFrom.ResolveName(cls, vars);
+            }
+
+            if (InnerFrom != null) {
+                InnerFrom.ResolveName(cls, vars);
+
+                TypeTrm = InnerFrom.TypeTrm;
+            }
+            else {
+
+                TypeTrm = Project.GetSpecializedClass(Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm });
+            }
+
+            vars.RemoveAt(vars.Count - 1);
+        }
+    }
+
+    partial class TAggregate {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
+            vars.Add(VarQry);
+            base.ResolveName(cls, vars);
+
+            if (IntoAggr != null) {
+                IntoAggr.ResolveName(cls, vars);
+            }
+
+            vars.RemoveAt(vars.Count - 1);
         }
     }
 
@@ -479,6 +540,43 @@ namespace MyEdit {
     }
 
     partial class TType {
+
+        public TField FindSysField(TypeInfo tp, string name) {
+            var fields = from f in tp.DeclaredFields where f.Name == name select f;
+            if (fields.Any()) {
+                return new TField(this, fields.First());
+            }
+
+            var props = from f in tp.DeclaredProperties where f.Name == name select f;
+            if (props.Any()) {
+                return new TField(this, props.First());
+            }
+
+            var events = from f in tp.DeclaredEvents where f.Name == name select f;
+            if (events.Any()) {
+                return new TField(this, events.First());
+            }
+
+            if (tp.BaseType != null) {
+                TField fld = FindSysField(tp.BaseType.GetTypeInfo(), name);
+                if (fld != null) {
+                    return fld;
+                }
+            }
+
+            if (tp.ImplementedInterfaces != null) {
+                foreach (Type tp2 in tp.ImplementedInterfaces) {
+
+                    TField fld = FindSysField(tp2.GetTypeInfo(), name);
+                    if (fld != null) {
+                        return fld;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         public TField FindField(string name) {
             var v = from f in Fields where f.NameVar == name select f;
             if (v.Any()) {
@@ -492,7 +590,34 @@ namespace MyEdit {
                 }
             }
 
+            if(Info != null) {
+                return FindSysField(Info, name);
+            }
+
+            if(this is TGenericClass) {
+                TGenericClass org_class = (this as TGenericClass).OrgCla;
+
+                if(org_class != null) {
+
+                    return org_class.FindField(name);
+                }
+            }
+
             return null;
+        }
+
+        bool IsSubclassOf(TypeInfo t1, Type t2) {
+            if (t1.IsSubclassOf(t2)) {
+                return true;
+            }
+
+            if(t1.Name == "Int16" || t1.Name == "Int32") {
+                if(t2.Name == "Single" || t2.Name == "Double") {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /*
@@ -500,22 +625,48 @@ namespace MyEdit {
         */
         public bool MatchMethod(MethodInfo method, List<TType> arg_types, bool exact) {
             ParameterInfo[] param_list = method.GetParameters();
-            if (arg_types.Count !=  param_list.Length) {
-                // 引数の数が違う場合
+            if (arg_types.Count < param_list.Length) {
+                // 実引数の数が少ない場合
+
+                return false;
+            }
+
+            bool is_params = false;
+
+            if (param_list.Length != 0) {
+                // 仮引数がある場合
+
+                // 最後の仮引数
+                ParameterInfo last_param = param_list[param_list.Length - 1];
+
+                foreach(CustomAttributeData attr in last_param.CustomAttributes) {
+                    if (attr.AttributeType.Name == "ParamArrayAttribute") {
+
+                        is_params = true;
+                        break;
+                    }
+                }
+            }
+
+            if(param_list.Length < arg_types.Count && !is_params) {
+                // 仮引数が少なく、可変個の引数でない場合
 
                 return false;
             }
 
             for (int i = 0; i < param_list.Length; i++) {
+                if(i == param_list.Length -1 && is_params) {
+                    return true;
+                }
+
+                ParameterInfo param = param_list[i];
 
                 if(arg_types[i].Info == null) {
                     return false;
                 }
-
-                ParameterInfo param = param_list[i];
                 TypeInfo param_type_info = param.ParameterType.GetTypeInfo();
 
-                if (!(param_type_info == arg_types[i].Info || !exact && arg_types[i].Info.IsSubclassOf(param.ParameterType))) {
+                if (!(param_type_info.FullName == arg_types[i].Info.FullName || !exact && IsSubclassOf(arg_types[i].Info, param.ParameterType))) {
                     return false;
                 }
             }
@@ -577,6 +728,15 @@ namespace MyEdit {
             if(Info != null) {
 
                 return FindMethod(Info, name, arg_types);
+            }
+
+            if(this is TGenericClass) {
+                TGenericClass org_class = (this as TGenericClass).OrgCla;
+
+                if(org_class != null) {
+
+                    return org_class.MatchFunction(name, arg_types);
+                }
             }
 
             return null;
