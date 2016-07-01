@@ -40,24 +40,29 @@ namespace MyEdit {
         }
 
         public override TVariable ReadArgVariable() {
+            EKind kind = EKind.Undefined;
+
             switch (CurTkn.Kind) {
             case EKind.ref_:
                 GetToken(EKind.ref_);
+                kind = EKind.ref_;
                 break;
 
             case EKind.out_:
                 GetToken(EKind.out_);
+                kind = EKind.out_;
                 break;
 
             case EKind.params_:
                 GetToken(EKind.params_);
+                kind = EKind.params_;
                 break;
             }
 
             TType type = ReadType(null, false);
             TToken id = GetToken(EKind.Identifier);
 
-            return new TVariable(id, type, null);
+            return new TVariable(id, type, kind);
         }
     }
 }

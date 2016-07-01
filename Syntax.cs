@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -29,6 +30,13 @@ namespace MyEdit {
         Average
     }
 
+    public class TEnv {
+        [ThreadStatic]
+        public static TProject Project;
+
+        [ThreadStatic]
+        public static TParser Parser;
+    }
 
     public class TUsing {
         public List<string> Packages = new List<string>();
@@ -63,6 +71,10 @@ namespace MyEdit {
         public TType(TFunction fnc) {
             ClassName = fnc.NameVar;
             DelegateFnc = fnc;
+        }
+
+        public TType(TypeInfo info) {
+            Info = info;
         }
 
         public virtual string GetClassText() {
@@ -124,11 +136,12 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TVariable
 
-    public partial class TVariable {
+    public partial class TVariable : TEnv {
         public TToken TokenVar;
         public string NameVar;
         public TType TypeVar;
         public TTerm InitValue;
+        public EKind KindVar;
 
         public TVariable() {
         }
@@ -143,6 +156,13 @@ namespace MyEdit {
             NameVar = name.TextTkn;
             TypeVar = type;
             InitValue = init;
+        }
+
+        public TVariable(TToken name, TType type, EKind kind) {
+            TokenVar = name;
+            NameVar = name.TextTkn;
+            TypeVar = type;
+            KindVar = kind;
         }
 
         public TVariable(string name, TType type) {
@@ -174,20 +194,27 @@ namespace MyEdit {
         public TApply BaseApp;
         public TBlock BlockFnc = new TBlock();
         public TTerm LambdaFnc;
+        public MethodInfo InfoFnc;
 
         public TFunction(bool is_static, TToken name, TVariable[]args, TType ret_type, TApply base_app) : base(is_static, name, ret_type, null) {
             ArgsFnc = args;
+            TypeVar = ret_type;
             BaseApp = base_app;
         }
 
         public TFunction(string name, TTerm trm) : base() {
             LambdaFnc = trm;
         }
+
+        public TFunction(TType parent_class, MethodInfo method_info) : base() {
+            InfoFnc = method_info;
+            TypeVar = Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
+        }
     }
 
     //------------------------------------------------------------ TTerm
 
-    public abstract partial class TTerm {
+    public abstract partial class TTerm : TEnv {
         public TToken TokenTrm;
         public TType CastType;
         public TType TypeTrm;
@@ -323,7 +350,7 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TStatement
 
-    public abstract partial class TStatement {
+    public abstract partial class TStatement : TEnv {
         public void sub(TStatement stmt) {
             if (stmt is TVariableDeclaration) {
                 TVariableDeclaration var_decl = stmt as TVariableDeclaration;

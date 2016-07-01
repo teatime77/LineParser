@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace MyEdit {
@@ -20,14 +22,36 @@ namespace MyEdit {
             関数名と引数の数と型が一致したらtrueを返します。
         */
         public bool Match(string name, List<TType> arg_types, bool exact) {
-            if (NameVar != name || arg_types.Count != ArgsFnc.Length) {
+            if (NameVar != name || arg_types.Count < ArgsFnc.Length) {
                 // 関数名か引数の数が違う場合
 
                 return false;
             }
 
+            if (ArgsFnc.Length < arg_types.Count) {
+
+                if(ArgsFnc.Length == 0 || ArgsFnc[ArgsFnc.Length - 1].KindVar != EKind.params_) {
+                    // 最後の仮引数が可変個の引数でない場合
+
+                    return false;
+                }
+            }
+
             for (int i = 0; i < ArgsFnc.Length; i++) {
                 TVariable var1 = ArgsFnc[i];
+
+                if (var1.KindVar == EKind.params_) {
+                    // 仮引数が可変個の引数の場合
+
+                    if (i != ArgsFnc.Length - 1) {
+                        // 最後でない場合
+
+                        throw new TResolveNameException();
+                    }
+
+                    return true;
+                }
+
                 if ( ! ( var1.TypeVar == arg_types[i] || !exact && arg_types[i].IsSubClass(var1.TypeVar) ) ) {
                     return false;
                 }
@@ -59,23 +83,23 @@ namespace MyEdit {
         public override void ResolveName(TType cls, List<TVariable> vars) {
             switch (TokenTrm.TokenType) {
             case ETokenType.Int:
-                TypeTrm = TProject.IntClass;
+                TypeTrm = Project.IntClass;
                 break;
 
             case ETokenType.Float:
-                TypeTrm = TProject.FloatClass;
+                TypeTrm = Project.FloatClass;
                 break;
 
             case ETokenType.Double:
-                TypeTrm = TProject.DoubleClass;
+                TypeTrm = Project.DoubleClass;
                 break;
 
             case ETokenType.Char_:
-                TypeTrm = TProject.CharClass;
+                TypeTrm = Project.CharClass;
                 break;
 
             case ETokenType.String_:
-                TypeTrm = TProject.StringClass;
+                TypeTrm = Project.StringClass;
                 break;
 
             default:
@@ -98,6 +122,35 @@ namespace MyEdit {
                 }
             }
             else {
+                if(ClassRef != null) {
+
+                    TypeTrm = ClassRef;
+                    return;
+                }
+
+                Debug.Assert(TokenTrm != null);
+                switch (TokenTrm.Kind) {
+                case EKind.this_:
+                    TypeTrm = cls;
+                    return;
+
+                case EKind.true_:
+                case EKind.false_:
+                    TypeTrm = Project.BoolClass;
+                    return;
+
+                case EKind.null_:
+                    TypeTrm = Project.NullClass;
+                    return;
+
+                case EKind.base_:
+                    if(cls.SuperClasses.Count == 0) {
+
+                        throw new TResolveNameException(this);
+                    }
+                    TypeTrm = cls.SuperClasses[0];
+                    return;
+                }
 
                 var v = from x in vars where x.NameVar == NameRef select x;
                 if (v.Any()) {
@@ -106,7 +159,18 @@ namespace MyEdit {
                 }
                 else {
 
-                    throw new TResolveNameException(this);
+                    if(cls != null) {
+
+                        VarRef = cls.FindField(NameRef);
+                        if (VarRef == null) {
+
+                            throw new TResolveNameException(this);
+                        }
+                    }
+                    else {
+
+                        throw new TResolveNameException(this);
+                    }
                 }
             }
 
@@ -151,6 +215,20 @@ namespace MyEdit {
                     fnc_ref.VarRef = cls.MatchFunction(fnc_ref.NameRef, arg_types);
                 }
                 if(fnc_ref.VarRef == null) {
+
+                    if(fnc_ref.NameRef == "InitializeComponent") {
+                        TypeTrm = Project.VoidClass;
+                        return;
+                    }
+                    if (this is TDotApply) {
+
+                        fnc_ref.VarRef = (this as TDotApply).DotApp.TypeTrm.MatchFunction(fnc_ref.NameRef, arg_types);
+                    }
+                    else {
+
+                        fnc_ref.VarRef = cls.MatchFunction(fnc_ref.NameRef, arg_types);
+                    }
+
                     throw new TResolveNameException(fnc_ref);
                 }
 
@@ -189,16 +267,16 @@ namespace MyEdit {
                 case EKind.LE:
                 case EKind.GT:
                 case EKind.GE:
-                    TypeTrm = TProject.BoolClass;
+                    TypeTrm = Project.BoolClass;
                     break;
 
                 case EKind.Not_:
-                    TypeTrm = TProject.BoolClass;
+                    TypeTrm = Project.BoolClass;
                     break;
 
                 case EKind.And_:
                 case EKind.Or_:
-                    TypeTrm = TProject.BoolClass;
+                    TypeTrm = Project.BoolClass;
                     break;
 
                 case EKind.Assign:
@@ -206,7 +284,7 @@ namespace MyEdit {
                 case EKind.SubEq:
                 case EKind.DivEq:
                 case EKind.ModEq:
-                    TypeTrm = TProject.VoidClass;
+                    TypeTrm = Project.VoidClass;
                     break;
                 }
             }
@@ -416,7 +494,66 @@ namespace MyEdit {
 
             return null;
         }
-        
+
+        /*
+            関数名と引数の数と型が一致したらtrueを返します。
+        */
+        public bool MatchMethod(MethodInfo method, List<TType> arg_types, bool exact) {
+            ParameterInfo[] param_list = method.GetParameters();
+            if (arg_types.Count !=  param_list.Length) {
+                // 引数の数が違う場合
+
+                return false;
+            }
+
+            for (int i = 0; i < param_list.Length; i++) {
+
+                if(arg_types[i].Info == null) {
+                    return false;
+                }
+
+                ParameterInfo param = param_list[i];
+                TypeInfo param_type_info = param.ParameterType.GetTypeInfo();
+
+                if (!(param_type_info == arg_types[i].Info || !exact && arg_types[i].Info.IsSubclassOf(param.ParameterType))) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public TFunction FindMethod(TypeInfo tp, string name, List<TType> arg_types) {
+            var v3 = from f in tp.DeclaredMethods where f.Name == name && MatchMethod(f, arg_types, true) select f;
+            if (v3.Any()) {
+                return new TFunction(this, v3.First());
+            }
+
+            var v4 = from f in tp.DeclaredMethods where f.Name == name && MatchMethod(f, arg_types, false) select f;
+            if (v4.Any()) {
+                return new TFunction(this, v4.First());
+            }
+
+            if(tp.BaseType != null) {
+                TFunction fnc = FindMethod(tp.BaseType.GetTypeInfo(), name, arg_types);
+                if(fnc != null) {
+                    return fnc;
+                }
+            }
+
+            if(tp.ImplementedInterfaces != null) {
+                foreach(Type tp2 in tp.ImplementedInterfaces) {
+
+                    TFunction fnc = FindMethod(tp2.GetTypeInfo(), name, arg_types);
+                    if (fnc != null) {
+                        return fnc;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         public TFunction MatchFunction(string name, List<TType> arg_types) {
             // 関数名と引数の数と型が一致する関数を探します。
             var v1 = from f in Functions where f.Match(name, arg_types, true) select f;
@@ -435,6 +572,11 @@ namespace MyEdit {
                 if(fnc != null) {
                     return fnc;
                 }
+            }
+
+            if(Info != null) {
+
+                return FindMethod(Info, name, arg_types);
             }
 
             return null;

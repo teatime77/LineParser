@@ -15,28 +15,30 @@ namespace LineParser {
     /// それ自体で使用できる空白ページまたはフレーム内に移動できる空白ページ。
     /// </summary>
     public sealed partial class MainPage : Page {
+        TProject MainProject;
+
         public MainPage() {
             this.InitializeComponent();
 
             Debug.WriteLine("メイン開始");
 
-            TProject prj = new TProject();
+            MainProject = new TProject();
+            TEnv.Project = MainProject;
 
-            TProject.Project = prj;
+            TParser.theParser = new TParser(MainProject);
+            TCSharpParser.CSharpParser = new TCSharpParser(MainProject);
+            TEnv.Parser = TCSharpParser.CSharpParser;
 
-            TParser.theParser = new TParser(prj);
-            TCSharpParser.CSharpParser = new TCSharpParser(prj);
+            MainProject.ClearProject();
 
-            prj.ClearProject();
+            MainProject.SetAssemblyList();
 
-            prj.SetAssemblyList();
+            MainProject.OpenProject();
 
-            prj.OpenProject();
-
-            prj.RegisterClassNames();
+            MainProject.RegisterClassNames();
 
             Debug.WriteLine("解析開始");
-            foreach (TSourceFile src in prj.SourceFiles) {
+            foreach (TSourceFile src in MainProject.SourceFiles) {
 
                 src.Parser.ParseFile(src);
 
@@ -44,40 +46,12 @@ namespace LineParser {
 
                 if(file_name == "Sys.cs") {
 
-                    Dictionary<string, string> dic = new Dictionary<string, string>();
-
-                    dic.Add("bool", "Boolean");
-                    dic.Add("byte", "Byte");
-                    dic.Add("char", "Char");
-                    dic.Add("Dictionary", "Dictionary`2");
-                    dic.Add("double", "Double");
-                    dic.Add("float", "Single");
-                    dic.Add("int", "Int32");
-                    dic.Add("List", "List`1");
-                    dic.Add("object", "Object");
-                    dic.Add("short", "Int16");
-                    dic.Add("string", "String");
-                    dic.Add("void", "Void");
-
-                    foreach (TType tp in prj.ClassTable.Values) {
-                        string name;
-
-                        if(! dic.TryGetValue(tp.ClassName, out name)) {
-                            name = tp.ClassName;
-                        }
-                        var v = from a in prj.AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
-                        if (v.Any()) {
-                            tp.Info = v.First().GetTypeInfo();
-                        }
-                        else {
-                            Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
-                        }
-                    }
+                    MainProject.RegisterSysClass();
                 }
 
                 lst_SourceFiles.Items.Add(file_name);
             }
-            foreach (TSourceFile src in prj.SourceFiles) {
+            foreach (TSourceFile src in MainProject.SourceFiles) {
                 src.Parser.ResolveName(src);
             }
             Debug.WriteLine("メイン終了");
@@ -86,8 +60,8 @@ namespace LineParser {
         private void lst_SourceFiles_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e) {
             int idx = lst_SourceFiles.SelectedIndex;
 
-            if(0 <= idx && idx < TProject.Project.SourceFiles.Count) {
-                TSourceFile src = TProject.Project.SourceFiles[idx];
+            if(0 <= idx && idx < MainProject.SourceFiles.Count) {
+                TSourceFile src = MainProject.SourceFiles[idx];
 
                 MyEditor editor = LeftEditor;
 

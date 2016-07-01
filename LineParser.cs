@@ -1188,25 +1188,25 @@ namespace MyEdit {
                                         if(dic.TryGetValue(class_def.ClassName, out sys_class)) {
                                             switch (sys_class) {
                                             case 0:
-                                                TProject.IntClass = class_def;
+                                                Project.IntClass = class_def;
                                                 break;
                                             case 1:
-                                                TProject.FloatClass = class_def;
+                                                Project.FloatClass = class_def;
                                                 break;
                                             case 2:
-                                                TProject.DoubleClass = class_def;
+                                                Project.DoubleClass = class_def;
                                                 break;
                                             case 3:
-                                                TProject.CharClass = class_def;
+                                                Project.CharClass = class_def;
                                                 break;
                                             case 4:
-                                                TProject.StringClass = class_def;
+                                                Project.StringClass = class_def;
                                                 break;
                                             case 5:
-                                                TProject.BoolClass = class_def;
+                                                Project.BoolClass = class_def;
                                                 break;
                                             case 6:
-                                                TProject.VoidClass = class_def;
+                                                Project.VoidClass = class_def;
                                                 break;
                                             }
                                         }
@@ -1268,7 +1268,6 @@ namespace MyEdit {
         public void ResolveName(TSourceFile src) {
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
-                //Debug.WriteLine("名前解決 : {0} {1}", line_idx, Dirty);
                 if (Dirty) {
                     Debug.WriteLine("名前解決 : 中断");
                     Running = false;
@@ -1276,6 +1275,7 @@ namespace MyEdit {
                 }
 
                 TLine line = src.Lines[line_idx];
+                Debug.WriteLine("名前解決 : {0}", line.TextLine.TrimEnd(), "");
 
                 if(line.ObjLine is TStatement) {
                     TStatement stmt = line.ObjLine as TStatement;
@@ -2168,6 +2168,10 @@ namespace MyEdit {
     }
 
     public class TResolveNameException : Exception {
+
+        public TResolveNameException() {
+        }
+
         public TResolveNameException(TToken tkn) {
             tkn.ErrorTkn = this;
         }

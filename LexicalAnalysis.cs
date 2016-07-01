@@ -33,7 +33,7 @@ namespace MyEdit {
         Error,          // エラー
     }
 
-    public partial class TParser {
+    public partial class TParser : TEnv {
         /*
             16進数文字ならtrueを返します。
         */

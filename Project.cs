@@ -11,16 +11,15 @@ namespace MyEdit {
 
     //------------------------------------------------------------ TProject
 
-    public partial class TProject {
-        public static TProject Project;
-
-        public static TType IntClass;
-        public static TType FloatClass;
-        public static TType DoubleClass;
-        public static TType CharClass;
-        public static TType StringClass;
-        public static TType BoolClass;
-        public static TType VoidClass;
+    public partial class TProject : TEnv {
+        public TType IntClass;
+        public TType FloatClass;
+        public TType DoubleClass;
+        public TType CharClass;
+        public TType StringClass;
+        public TType BoolClass;
+        public TType VoidClass;
+        public TType NullClass = new TType("null class");
 
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public Dictionary<string, TType> ClassTable = new Dictionary<string, TType>();
@@ -28,6 +27,7 @@ namespace MyEdit {
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
         public List<Assembly> AssemblyList = new List<Assembly>();
+        public Dictionary<TypeInfo, TType> SysClassTable = new Dictionary<TypeInfo, TType>();
 
         public TProject() {
         }
@@ -52,6 +52,52 @@ namespace MyEdit {
                 TSourceFile src = new TSourceFile(path, TCSharpParser.CSharpParser);
 
                 SourceFiles.Add(src);
+            }
+        }
+
+        public TType GetSysClass(TypeInfo tp) {
+            TType tp2;
+
+            if(SysClassTable.TryGetValue(tp, out tp2)) {
+
+                return tp2;
+            }
+
+            tp2 = new TType(tp);
+            SysClassTable.Add(tp, tp2);
+
+            return tp2;
+        }
+        public void RegisterSysClass() {
+            Dictionary<string, string> dic = new Dictionary<string, string>();
+
+            dic.Add("bool", "Boolean");
+            dic.Add("byte", "Byte");
+            dic.Add("char", "Char");
+            dic.Add("Dictionary", "Dictionary`2");
+            dic.Add("double", "Double");
+            dic.Add("float", "Single");
+            dic.Add("int", "Int32");
+            dic.Add("List", "List`1");
+            dic.Add("object", "Object");
+            dic.Add("short", "Int16");
+            dic.Add("string", "String");
+            dic.Add("void", "Void");
+
+            foreach (TType tp in ClassTable.Values) {
+                string name;
+
+                if (!dic.TryGetValue(tp.ClassName, out name)) {
+                    name = tp.ClassName;
+                }
+                var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
+                if (v.Any()) {
+                    tp.Info = v.First().GetTypeInfo();
+                    SysClassTable.Add(tp.Info, tp);
+                }
+                else {
+                    Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
+                }
             }
         }
 
