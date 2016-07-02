@@ -59,6 +59,7 @@ namespace MyEdit {
         public string ClassText = null;
         public TFunction DelegateFnc;
         public TypeInfo Info;
+        public bool TypeInfoSearched;
 
         public List<TType> SuperClasses = new List<TType>();
         public List<TField> Fields = new List<TField>();
@@ -88,19 +89,33 @@ namespace MyEdit {
             if(this is TGenericClass) {
                 TGenericClass gen = this as TGenericClass;
 
-                if(gen.GenCla.Count == 1) {
+                if (gen.GenCla[0].ClassName == "T") {
+                    return null;
+                }
+                if (ClassName == "List" || ClassName == "Array" || ClassName == "IEnumerable") {
 
-                    if (ClassName == "List" || ClassName == "Array") {
+                    return gen.GenCla[0];
+                }
+                else if (ClassName == "Dictionary") {
 
-                        if(gen.GenCla[0].ClassName == "T") {
-                            return null;
-                        }
-                        return gen.GenCla[0];
-                    }
+                    return gen.GenCla[1];
                 }
             }
 
             return null;
+        }
+
+        public bool IsPrimitive() {
+            //if(Info != null && ! Info.IsSubclassOf(typeof(object))) {
+
+            //    return true;
+            //}
+            TProject p = Project;
+            if(this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
+                return true;
+            }
+
+            return false;
         }
     }
 

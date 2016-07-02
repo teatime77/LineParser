@@ -18,6 +18,7 @@ namespace MyEdit {
         public TType FloatClass;
         public TType DoubleClass;
         public TType CharClass;
+        public TType ObjectClass;
         public TType StringClass;
         public TType BoolClass;
         public TType VoidClass;
@@ -32,6 +33,9 @@ namespace MyEdit {
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public List<Assembly> AssemblyList = new List<Assembly>();
         public Dictionary<string, TType> SysClassTable = new Dictionary<string, TType>();
+
+        Dictionary<string, string> ToSysClassNameTable = new Dictionary<string, string>();
+        Dictionary<string, string> FromSysClassNameTable = new Dictionary<string, string>();
 
         public bool ParseDone;
 
@@ -127,40 +131,82 @@ namespace MyEdit {
             return tp2;
         }
 
-        public void RegisterSysClass() {
-            Dictionary<string, string> dic = new Dictionary<string, string>();
+        public string FromSysClassName(string name) {
+            string name2;
 
-            dic.Add("bool", "Boolean");
-            dic.Add("byte", "Byte");
-            dic.Add("char", "Char");
-            dic.Add("Dictionary", "Dictionary`2");
-            dic.Add("double", "Double");
-            dic.Add("float", "Single");
-            dic.Add("IEnumerable", "IEnumerable`1");
-            dic.Add("int", "Int32");
-            dic.Add("List", "List`1");
-            dic.Add("object", "Object");
-            dic.Add("short", "Int16");
-            dic.Add("string", "String");
-            dic.Add("void", "Void");
+            if(FromSysClassNameTable.TryGetValue(name, out name2)) {
+                return name2;
+            }
+            return name;
+        }
+
+        public string ToSysClassName(string name) {
+            string name2;
+
+            if (ToSysClassNameTable.TryGetValue(name, out name2)) {
+                return name2;
+            }
+            return name;
+        }
+
+        public void SetTypeInfo(TType tp) {
+            if (tp.TypeInfoSearched) {
+                return;
+            }
+            tp.TypeInfoSearched = true;
+
+            string sys_name = ToSysClassName(tp.ClassName);
+            var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == sys_name select tp2;
+            if (v.Any()) {
+
+
+                if (v.Count() == 1) {
+                    tp.Info = v.First().GetTypeInfo();
+                }
+                else { 
+                    foreach(Type t in v) {
+                        Debug.WriteLine("あいまいな型 : {0}", t.FullName, "");
+                    }
+                    if(sys_name == "TimeSpan" || sys_name == "Path") {
+
+                        tp.Info = v.Last().GetTypeInfo();
+                    }
+                    else {
+
+                        tp.Info = v.First().GetTypeInfo();
+                    }
+
+                }
+                SysClassTable.Add(tp.Info.FullName, tp);
+            }
+        }
+
+        public void RegisterSysClass() {
+            ToSysClassNameTable.Add("bool", "Boolean");
+            ToSysClassNameTable.Add("byte", "Byte");
+            ToSysClassNameTable.Add("char", "Char");
+            ToSysClassNameTable.Add("Dictionary", "Dictionary`2");
+            ToSysClassNameTable.Add("double", "Double");
+            ToSysClassNameTable.Add("float", "Single");
+            ToSysClassNameTable.Add("IEnumerable", "IEnumerable`1");
+            ToSysClassNameTable.Add("int", "Int32");
+            ToSysClassNameTable.Add("List", "List`1");
+            ToSysClassNameTable.Add("object", "Object");
+            ToSysClassNameTable.Add("short", "Int16");
+            ToSysClassNameTable.Add("string", "String");
+            ToSysClassNameTable.Add("void", "Void");
+
+            foreach(string s in ToSysClassNameTable.Keys) {
+                FromSysClassNameTable.Add(ToSysClassNameTable[s], s);
+            }
             
             foreach (TType tp in ClassTable.Values) {
-                string name;
-
                 if (tp is TGenericClass) {
                     Debug.WriteLine("sys 総称型 {0}", tp.ClassName, "");
                 }
-                else { 
-
-                    if (!dic.TryGetValue(tp.ClassName, out name)) {
-                        name = tp.ClassName;
-                    }
-                    var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
-                    if (v.Any()) {
-                        tp.Info = v.First().GetTypeInfo();
-                        SysClassTable.Add(tp.Info.FullName, tp);
-                    }
-                    else {
+                else {
+                    SetTypeInfo(tp);
+                    if (tp.Info == null) {
                         Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
                     }
                 }

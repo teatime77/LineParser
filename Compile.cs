@@ -57,8 +57,17 @@ namespace MyEdit {
                     return true;
                 }
 
-                if ( ! ( var1.TypeVar == arg_types[i] || !exact && arg_types[i].IsSubClass(var1.TypeVar) ) ) {
-                    return false;
+                if (arg_types[i] == Project.NullClass) {
+
+                    if (var1.TypeVar.IsPrimitive()) {
+                        return false;
+                    }
+                }
+                else {
+
+                    if (!(var1.TypeVar == arg_types[i] || !exact && arg_types[i].IsSubClass(var1.TypeVar))) {
+                        return false;
+                    }
                 }
             }
 
@@ -258,6 +267,9 @@ namespace MyEdit {
                     break;
 
                 case EKind.NewArray:
+                    TNewApply new_app = this as TNewApply;
+                    List<TType> param_classes = new List<TType> { new_app.ClassApp };
+                    TypeTrm = Project.GetSpecializedClass(Project.ArrayClass, param_classes, new_app.Args.Length);
                     break;
 
                 case EKind.base_:
@@ -287,6 +299,7 @@ namespace MyEdit {
                 case EKind.LE:
                 case EKind.GT:
                 case EKind.GE:
+                case EKind.is_:
                     TypeTrm = Project.BoolClass;
                     break;
 
@@ -309,11 +322,39 @@ namespace MyEdit {
 
                 case EKind.await_:
                     TType tp0 = Args[0].TypeTrm;
-                    if(tp0 == null || tp0.Info == null || tp0.Info.Name != "IAsyncOperation`1") {
+                    if(tp0 == null || tp0.Info == null) {
                         throw new TResolveNameException();
                     }
-                    TypeInfo inf = tp0.Info.GenericTypeArguments[0].GetTypeInfo();
+                    if(tp0.Info.Name == "Task") {
 
+                        TypeTrm = tp0;
+                    }
+                    else if (tp0.Info.Name == "IAsyncOperation`1") {
+
+                        TypeInfo inf = tp0.Info.GenericTypeArguments[0].GetTypeInfo();
+                        TType tp1;
+                        if (!Project.SysClassTable.TryGetValue(inf.FullName, out tp1)) {
+
+                            string name = Project.FromSysClassName(inf.Name);
+
+                            tp1 = Project.GetClassByName(name);
+                            if (tp1 == null || tp1 is TGenericClass) {
+                                throw new TResolveNameException();
+                            }
+                        }
+                        TypeTrm = tp1;
+                    }
+                    else {
+
+                        throw new TResolveNameException();
+                    }
+                    break;
+
+                case EKind.Question:
+                    TypeTrm = Args[1].TypeTrm;
+                    break;
+
+                default:
                     break;
                 }
             }
@@ -673,14 +714,27 @@ namespace MyEdit {
                 }
 
                 ParameterInfo param = param_list[i];
-
-                if(arg_types[i].Info == null) {
-                    return false;
-                }
                 TypeInfo param_type_info = param.ParameterType.GetTypeInfo();
 
-                if (!(param_type_info.FullName == arg_types[i].Info.FullName || !exact && IsSubclassOf(arg_types[i].Info, param.ParameterType))) {
-                    return false;
+                if(arg_types[i] == Project.NullClass) {
+
+                    if( !param_type_info.IsSubclassOf(typeof(object))) {
+                        return false;
+                    }
+                }
+                else {
+
+                    if (arg_types[i].Info == null) {
+                        Project.SetTypeInfo(arg_types[i]);
+                        if (arg_types[i].Info == null) {
+
+                            return false;
+                        }
+                    }
+
+                    if (!(param_type_info.FullName == arg_types[i].Info.FullName || !exact && IsSubclassOf(arg_types[i].Info, param.ParameterType))) {
+                        return false;
+                    }
                 }
             }
 

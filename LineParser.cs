@@ -148,6 +148,9 @@ namespace MyEdit {
             else if (cls.ClassName == "char") {
                 Project.CharClass = cls;
             }
+            else if (cls.ClassName == "object") {
+                Project.ObjectClass = cls;
+            }
             else if (cls.ClassName == "string") {
                 Project.StringClass = cls;
             }
@@ -1227,6 +1230,7 @@ namespace MyEdit {
         }
 
         public void ResolveName(TSourceFile src) {
+            Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
                 if (Dirty) {
@@ -1238,7 +1242,7 @@ namespace MyEdit {
                 TLine line = src.Lines[line_idx];
                 Debug.WriteLine("名前解決 : {0}", line.TextLine.TrimEnd(), "");
 
-                if(line.ObjLine is TStatement) {
+                if (line.ObjLine is TStatement) {
                     TStatement stmt = line.ObjLine as TStatement;
 
                     List<TVariable> vars;
