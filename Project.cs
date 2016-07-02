@@ -30,9 +30,10 @@ namespace MyEdit {
         public Dictionary<string, TType> ClassTable = new Dictionary<string, TType>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
-        public Dictionary<string, TGenericClass> ArrayClassTable = new Dictionary<string, TGenericClass>();
         public List<Assembly> AssemblyList = new List<Assembly>();
-        public Dictionary<TypeInfo, TType> SysClassTable = new Dictionary<TypeInfo, TType>();
+        public Dictionary<string, TType> SysClassTable = new Dictionary<string, TType>();
+
+        public bool ParseDone;
 
         public TProject() {
         }
@@ -63,7 +64,6 @@ namespace MyEdit {
 
                     RegisterSysClass();
                 }
-
             }
 
             while (true) {
@@ -79,6 +79,8 @@ namespace MyEdit {
                     break;
                 }
             }
+
+            ParseDone = true;
 
             foreach (TSourceFile src in SourceFiles) {
                 src.Parser.ResolveName(src);
@@ -111,19 +113,20 @@ namespace MyEdit {
             }
         }
 
-        public TType GetSysClass(TypeInfo tp) {
+        public TType GetSysClass(TypeInfo inf) {
             TType tp2;
 
-            if(SysClassTable.TryGetValue(tp, out tp2)) {
+            if(SysClassTable.TryGetValue(inf.FullName, out tp2)) {
 
                 return tp2;
             }
 
-            tp2 = new TType(tp);
-            SysClassTable.Add(tp, tp2);
+            tp2 = new TType(inf);
+            SysClassTable.Add(inf.FullName, tp2);
 
             return tp2;
         }
+
         public void RegisterSysClass() {
             Dictionary<string, string> dic = new Dictionary<string, string>();
 
@@ -140,11 +143,14 @@ namespace MyEdit {
             dic.Add("short", "Int16");
             dic.Add("string", "String");
             dic.Add("void", "Void");
-
+            
             foreach (TType tp in ClassTable.Values) {
                 string name;
 
-                if(tp.ClassName != "Enumerable") {
+                if (tp is TGenericClass) {
+                    Debug.WriteLine("sys 総称型 {0}", tp.ClassName, "");
+                }
+                else { 
 
                     if (!dic.TryGetValue(tp.ClassName, out name)) {
                         name = tp.ClassName;
@@ -152,7 +158,7 @@ namespace MyEdit {
                     var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == name select tp2;
                     if (v.Any()) {
                         tp.Info = v.First().GetTypeInfo();
-                        SysClassTable.Add(tp.Info, tp);
+                        SysClassTable.Add(tp.Info.FullName, tp);
                     }
                     else {
                         Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
@@ -203,7 +209,6 @@ namespace MyEdit {
             ClassTable.Clear();
             ParameterizedClassTable.Clear();
             SpecializedClassTable.Clear();
-            ArrayClassTable.Clear();
         }
 
         public TType GetClassByName(string name) {
@@ -244,39 +249,65 @@ namespace MyEdit {
             return GetClassByName(name);
         }
 
-        public void RegClass(Dictionary<string, TType> dic, TType cls) {
-            if (dic.ContainsKey(cls.ClassName)) {
+        public static string MakeClassText(string class_name, List<TType> param_classes, int dim_cnt) {
+            StringWriter sw = new StringWriter();
 
-                dic[cls.ClassName] = cls;
-            }
-            else {
+            sw.Write(class_name);
 
-                dic.Add(cls.ClassName, cls);
+            sw.Write("<");
+            foreach (TType c in param_classes) {
+                if (c != param_classes[0]) {
+                    sw.Write(",");
+                }
+                sw.Write("{0}", c.GetClassText());
             }
+            sw.Write(">");
+
+            if (dim_cnt != 0) {
+
+                sw.Write("[{0}]", new string(',', dim_cnt - 1));
+            }
+
+            return sw.ToString();
         }
 
-        public void RegGenericClass(Dictionary<string, TGenericClass> dic, TGenericClass cls) {
-            if (dic.ContainsKey(cls.ClassName)) {
+        public TGenericClass GetParameterizedClass(string class_name, List<TType> param_classes) {
+            string class_text = MakeClassText(class_name, param_classes, 0);
 
-                dic[cls.ClassName] = cls;
-            }
-            else {
+            TGenericClass reg_class;
+            if (! ParameterizedClassTable.TryGetValue(class_text, out reg_class)) {
 
-                dic.Add(cls.ClassName, cls);
+                reg_class = new TGenericClass(class_name, param_classes);
+                reg_class.GenericType = EGeneric.ParameterizedClass;
+
+                ParameterizedClassTable.Add(class_text, reg_class);
+
+                ClassTable.Add(reg_class.ClassName, reg_class);
             }
+
+            return reg_class;
+
         }
 
-        public TGenericClass GetSpecializedClass(TGenericClass cls, List<TType> vtp) {
-            string class_text = cls.GetClassText();
+        public TGenericClass GetSpecializedClass(TGenericClass org_class, List<TType> param_classes, int dim_cnt) {
+            string class_text = MakeClassText(org_class.ClassName, param_classes, dim_cnt);
 
-            TGenericClass gen1 = null;
-            if(! SpecializedClassTable.TryGetValue(class_text, out gen1)) {
+            TGenericClass reg_class;
+            if (!SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
 
-                gen1 = new TGenericClass(cls, vtp);
-                SpecializedClassTable.Add(class_text, gen1);
+                reg_class = new TGenericClass(org_class, param_classes, dim_cnt);
+                reg_class.GenericType = EGeneric.SpecializedClass;
+
+                if (ParseDone) {
+                    SetMemberOfSpecializedClass(reg_class);
+                }
+                else {
+
+                    SpecializedClassTable.Add(class_text, reg_class);
+                }
             }
 
-            return gen1;
+            return reg_class;
         }
 
         public TType SubstituteArgumentClass(TType tp, Dictionary<string, TType> dic) {
@@ -309,7 +340,7 @@ namespace MyEdit {
                 return tp;
             }
 
-            return GetSpecializedClass(gen.OrgCla, vtp);
+            return GetSpecializedClass(gen.OrgCla, vtp, gen.DimCnt);
         }
 
         public TVariable CopyVariable(TVariable var_src, Dictionary<string, TType> dic) {
@@ -336,16 +367,35 @@ namespace MyEdit {
         }
 
         public void SetMemberOfSpecializedClass(TGenericClass cls) {
+            string class_text = cls.GetClassText();
+
+            if (cls.SetMember) {
+                return;
+            }
+
+            if (! SpecializedClassTable.ContainsKey(class_text)) {
+                SpecializedClassTable.Add(class_text, cls);
+            }
+
+            cls.SetMember = true;
+
             Dictionary<string, TType> dic = new Dictionary<string, TType>();
+
+            if(cls.GenCla == null || cls.GenCla.Count != cls.OrgCla.GenCla.Count) {
+                throw new TParseException();
+            }
 
             for(int i = 0; i < cls.OrgCla.GenCla.Count; i++) {
                 dic.Add(cls.OrgCla.GenCla[i].ClassName, cls.GenCla[i]);
             }
 
+            for (int i = 0; i < cls.GenCla.Count; i++) {
+                cls.GenCla[i] = SubstituteArgumentClass(cls.GenCla[i], dic);
+            }
+
+            cls.SuperClasses = (from c in cls.OrgCla.SuperClasses select SubstituteArgumentClass(c, dic)).ToList();
             cls.Fields = (from x in cls.OrgCla.Fields select CopyField(cls, x, dic)).ToList();
             cls.Functions = (from x in cls.OrgCla.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
-
-            cls.SetMember = true;
         }
     }
 

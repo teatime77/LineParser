@@ -82,6 +82,9 @@ namespace MyEdit {
         }
 
         public TType ElementType() {
+            if(this == Project.StringClass) {
+                return Project.CharClass;
+            }
             if(this is TGenericClass) {
                 TGenericClass gen = this as TGenericClass;
 
@@ -89,6 +92,9 @@ namespace MyEdit {
 
                     if (ClassName == "List" || ClassName == "Array") {
 
+                        if(gen.GenCla[0].ClassName == "T") {
+                            return null;
+                        }
                         return gen.GenCla[0];
                     }
                 }
@@ -110,43 +116,16 @@ namespace MyEdit {
             GenCla = arg_classes;
         }
 
-        public TGenericClass(TGenericClass org_class, List<TType> arg_classes) : base(org_class.ClassName) {
+        public TGenericClass(TGenericClass org_class, List<TType> arg_classes, int dim_cnt) : base(org_class.ClassName) {
             OrgCla = org_class;
             GenCla = arg_classes;
-        }
-
-        public TGenericClass(TType element_class, int dim_cnt) : base(Project.ArrayClass.ClassName) {
-            OrgCla = Project.ArrayClass;
-            GenCla = new List<TType>();
-            GenCla.Add(element_class);
             DimCnt = dim_cnt;
         }
 
         public override string GetClassText() {
             if(ClassText == null) {
 
-                StringWriter sw = new StringWriter();
-
-                sw.Write(ClassName);
-
-                if(GenCla != null) {
-
-                    sw.Write("<");
-                    foreach (TType c in GenCla) {
-                        if (c != GenCla[0]) {
-                            sw.Write(",");
-                        }
-                        sw.Write("{0}", c.GetClassText());
-                    }
-                    sw.Write(">");
-                }
-
-                if (DimCnt != 0) {
-
-                    sw.Write("[{0}]", new string(',', DimCnt - 1));
-                }
-
-                ClassText = sw.ToString();
+                ClassText = TProject.MakeClassText(ClassName, GenCla, DimCnt);
             }
 
             return ClassText;

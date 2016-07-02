@@ -106,14 +106,7 @@ namespace MyEdit {
                 }
                 GetToken(EKind.GT);
 
-                TGenericClass parameterized_class = new TGenericClass(id.TextTkn, param_classes);
-
-                parameterized_class.GenericType = EGeneric.ParameterizedClass;
-
-                PrjParser.RegGenericClass(PrjParser.ParameterizedClassTable, parameterized_class);
-                PrjParser.RegClass(PrjParser.ClassTable, parameterized_class);
-
-                cls = parameterized_class;
+                cls = Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             else {
 
@@ -125,9 +118,8 @@ namespace MyEdit {
                 GetToken(EKind.Colon);
                 while (true) {
 
-                    TToken super_class_name = GetToken2(EKind.Identifier, EKind.ClassName);
+                    TType super_class = ReadType(cls, false);
 
-                    TType super_class = PrjParser.GetClassByName(super_class_name.TextTkn);
                     cls.SuperClasses.Add(super_class);
 
                     if(CurTkn.Kind == EKind.Comma) {
@@ -272,9 +264,8 @@ namespace MyEdit {
             if (contains_argument_class) {
                 // 引数にArgumentClassを含む場合
 
-                TGenericClass tmp_class = new TGenericClass(cls1 as TGenericClass, param_classes);
+                TGenericClass tmp_class = new TGenericClass(cls1 as TGenericClass, param_classes, dim_cnt);
                 tmp_class.ContainsArgumentClass = true;
-                tmp_class.DimCnt = dim_cnt;
 
                 return tmp_class;
             }
@@ -288,7 +279,7 @@ namespace MyEdit {
             else {
                 // 引数がある場合
 
-                cls2 = GetSpecializedClass(cls1 as TGenericClass, param_classes);
+                cls2 = Project.GetSpecializedClass(cls1 as TGenericClass, param_classes, 0);
             }
 
             if (dim_cnt == 0) {
@@ -297,47 +288,7 @@ namespace MyEdit {
                 return cls2;
             }
 
-            string class_text = cls2.GetClassText() + new string(',', dim_cnt - 1);
-
-            TGenericClass reg_class;
-
-            if (!PrjParser.ArrayClassTable.TryGetValue(class_text, out reg_class)) {
-
-                reg_class = new TGenericClass(cls2, dim_cnt);
-                reg_class.GenericType = EGeneric.SpecializedClass;
-
-                //Debug.WriteLine("配列型 : {0}", reg_class.GetClassText(),"");
-                PrjParser.ArrayClassTable.Add(class_text, reg_class);
-            }
-
-            return reg_class;
-        }
-
-        public TType GetSpecializedClass(TGenericClass org_class, List<TType> param_classes) {
-            StringWriter sw = new StringWriter();
-            sw.Write(org_class.ClassName);
-            sw.Write("<");
-            foreach(TType c in param_classes) {
-                if(c != param_classes[0]) {
-                    sw.Write(",");
-                }
-                sw.Write("{0}", c.GetClassText());
-            }
-            sw.Write(">");
-
-            string class_text = sw.ToString();
-
-            TGenericClass reg_class;
-            if (!PrjParser.SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
-
-                reg_class = new TGenericClass(org_class, param_classes);
-                reg_class.GenericType = EGeneric.SpecializedClass;
-
-                //Debug.WriteLine("特化クラス : {0}", reg_class.GetClassText(), "");
-                PrjParser.SpecializedClassTable.Add(class_text, reg_class);
-            }
-
-            return reg_class;
+            return Project.GetSpecializedClass(Project.ArrayClass, new List<TType> { cls2 }, dim_cnt);
         }
 
         public virtual void LineEnd() {

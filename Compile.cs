@@ -274,6 +274,10 @@ namespace MyEdit {
                 case EKind.Div:
                 case EKind.Mod:
 
+                case EKind.Hat:
+                case EKind.Anp:
+                case EKind.BitOR:
+
                     TypeTrm = Args[0].TypeTrm;
                     break;
 
@@ -301,6 +305,15 @@ namespace MyEdit {
                 case EKind.DivEq:
                 case EKind.ModEq:
                     TypeTrm = Project.VoidClass;
+                    break;
+
+                case EKind.await_:
+                    TType tp0 = Args[0].TypeTrm;
+                    if(tp0 == null || tp0.Info == null || tp0.Info.Name != "IAsyncOperation`1") {
+                        throw new TResolveNameException();
+                    }
+                    TypeInfo inf = tp0.Info.GenericTypeArguments[0].GetTypeInfo();
+
                     break;
                 }
             }
@@ -341,7 +354,7 @@ namespace MyEdit {
             }
             else {
 
-                TypeTrm = Project.GetSpecializedClass(Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm });
+                TypeTrm = Project.GetSpecializedClass(Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm }, 0);
             }
 
             vars.RemoveAt(vars.Count - 1);
