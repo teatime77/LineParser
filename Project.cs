@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Text;
 using Windows.Storage;
 using Windows.UI;
 
@@ -22,6 +24,7 @@ namespace MyEdit {
         public TType StringClass;
         public TType BoolClass;
         public TType VoidClass;
+        public TType TypeClass;
         public TGenericClass ArrayClass;
         public TGenericClass EnumerableClass;
         public TType NullClass = new TType("null class");
@@ -70,6 +73,11 @@ namespace MyEdit {
                 }
             }
 
+            TSetParentNavi set_parent = new TSetParentNavi();
+            List<object> args = new List<object>();
+            args.Add(null);
+            set_parent.ProjectNavi(this, args);
+
             while (true) {
 
                 var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
@@ -102,11 +110,12 @@ namespace MyEdit {
             AssemblyList.Add(typeof(File).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Stack<int>).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(MainPage).GetTypeInfo().Assembly);
+            AssemblyList.Add(typeof(WebUtility).GetTypeInfo().Assembly);
         }
 
         public void OpenProject() {
             StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-            string[] project_files = File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", System.Text.Encoding.UTF8);
+            string[] project_files = File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8);
             foreach (string file_name in project_files) {
 
                 string path = localFolder.Path + @"\" + file_name;
@@ -295,7 +304,7 @@ namespace MyEdit {
             return GetClassByName(name);
         }
 
-        public static string MakeClassText(string class_name, List<TType> param_classes, int dim_cnt) {
+        public string MakeClassText(string class_name, List<TType> param_classes, int dim_cnt) {
             StringWriter sw = new StringWriter();
 
             sw.Write(class_name);
@@ -439,7 +448,15 @@ namespace MyEdit {
                 cls.GenCla[i] = SubstituteArgumentClass(cls.GenCla[i], dic);
             }
 
+            cls.KindClass = cls.OrgCla.KindClass;
+
             cls.SuperClasses = (from c in cls.OrgCla.SuperClasses select SubstituteArgumentClass(c, dic)).ToList();
+
+            if(cls.OrgCla.RetType != null) {
+                cls.RetType = SubstituteArgumentClass(cls.OrgCla.RetType, dic);
+                cls.ArgTypes = (from c in cls.OrgCla.ArgTypes select SubstituteArgumentClass(c, dic)).ToArray();
+            }
+
             cls.Fields = (from x in cls.OrgCla.Fields select CopyField(cls, x, dic)).ToList();
             cls.Functions = (from x in cls.OrgCla.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
         }

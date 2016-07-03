@@ -39,7 +39,7 @@ namespace MyEdit {
             GetToken(EKind.EOT);
         }
 
-        public override TVariable ReadArgVariable() {
+        public override TVariable ReadArgVariable(TType parent_class) {
             EKind kind = EKind.Undefined;
 
             switch (CurTkn.Kind) {
@@ -59,7 +59,7 @@ namespace MyEdit {
                 break;
             }
 
-            TType type = ReadType(null, false);
+            TType type = ReadType(parent_class, false);
             TToken id = GetToken(EKind.Identifier);
 
             return new TVariable(id, type, kind);

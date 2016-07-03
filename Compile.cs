@@ -65,8 +65,23 @@ namespace MyEdit {
                 }
                 else {
 
-                    if (!(var1.TypeVar == arg_types[i] || !exact && arg_types[i].IsSubClass(var1.TypeVar))) {
-                        return false;
+                    if(var1.TypeVar.KindClass == EClass.Delegate) {
+
+                        if(arg_types[i].KindClass != EClass.Delegate) {
+                            return false;
+                        }
+
+                        string dlg_txt1 = var1.TypeVar.GetDelegateText();
+                        string dlg_txt2 = arg_types[i].GetDelegateText();
+                        if(dlg_txt1 != dlg_txt2) {
+                            return false;
+                        }
+                    }
+                    else {
+
+                        if (!(var1.TypeVar == arg_types[i] || !exact && arg_types[i].IsSubClass(var1.TypeVar))) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -116,8 +131,16 @@ namespace MyEdit {
                 TypeTrm = Project.StringClass;
                 break;
 
+            case ETokenType.VerbatimString:
+                TypeTrm = Project.StringClass;
+                break;
+
             default:
                 throw new TResolveNameException(TokenTrm);
+            }
+
+            if (CastType != null) {
+                TypeTrm = CastType;
             }
         }
     }
@@ -135,6 +158,7 @@ namespace MyEdit {
                     VarRef = dot_ref.DotRef.TypeTrm.FindField(NameRef);
                     throw new TResolveNameException(this);
                 }
+                TypeTrm = VarRef.TypeVar;
             }
             else {
                 if(ClassRef != null) {
@@ -143,20 +167,42 @@ namespace MyEdit {
                     return;
                 }
 
-                Debug.Assert(TokenTrm != null);
+                if(TokenTrm == null) {
+
+                    if(ParentTrm is TDotApply) {
+                        TType tp = (ParentTrm as TDotApply).DotApp.TypeTrm;
+                        if(tp is TGenericClass) {
+
+                            TType gen_tp = (tp as TGenericClass).GenCla[0];
+
+                            Debug.Assert(VarRef is TFunction);
+                            TFunction lambda = VarRef as TFunction;
+                            Debug.Assert(lambda.LambdaFnc != null);
+                            lambda.ArgsFnc[0].TypeVar = gen_tp;
+                            vars.Add(lambda.ArgsFnc[0]);
+                            lambda.LambdaFnc.ResolveName(cls, vars);
+                            vars.RemoveAt(vars.Count - 1);
+
+                            TypeTrm = new TType("lambda function", lambda.LambdaFnc.TypeTrm, new TType[] { gen_tp });
+                            return;
+                        }
+                    }
+
+                    throw new TResolveNameException();
+                }
                 switch (TokenTrm.Kind) {
                 case EKind.this_:
                     TypeTrm = cls;
-                    return;
+                    break;
 
                 case EKind.true_:
                 case EKind.false_:
                     TypeTrm = Project.BoolClass;
-                    return;
+                    break;
 
                 case EKind.null_:
                     TypeTrm = Project.NullClass;
-                    return;
+                    break;
 
                 case EKind.base_:
                     if(cls.SuperClasses.Count == 0) {
@@ -164,45 +210,50 @@ namespace MyEdit {
                         throw new TResolveNameException(this);
                     }
                     TypeTrm = cls.SuperClasses[0];
-                    return;
-                }
+                    break;
 
-                var v = from x in vars where x.NameVar == NameRef select x;
-                if (v.Any()) {
+                default:
 
-                    VarRef = v.First();
-                }
-                else {
+                    var v = from x in vars where x.NameVar == NameRef select x;
+                    if (v.Any()) {
 
-                    if(cls != null) {
+                        VarRef = v.First();
+                        TypeTrm = VarRef.TypeVar;
+                    }
+                    else {
 
-                        VarRef = cls.FindField(NameRef);
-                        if (VarRef == null) {
+                        if (cls != null) {
 
-                            var fncs = from f in cls.Functions where f.NameVar == NameRef select f;
-                            if (fncs.Any()) {
-                                VarRef = fncs.First();
-                                TypeTrm = Project.HandlerClass;
-                                return;
+                            VarRef = cls.FindField(NameRef);
+                            if (VarRef == null) {
+
+                                var fncs = from f in cls.Functions where f.NameVar == NameRef select f;
+                                if (fncs.Any()) {
+                                    VarRef = fncs.First();
+                                    TypeTrm = Project.HandlerClass;
+                                }
+                                else {
+
+                                    throw new TResolveNameException(this);
+                                }
                             }
+                            else {
+
+                                TypeTrm = VarRef.TypeVar;
+                            }
+                        }
+                        else {
 
                             throw new TResolveNameException(this);
                         }
                     }
-                    else {
-
-                        throw new TResolveNameException(this);
-                    }
+                    break;
                 }
             }
 
             if(CastType != null) {
 
                 TypeTrm = CastType;
-            }
-            else {
-
-                TypeTrm = VarRef.TypeVar;
             }
 
             if (TypeTrm == null) {
@@ -215,7 +266,7 @@ namespace MyEdit {
         public override void ResolveName(TType cls, List<TVariable> vars) {
             TType cur_type;
 
-            if(this is TDotApply) {
+            if (this is TDotApply) {
 
                 (this as TDotApply).DotApp.ResolveName(cls, vars);
 
@@ -232,7 +283,7 @@ namespace MyEdit {
                 arg_types.Add(t.TypeTrm);
             }
 
-            if(FunctionApp is TReference) {
+            if (FunctionApp is TReference) {
                 TReference fnc_ref = FunctionApp as TReference;
 
                 if(KindApp == EKind.Index) {
@@ -354,9 +405,17 @@ namespace MyEdit {
                     TypeTrm = Args[1].TypeTrm;
                     break;
 
+                case EKind.typeof_:
+                    TypeTrm = Project.TypeClass;
+                    break;
+
                 default:
                     break;
                 }
+            }
+
+            if(CastType != null) {
+                TypeTrm = CastType;
             }
 
             if(TypeTrm == null) {
@@ -382,7 +441,10 @@ namespace MyEdit {
             vars.Add(VarQry);
             base.ResolveName(cls, vars);
 
-            SelFrom.ResolveName(cls, vars);
+            if(SelFrom != null) {
+
+                SelFrom.ResolveName(cls, vars);
+            }
 
             if (TakeFrom != null) {
                 TakeFrom.ResolveName(cls, vars);
@@ -399,6 +461,10 @@ namespace MyEdit {
             }
 
             vars.RemoveAt(vars.Count - 1);
+
+            if (CastType != null) {
+                TypeTrm = CastType;
+            }
         }
     }
 
@@ -412,6 +478,10 @@ namespace MyEdit {
             }
 
             vars.RemoveAt(vars.Count - 1);
+
+            if (CastType != null) {
+                TypeTrm = CastType;
+            }
         }
     }
 
@@ -576,6 +646,9 @@ namespace MyEdit {
     
     partial class TType {
         public bool IsSubClass(TType tp) {
+            if(tp == Project.ObjectClass) {
+                return ! IsPrimitive();
+            }
             if (SuperClasses.Contains(tp)) {
                 return true;
             }
@@ -679,11 +752,6 @@ namespace MyEdit {
         */
         public bool MatchMethod(MethodInfo method, List<TType> arg_types, bool exact) {
             ParameterInfo[] param_list = method.GetParameters();
-            if (arg_types.Count < param_list.Length) {
-                // 実引数の数が少ない場合
-
-                return false;
-            }
 
             bool is_params = false;
 
@@ -700,6 +768,12 @@ namespace MyEdit {
                         break;
                     }
                 }
+            }
+
+            if (arg_types.Count < param_list.Length && ! is_params) {
+                // 実引数の数が少ない場合
+
+                return false;
             }
 
             if(param_list.Length < arg_types.Count && !is_params) {

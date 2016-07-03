@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using Windows.UI;
 
 namespace MyEdit {
@@ -26,7 +27,7 @@ namespace MyEdit {
             PathSrc = path;
             Parser = parser;
 
-            string text = File.ReadAllText(path, System.Text.Encoding.UTF8).Replace("\r\n", "\n");
+            string text = File.ReadAllText(path, Encoding.UTF8).Replace("\r\n", "\n");
             Chars.AddRange(from c in text select new TChar(c));
 
             Lines.Clear();

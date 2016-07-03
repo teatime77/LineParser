@@ -57,33 +57,68 @@ namespace MyEdit {
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
         public string ClassText = null;
+        public string DelegateText = null;
         public TFunction DelegateFnc;
         public TypeInfo Info;
         public bool TypeInfoSearched;
+
+        public TType RetType;
+        public TType[] ArgTypes;
 
         public List<TType> SuperClasses = new List<TType>();
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
 
-        public TType(string name) {
-            ClassName = name;
+        public TType() {
         }
 
-        public TType(TFunction fnc) {
-            ClassName = fnc.NameVar;
-            DelegateFnc = fnc;
+        public TType(string name) {
+            ClassName = name;
         }
 
         public TType(TypeInfo info) {
             Info = info;
         }
 
+        public TType(string name, TType ret_type, TType[] arg_types) {
+            KindClass = EClass.Delegate;
+            ClassName = name;
+            RetType = ret_type;
+            ArgTypes = arg_types;
+        }
+
         public virtual string GetClassText() {
             return ClassName;
         }
 
+
+        public string GetDelegateText() {
+            if(DelegateText == null) {
+
+                StringWriter sw = new StringWriter();
+
+                sw.Write(RetType.GetClassText());
+                sw.Write(" (");
+
+                foreach (TType t in ArgTypes) {
+                    if (t != ArgTypes.First()) {
+                        sw.Write(",");
+                    }
+                    sw.Write(t.GetClassText());
+                }
+                sw.Write(")");
+
+                DelegateText = sw.ToString();
+            }
+
+            return DelegateText;
+        }
+
+
         public TType ElementType() {
-            if(this == Project.StringClass) {
+            TType tp;
+
+            if (this == Project.StringClass) {
                 return Project.CharClass;
             }
             if(this is TGenericClass) {
@@ -101,6 +136,25 @@ namespace MyEdit {
                     return gen.GenCla[1];
                 }
             }
+            if(Info != null) {
+                if (Info.IsArray) {
+
+                    int k = Info.Name.IndexOf('[');
+                    string name = Info.Name.Substring(0, k);
+                    tp = Project.GetClassByName(name);
+                    if (tp != null) {
+                        return tp;
+                    }
+                }
+
+                Type t = Info.GenericTypeArguments[0];
+                tp = Project.GetClassByName(t.Name);
+                if (tp != null) {
+                    return tp;
+                }
+
+            }
+
 
             return null;
         }
@@ -140,7 +194,7 @@ namespace MyEdit {
         public override string GetClassText() {
             if(ClassText == null) {
 
-                ClassText = TProject.MakeClassText(ClassName, GenCla, DimCnt);
+                ClassText = Project.MakeClassText(ClassName, GenCla, DimCnt);
             }
 
             return ClassText;
@@ -229,7 +283,9 @@ namespace MyEdit {
             BaseApp = base_app;
         }
 
-        public TFunction(string name, TTerm trm) : base() {
+        public TFunction(TToken name, TTerm trm) : base() {
+            ArgsFnc = new TVariable[1];
+            ArgsFnc[0] = new TVariable(name);
             LambdaFnc = trm;
         }
 
@@ -242,13 +298,12 @@ namespace MyEdit {
     //------------------------------------------------------------ TTerm
 
     public abstract partial class TTerm : TEnv {
+        public object ParentTrm;
         public TToken TokenTrm;
         public TType CastType;
         public TType TypeTrm;
         public bool WithParenthesis;
         public bool IsType;
-
-        
     }
 
     public partial class TLiteral : TTerm {
@@ -346,12 +401,12 @@ namespace MyEdit {
             Debug.Assert(kind == EKind.NewInstance || kind == EKind.NewArray);
             KindApp = kind;
             Args = args;
-            if(init == null) {
 
-                InitList = new List<TTerm>();
+            if(init != null) {
+                InitList = init;
             }
             else {
-
+                InitList = new List<TTerm>();
             }
 
             ClassApp = cls;
@@ -377,48 +432,7 @@ namespace MyEdit {
     //------------------------------------------------------------ TStatement
 
     public abstract partial class TStatement : TEnv {
-        public void sub(TStatement stmt) {
-            if (stmt is TVariableDeclaration) {
-                TVariableDeclaration var_decl = stmt as TVariableDeclaration;
-            }
-            else if (stmt is TAssignment) {
-                TAssignment asn = stmt as TAssignment;
-            }
-            else if (stmt is TCall) {
-                TCall call1 = stmt as TCall;
-            }
-            else if (stmt is TJump) {
-                TJump jmp = stmt as TJump;
-            }
-            else if (stmt is TBlockStatement) {
-                TBlockStatement blc_stmt = stmt as TBlockStatement;
-
-                if (stmt is TBlock) {
-                    TBlock block = stmt as TBlock;
-                }
-                else if (stmt is TIfBlock) {
-                    TIfBlock if_block = stmt as TIfBlock;
-                }
-                else if (stmt is TCase) {
-                    TCase cas = stmt as TCase;
-                }
-                else if (stmt is TSwitch) {
-                    TSwitch swt = stmt as TSwitch;
-                }
-                else if (stmt is TFor) {
-                    TFor for1 = stmt as TFor;
-                }
-                else if (stmt is TWhile) {
-                    TWhile while1 = stmt as TWhile;
-                }
-                else if (stmt is TTry) {
-                    TTry try1 = stmt as TTry;
-                }
-                else if (stmt is TCatch) {
-                    TCatch catch1 = stmt as TCatch;
-                }
-            }
-        }
+        public object ParentStmt;
     }
 
     public partial class TAssignment : TStatement {
