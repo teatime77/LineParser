@@ -1,11 +1,11 @@
 ﻿<Page
+    x:Class="Miyu.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:LineParser"
+    xmlns:local="using:Miyu"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:MyEdit="using:MyEdit"
-    x:Class="LineParser.MainPage"
+    xmlns:Miyu="using:Miyu"
     mc:Ignorable="d" Loaded="Page_Loaded" >
 
     <Grid>
@@ -28,7 +28,7 @@
             </PivotItem>
         </Pivot>
 
-        <MyEdit:MyEditor x:Name="LeftEditor" Grid.Column="1" />
-        <MyEdit:MyEditor x:Name="RightEditor" Grid.Column="2" />
+        <Miyu:MyEditor x:Name="LeftEditor" Grid.Column="1" />
+        <Miyu:MyEditor x:Name="RightEditor" Grid.Column="2" />
     </Grid>
 </Page>

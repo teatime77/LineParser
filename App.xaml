@@ -1,8 +1,8 @@
 ﻿<Application
-    x:Class="LineParser.App"
+    x:Class="Miyu.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:LineParser"
+    xmlns:local="using:Miyu"
     RequestedTheme="Light">
 
 </Application>

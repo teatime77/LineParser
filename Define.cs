@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 
-namespace MyEdit {
+namespace Miyu {
     public enum EKind {
         Undefined,
 

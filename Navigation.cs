@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace MyEdit {
+namespace Miyu {
     public abstract class TNavigation {
         public abstract void BeforeAction(object self, List<object> args);
         public abstract void AfterAction(object self, List<object> args);

@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
-namespace MyEdit {
+namespace Miyu {
     public enum EClass {
         Class,
         Enum,

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
         1行の構文解析
 --------------------------------------------------------------------------------*/
 
-namespace MyEdit {
+namespace Miyu {
     partial class TParser {
         public const int TabSize = 4;
         public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);

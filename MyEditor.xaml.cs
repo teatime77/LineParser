@@ -22,10 +22,9 @@ using System.Threading.Tasks;
 using System.Net;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 
-
 // The User Control item template is documented at http://go.microsoft.com/fwlink/?LinkId=234236
 
-namespace MyEdit {
+namespace Miyu {
     public sealed partial class MyEditor : UserControl {
         // 矢印カーソル
         static CoreCursor ArrowCoreCursor = new CoreCursor(CoreCursorType.Arrow, 1);
@@ -87,7 +86,7 @@ namespace MyEdit {
         /*
             テキスト選択の開始位置
         */
-        public int SelStart(){
+        public int SelStart() {
             return Math.Min(SelOrigin, SelCurrent);
         }
 
@@ -120,10 +119,10 @@ namespace MyEdit {
             CoreWindow wnd = CoreApplication.GetCurrentView().CoreWindow;
 
             // イベントハンドラを登録します。
-            wnd.KeyDown             += CoreWindow_KeyDown;
-            wnd.PointerPressed      += CoreWindow_PointerPressed;
-            wnd.PointerMoved        += CoreWindow_PointerMoved;
-            wnd.PointerReleased     += CoreWindow_PointerReleased;
+            wnd.KeyDown += CoreWindow_KeyDown;
+            wnd.PointerPressed += CoreWindow_PointerPressed;
+            wnd.PointerMoved += CoreWindow_PointerMoved;
+            wnd.PointerReleased += CoreWindow_PointerReleased;
             wnd.PointerWheelChanged += CoreWindow_PointerWheelChanged;
 
             PointerTimer = new DispatcherTimer();
@@ -177,10 +176,10 @@ namespace MyEdit {
             // 文字の現在位置
             int pos;
 
-            for(pos = 0; pos < Chars.Count && line_idx < start_line_idx; pos++) {
-                if(Chars[pos].Chr == TSourceFile.LF) {
+            for (pos = 0; pos < Chars.Count && line_idx < start_line_idx; pos++) {
+                if (Chars[pos].Chr == TSourceFile.LF) {
                     line_idx++;
-                    if(line_idx == start_line_idx) {
+                    if (line_idx == start_line_idx) {
                         pos++;
                         break;
                     }
@@ -191,7 +190,7 @@ namespace MyEdit {
             float y = (float)ViewPadding.Y;
 
             int sel_start = SelStart();
-            int sel_end   = SelEnd();
+            int sel_end = SelEnd();
 
             for (; ; pos++) {
                 StringWriter line_sw = new StringWriter();
@@ -243,8 +242,8 @@ namespace MyEdit {
                     else {
 
                         args.DrawingSession.DrawText(str, x, y, TSourceFile.ColorFromTokenType(token_type), TextFormat);
-                        
-                        if(tkn != null && tkn.ErrorTkn != null) {
+
+                        if (tkn != null && tkn.ErrorTkn != null) {
 
                             args.DrawingSession.DrawLine(x, yb, xe, yb, Colors.Red, 1);
                         }
@@ -292,7 +291,7 @@ namespace MyEdit {
 
                 // 挿入カーソルの位置を得ます。
                 int cursor_pos;
-                if(DropPos != -1) {
+                if (DropPos != -1) {
                     // ドロップ先がある場合
 
                     // ドロップ先に挿入カーソルを描画します。
@@ -317,7 +316,7 @@ namespace MyEdit {
                 }
 
                 line_idx++;
-                if(ViewLineCount <= line_idx - start_line_idx) {
+                if (ViewLineCount <= line_idx - start_line_idx) {
                     break;
                 }
 
@@ -404,12 +403,12 @@ namespace MyEdit {
 
             // アプリ内で持っているテキストの選択位置を更新します。
             SelOrigin = sel_start + new_text.Length;
-            SelCurrent  = SelOrigin;
+            SelCurrent = SelOrigin;
 
             // 新しく挿入した文字列に含まれる改行文字の個数
             int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();//   GetLFCount(sel_start, sel_start + new_text.Length);
 
-            if(new_LF_cnt < old_LF_cnt) {
+            if (new_LF_cnt < old_LF_cnt) {
                 // 行が減った場合
 
                 // 行を削除します。
@@ -421,7 +420,7 @@ namespace MyEdit {
                 // 行が増えた場合
 
                 // 行を挿入します。
-                for(int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
+                for (int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
                     SourceFile.Lines.Insert(start_line_idx, new TLine());
                 }
             }
@@ -540,7 +539,7 @@ namespace MyEdit {
                 }
                 break;
 
-            case VirtualKey.End: 
+            case VirtualKey.End:
                 if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0) {
                     // Controlキーが押されている場合
 
@@ -552,13 +551,13 @@ namespace MyEdit {
 
                     // 現在の行の最終位置を得ます。
                     new_sel_current = SourceFile.GetLineEnd(SelCurrent);
-                }               
+                }
                 break;
 
             case VirtualKey.PageUp: {
                     int line_diff = 0;
                     int i;
-                    for (i = Math.Min(SelCurrent, Chars.Count - 1) ; 0 < i; i--) {
+                    for (i = Math.Min(SelCurrent, Chars.Count - 1); 0 < i; i--) {
                         if (Chars[i].Chr == TSourceFile.LF) {
 
                             line_diff++;
@@ -758,13 +757,13 @@ namespace MyEdit {
             ポインタが押された。
         */
         private void CoreWindow_PointerPressed(CoreWindow sender, PointerEventArgs e) {
-            if(editContext == null) {
+            if (editContext == null) {
                 // IMEがまだ初期化されてない場合
 
                 return;
             }
 
-            if(PointerEventLoop == null) {
+            if (PointerEventLoop == null) {
                 // ポインタのイベントハンドラがnullの場合
 
                 PointerEventLoop = PointerHandler(e);
@@ -977,7 +976,7 @@ namespace MyEdit {
                     if (SelStart() < start_pos && start_pos < SelEnd()) {
                         // 選択部分を長押しした場合
 
-                        for(IEnumerator drag_drop = DragDropHandler(e); drag_drop.MoveNext();) {
+                        for (IEnumerator drag_drop = DragDropHandler(e); drag_drop.MoveNext();) {
                             yield return 0;
                         }
 
@@ -1076,7 +1075,7 @@ namespace MyEdit {
             ポインタが出て行った。
         */
         private void OverlappedButton_PointerExited(object sender, PointerRoutedEventArgs e) {
-            CoreApplication.GetCurrentView().CoreWindow.PointerCursor   = ArrowCoreCursor;
+            CoreApplication.GetCurrentView().CoreWindow.PointerCursor = ArrowCoreCursor;
 
         }
 
@@ -1194,7 +1193,7 @@ namespace MyEdit {
         }
 
         public void SetSource(TSourceFile src) {
-            if(SourceFile != null) {
+            if (SourceFile != null) {
                 SourceFile.Editors.Remove(this);
             }
 
@@ -1277,7 +1276,7 @@ namespace MyEdit {
     */
     public class TShape {
         // 図形を囲む矩形
-        public Rect     Bounds;
+        public Rect Bounds;
 
         // 図形に対応するテキストの範囲
         public int StartPos;
@@ -1287,12 +1286,12 @@ namespace MyEdit {
             コンストラクタ
         */
         public TShape(double x, double y, Size sz, int start_pos, int end_pos) {
-            Bounds.X        = x;
-            Bounds.Y        = y;
-            Bounds.Width    = sz.Width;
-            Bounds.Height   = sz.Height;
-            StartPos        = start_pos;
-            EndPos          = end_pos;
+            Bounds.X = x;
+            Bounds.Y = y;
+            Bounds.Width = sz.Width;
+            Bounds.Height = sz.Height;
+            StartPos = start_pos;
+            EndPos = end_pos;
         }
     }
 }

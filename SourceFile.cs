@@ -7,7 +7,7 @@ using System.Net;
 using System.Text;
 using Windows.UI;
 
-namespace MyEdit {
+namespace Miyu {
 
     public class TSourceFile {
         // 改行文字

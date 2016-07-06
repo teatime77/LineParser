@@ -10,7 +10,7 @@ using Windows.ApplicationModel;
 using Windows.Globalization;
 using System.Threading.Tasks;
 
-namespace MyEdit {
+namespace Miyu {
     public partial class MyEditor {
         // IMEの操作は主にこのオブジェクトを使います。
         CoreTextEditContext editContext;

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
         1行の構文解析
 --------------------------------------------------------------------------------*/
 
-namespace MyEdit {
+namespace Miyu {
     public class TCSharpParser : TParser {
         public static TCSharpParser CSharpParser;
 

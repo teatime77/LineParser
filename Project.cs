@@ -1,5 +1,4 @@
-﻿using LineParser;
-using Microsoft.Graphics.Canvas.UI.Xaml;
+﻿using Microsoft.Graphics.Canvas.UI.Xaml;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +10,7 @@ using System.Text;
 using Windows.Storage;
 using Windows.UI;
 
-namespace MyEdit {
+namespace Miyu {
 
     //------------------------------------------------------------ TProject
 
