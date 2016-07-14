@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -22,7 +23,12 @@ namespace Miyu {
             Debug.WriteLine("メイン開始");
 
             MainProject = new TProject();
-            MainProject.Build();
+            MainProject.Init();
+
+            Task.Run(() => {
+
+                MainProject.Build();
+            });
 
             foreach (TSourceFile src in MainProject.SourceFiles) {
                 string file_name = Path.GetFileName(src.PathSrc);
@@ -44,9 +50,6 @@ namespace Miyu {
                 editor.Focus(FocusState.Programmatic);
                 editor.InvalidateCanvas();
             }
-        }
-
-        private void Page_Loaded(object sender, RoutedEventArgs e) {
         }
     }
 }

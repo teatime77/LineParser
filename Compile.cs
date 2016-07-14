@@ -419,7 +419,7 @@ namespace Miyu {
             }
 
             if(TypeTrm == null) {
-                ResolveName(cls, vars);
+                //ResolveName(cls, vars);
                 throw new TResolveNameException(TokenTrm);
             }
         }

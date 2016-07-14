@@ -53,6 +53,8 @@ namespace Miyu {
     //------------------------------------------------------------ TType
 
     public partial class TType : TEnv {
+        public static int CountClass;
+        public int IdxClass;
         public EClass KindClass = EClass.Class;
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
@@ -69,18 +71,27 @@ namespace Miyu {
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
 
+        void SetIdxClass() {
+            IdxClass = CountClass;
+            CountClass++;
+        }
+
         public TType() {
+            SetIdxClass();
         }
 
         public TType(string name) {
+            SetIdxClass();
             ClassName = name;
         }
 
         public TType(TypeInfo info) {
+            SetIdxClass();
             Info = info;
         }
 
         public TType(string name, TType ret_type, TType[] arg_types) {
+            SetIdxClass();
             KindClass = EClass.Delegate;
             ClassName = name;
             RetType = ret_type;

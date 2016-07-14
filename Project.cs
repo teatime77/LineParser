@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Windows.Storage;
 using Windows.UI;
 
@@ -39,64 +40,106 @@ namespace Miyu {
         Dictionary<string, string> ToSysClassNameTable = new Dictionary<string, string>();
         Dictionary<string, string> FromSysClassNameTable = new Dictionary<string, string>();
 
+        public ManualResetEvent Modified;
         public bool ParseDone;
 
         public TProject() {
         }
 
-        public void Build() {
-            TEnv.Project = this;
+        public void Init() {
+            Project = this;
 
             TParser.theParser = new TParser(this);
             TCSharpParser.CSharpParser = new TCSharpParser(this);
-            TEnv.Parser = TCSharpParser.CSharpParser;
-
-            ClearProject();
+            Parser = TCSharpParser.CSharpParser;
 
             SetAssemblyList();
 
             OpenProject();
 
+            Modified = new ManualResetEvent(true);
+        }
+
+        public void Build() {
+            DateTime tick;
+
+            Project = this;
+            Parser = TCSharpParser.CSharpParser;
+
             RegisterClassNames();
+            var v = from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src;
+            Debug.Assert(v.Any());
+            TSourceFile sys_src = v.First();
 
-            Debug.WriteLine("解析開始");
-            foreach (TSourceFile src in SourceFiles) {
+            tick = DateTime.Now;
 
-                src.Parser.ParseFile(src);
+            sys_src.Parser.ParseFile(sys_src);
 
-                string file_name = Path.GetFileName(src.PathSrc);
+            RegisterSysClass();
 
-                if (file_name == "Sys.cs") {
+            Dictionary<string, TType> class_table_save = new Dictionary<string, TType>(ClassTable);
+            Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
+            Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
 
-                    RegisterSysClass();
-                }
-            }
-
-            TSetParentNavi set_parent = new TSetParentNavi();
-            List<object> args = new List<object>();
-            args.Add(null);
-            set_parent.ProjectNavi(this, args);
+            Debug.WriteLine("Sys.cs 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+            tick = DateTime.Now;
 
             while (true) {
+                Modified.WaitOne();
+                Modified.Reset();
 
-                var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
-                if (vc.Any()) {
+                try {
+                    Debug.WriteLine("解析開始");
 
-                    foreach (TGenericClass gen in vc) {
-                        SetMemberOfSpecializedClass(gen);
+                    tick = DateTime.Now;
+
+                    ClassTable = new Dictionary<string, TType>(class_table_save);
+                    ParameterizedClassTable = new Dictionary<string, TGenericClass>(parameterized_class_table_save);
+                    SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
+                    ParseDone = false;
+
+                    foreach (TSourceFile src in SourceFiles) {
+                        if(src != sys_src) {
+
+                            lock (src) {
+                                src.Parser.ParseFile(src);
+                            }
+                        }
                     }
+                    Debug.WriteLine("解析終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+                    tick = DateTime.Now;
+
+                    TSetParentNavi set_parent = new TSetParentNavi();
+                    List<object> args = new List<object>();
+                    args.Add(null);
+                    set_parent.ProjectNavi(this, args);
+
+                    while (true) {
+
+                        var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
+                        if (vc.Any()) {
+
+                            foreach (TGenericClass gen in vc) {
+                                SetMemberOfSpecializedClass(gen);
+                            }
+                        }
+                        else {
+                            break;
+                        }
+                    }
+
+                    ParseDone = true;
+
+                    foreach (TSourceFile src in SourceFiles) {
+                        src.Parser.ResolveName(src);
+                    }
+                    Debug.WriteLine("名前解決 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+
                 }
-                else {
-                    break;
+                catch (TBuildCancel) {
+
                 }
             }
-
-            ParseDone = true;
-
-            foreach (TSourceFile src in SourceFiles) {
-                src.Parser.ResolveName(src);
-            }
-            Debug.WriteLine("メイン終了");
 
         }
 
@@ -257,12 +300,6 @@ namespace Miyu {
                     }
                 }
             }
-        }
-
-        public void ClearProject() {
-            ClassTable.Clear();
-            ParameterizedClassTable.Clear();
-            SpecializedClassTable.Clear();
         }
 
         public TType GetClassByName(string name) {

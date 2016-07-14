@@ -146,11 +146,7 @@ namespace Miyu {
             // 再描画します。
             InvalidateCanvas();
 
-            if (SourceFile.Parser.Dirty) {
-
-                SourceFile.Parser.ParseFile(SourceFile);
-                Debug.WriteLine("TextUpdating 終了");
-            }
+            TProject.Project.Modified.Set();
         }
 
         /*

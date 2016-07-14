@@ -21,7 +21,9 @@ namespace Miyu {
         [ThreadStatic]
         public static TType CurrentClass;
 
+        [ThreadStatic]
         public TProject PrjParser;
+
         public TToken[] TokenList;
         public int TokenPos;
         public TToken CurTkn;
@@ -345,7 +347,17 @@ namespace Miyu {
                 return cls2;
             }
 
-            return Project.GetSpecializedClass(Project.ArrayClass, new List<TType> { cls2 }, dim_cnt);
+            List<TType> array_element_class_list = new List<TType> { cls2 };
+
+            if (cls2.GenericType == EGeneric.ArgumentClass) {
+
+                TGenericClass tmp_class = new TGenericClass(Project.ArrayClass, array_element_class_list, dim_cnt);
+                tmp_class.ContainsArgumentClass = true;
+
+                return tmp_class;
+            }
+
+            return Project.GetSpecializedClass(Project.ArrayClass, array_element_class_list, dim_cnt);
         }
 
         public virtual void LineEnd() {
@@ -358,7 +370,7 @@ namespace Miyu {
             GetToken(EKind.using_);
 
             while (true) {
-                TToken id = GetToken(EKind.Identifier);
+                TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
                 using1.Packages.Add(id.TextTkn);
                 if(CurTkn.Kind != EKind.Dot) {
@@ -1128,7 +1140,7 @@ namespace Miyu {
             }
             Running = true;
             Dirty = false;
-            Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
+            //Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             src.ClassesSrc.Clear();
 
@@ -1277,15 +1289,15 @@ namespace Miyu {
             }
             CurrentClass = null;
 
-            foreach (MyEditor editor in src.Editors) {
-                editor.InvalidateCanvas();
-            }
+            //foreach (MyEditor editor in src.Editors) {
+            //    editor.InvalidateCanvas();
+            //}
 
             Running = false;
         }
 
         public void ResolveName(TSourceFile src) {
-            Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
+            //Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
                 if (Dirty) {
@@ -1304,9 +1316,11 @@ namespace Miyu {
                     GetVariableClass(src, line_idx, out vars);
 
                     // 名前解決のエラーをクリアします。
-                    var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
-                    foreach (TToken name_err_tkn in name_err_tkns) {
-                        name_err_tkn.ErrorTkn = null;
+                    lock (src) {
+                        var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
+                        foreach (TToken name_err_tkn in name_err_tkns) {
+                            name_err_tkn.ErrorTkn = null;
+                        }
                     }
 
                     try {
@@ -2216,5 +2230,8 @@ namespace Miyu {
                 ref1.TokenTrm.ErrorTkn = this;
             }
         }
+    }
+
+    public class TBuildCancel : Exception {
     }
 }

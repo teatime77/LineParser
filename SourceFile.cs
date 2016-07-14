@@ -9,7 +9,7 @@ using Windows.UI;
 
 namespace Miyu {
 
-    public class TSourceFile {
+    public class TSourceFile : TEnv {
         // 改行文字
         public const char LF = '\n';
 
@@ -130,7 +130,10 @@ namespace Miyu {
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得ます。
-                line.Tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
+                TToken[] tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
+                lock (this) {
+                    line.Tokens = tokens;
+                }
                 foreach (TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットします。

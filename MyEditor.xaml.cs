@@ -732,7 +732,7 @@ namespace Miyu {
 
             if (SourceFile.Parser.Dirty) {
 
-                SourceFile.Parser.ParseFile(SourceFile);
+                TProject.Project.Modified.Set();
                 Debug.WriteLine("CoreWindow KeyDown 終了");
             }
         }
