@@ -6,6 +6,15 @@ using System.Linq;
 using System.Reflection;
 
 namespace Miyu {
+
+    public enum ELanguage {
+        TypeScript,
+        CSharp,
+        JavaScript,
+        Java,
+        Basic,
+    }
+
     public enum EClass {
         Class,
         Enum,
@@ -50,11 +59,47 @@ namespace Miyu {
         }
     }
 
+    //-------------------------------------------------------------------------------- TModifier
+    public class TModifier {
+        public bool ValidMod;
+        public bool isPublic;
+        public bool isPrivate;
+        public bool isPartial;
+        public bool isStatic;
+        public bool isConst;
+        public bool isOverride;
+        public bool isAbstract;
+        public bool isVirtual;
+        public bool isSealed;
+        public bool isAsync;
+
+        public bool isRef;
+        public bool isOut;
+        public bool isParams;
+
+        public bool isIterator;
+        public bool isWeak;
+        public bool isParent;
+        public bool isPrev;
+        public bool isNext;
+        public bool isInvariant;
+
+        public bool isXmlIgnore;
+
+        public List<TToken> TokenListMod;
+
+        public bool isStrong() {
+            return ! isWeak && ! isParent && ! isPrev && !  isNext;
+        }
+    }
+
     //------------------------------------------------------------ TType
 
     public partial class TType : TEnv {
         public static int CountClass;
         public int IdxClass;
+        public TToken[] CommentCls;
+        public TModifier ModifierCls;
         public EClass KindClass = EClass.Class;
         public EGeneric GenericType = EGeneric.SimpleClass;
         public string ClassName;
@@ -70,6 +115,8 @@ namespace Miyu {
         public List<TType> SuperClasses = new List<TType>();
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
+
+        public List<TType> SubClasses;
 
         void SetIdxClass() {
             IdxClass = CountClass;
@@ -215,6 +262,7 @@ namespace Miyu {
     //------------------------------------------------------------ TVariable
 
     public partial class TVariable : TEnv {
+        public TModifier ModifierVar;
         public TToken TokenVar;
         public string NameVar;
         public TType TypeVar;
@@ -229,7 +277,8 @@ namespace Miyu {
             NameVar = name.TextTkn;
         }
 
-        public TVariable(TToken name, TType type, TTerm init) {
+        public TVariable(TModifier mod1, TToken name, TType type, TTerm init) {
+            ModifierVar = mod1;
             TokenVar = name;
             NameVar = name.TextTkn;
             TypeVar = type;
@@ -250,11 +299,10 @@ namespace Miyu {
     }
 
     public class TMember : TVariable {
-        public bool IsStatic;
+        public TToken[] CommentVar;
         public TType ClassMember;
 
-        public TMember(bool is_static, TToken name, TType tp, TTerm init) : base(name, tp, init) {
-            IsStatic = is_static;
+        public TMember(TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
         }
 
         public TMember() : base() {
@@ -262,7 +310,7 @@ namespace Miyu {
     }
 
     public class TField : TMember {
-        public TField(TType parent_class, bool is_static, TToken name, TType tp, TTerm init) : base(is_static, name, tp, init) {
+        public TField(TType parent_class, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
         }
 
         public TField(TType parent_class, FieldInfo fld_info) {
@@ -288,7 +336,7 @@ namespace Miyu {
         public TTerm LambdaFnc;
         public MethodInfo InfoFnc;
 
-        public TFunction(bool is_static, TToken name, TVariable[]args, TType ret_type, TApply base_app) : base(is_static, name, ret_type, null) {
+        public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app) : base(mod1, name, ret_type, null) {
             ArgsFnc = args;
             TypeVar = ret_type;
             BaseApp = base_app;
@@ -309,6 +357,7 @@ namespace Miyu {
     //------------------------------------------------------------ TTerm
 
     public abstract partial class TTerm : TEnv {
+        public TStatement ParentStatementTrm;
         public object ParentTrm;
         public TToken TokenTrm;
         public TType CastType;
@@ -325,6 +374,8 @@ namespace Miyu {
 
     public partial class TReference : TTerm {
         public string NameRef;
+        public bool IsOut;
+        public bool IsRef;
         public TVariable VarRef;
         public TType ClassRef;
 
@@ -433,7 +484,7 @@ namespace Miyu {
     public partial class TFrom : TQuery {
         public TTerm SelFrom;
         public TTerm TakeFrom;
-        public TTerm InnerFrom;
+        public TFrom InnerFrom;
     }
 
     public partial class TAggregate : TQuery {
@@ -443,7 +494,10 @@ namespace Miyu {
     //------------------------------------------------------------ TStatement
 
     public abstract partial class TStatement : TEnv {
+        public TToken[] CommentStmt;
         public object ParentStmt;
+        public TStatement PrevStatement;
+        public TFunction ParentFunctionStmt;
     }
 
     public partial class TAssignment : TStatement {
@@ -463,6 +517,7 @@ namespace Miyu {
     }
 
     public partial class TVariableDeclaration : TStatement {
+        public bool IsVar;
         public List<TVariable> Variables = new List<TVariable>();
     }
 
@@ -475,6 +530,8 @@ namespace Miyu {
     }
 
     public partial class TIfBlock : TBlockStatement {
+        public TToken CommentIf;
+        public bool IsElse;
         public TTerm ConditionIf;
     }
 
@@ -524,6 +581,7 @@ namespace Miyu {
     public partial class TJump : TStatement {
         public EKind KindJmp;
         public TTerm RetVal;
+        public string LabelJmp;
 
         public TJump(EKind kind) {
             KindJmp = kind;
@@ -531,10 +589,10 @@ namespace Miyu {
     }
 
     public class TLabelStatement : TStatement {
-        public TToken LabelToken;
+        public string LabelToken;
 
         public TLabelStatement(TToken lbl) {
-            LabelToken = lbl;
+            LabelToken = lbl.TextTkn;
         }
     }
 

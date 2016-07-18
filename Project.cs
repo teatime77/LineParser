@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using Windows.Storage;
 using Windows.UI;
+using Windows.UI.Xaml;
 
 namespace Miyu {
 
@@ -135,6 +136,19 @@ namespace Miyu {
                     }
                     Debug.WriteLine("名前解決 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
 
+                    tick = DateTime.Now;
+                    string out_dir = ApplicationData.Current.LocalFolder.Path + "\\out";
+                    if (!Directory.Exists(out_dir)) {
+                        Directory.CreateDirectory(out_dir);
+                    }
+                    foreach (TSourceFile src in SourceFiles) {
+                        TTokenWriter tw = new TTokenWriter(src.Parser);
+                        src.Parser.SourceFileText(src, tw);
+
+                        string path = out_dir + "\\" + Path.GetFileName(src.PathSrc);
+                        File.WriteAllText(path, tw.ToPlainText(), Encoding.UTF8);
+                    }
+                    Debug.WriteLine("ソース生成 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {
 
@@ -436,14 +450,14 @@ namespace Miyu {
 
         public TVariable CopyVariable(TVariable var_src, Dictionary<string, TType> dic) {
             TType tp = SubstituteArgumentClass(var_src.TypeVar, dic);
-            TVariable var1 = new TVariable(var_src.TokenVar, tp, null);
+            TVariable var1 = new TVariable(var_src.ModifierVar, var_src.TokenVar, tp, null);
 
             return var1;
         }
 
         public TField CopyField(TType cla1, TField fld_src, Dictionary<string, TType> dic) {
             TType tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
-            TField fld1 = new TField(cla1, fld_src.IsStatic, fld_src.TokenVar, tp, null);
+            TField fld1 = new TField(cla1, fld_src.ModifierVar, fld_src.TokenVar, tp, null);
 
             return fld1;
         }
@@ -452,7 +466,7 @@ namespace Miyu {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
             TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
-            TFunction fnc = new TFunction(fnc_src.IsStatic, fnc_src.TokenVar, args, ret_type, null);
+            TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null);
 
             return fnc;
         }

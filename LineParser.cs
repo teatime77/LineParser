@@ -30,6 +30,7 @@ namespace Miyu {
         public TToken NextTkn;
         public bool Dirty;
         public bool Running;
+        public ELanguage LanguageSP;
 
         // キーワードの文字列の辞書
         public Dictionary<string, EKind> KeywordMap;
@@ -79,7 +80,7 @@ namespace Miyu {
             return cls;
         }
 
-        public TType ReadClassLine() {
+        public TType ReadClassLine(TModifier mod1) {
             GetToken(EKind.Undefined);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
@@ -114,6 +115,7 @@ namespace Miyu {
 
                 cls = PrjParser.GetClassByName(id.TextTkn);
             }
+            cls.ModifierCls = mod1;
 
             if (CurTkn.Kind == EKind.Colon) {
 
@@ -175,7 +177,7 @@ namespace Miyu {
             return cls;
         }
 
-        public TType ReadDelegateLine() {
+        public TType ReadDelegateLine(TModifier mod1) {
             GetToken(EKind.delegate_);
             TType ret_type = ReadType(null, false);
 
@@ -226,7 +228,7 @@ namespace Miyu {
             return dlg;
         }
 
-        public TField ReadFieldLine(TType parent_class, bool is_static, TType type_prepend) {
+        public TField ReadFieldLine(TType parent_class, TModifier mod1, TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
             TType tp;
@@ -251,7 +253,7 @@ namespace Miyu {
 
             LineEnd();
 
-            return new TField(parent_class, is_static, id, tp, init);
+            return new TField(parent_class, mod1, id, tp, init);
         }
 
         public TField ReadEnumFieldLine(TType parent_class) {
@@ -260,7 +262,7 @@ namespace Miyu {
             OptGetToken(EKind.Comma);
             GetToken(EKind.EOT);
 
-            return new TField(parent_class, false, id, parent_class, null);
+            return new TField(parent_class, null, id, parent_class, null);
         }
 
         public TType ReadType(TType parent_class, bool new_class) {
@@ -416,7 +418,7 @@ namespace Miyu {
             return vars;
         }
 
-        public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, bool is_static, TType ret_type_prepend) {
+        public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
             TToken fnc_name;
             
             if(constructor_class != null) {
@@ -475,21 +477,35 @@ namespace Miyu {
 
             GetToken(EKind.EOT);
 
-            return new TFunction(is_static, fnc_name, vars.ToArray(), ret_type, base_app);
+            return new TFunction(mod1, fnc_name, vars.ToArray(), ret_type, base_app);
         }
 
         public virtual TVariable ReadArgVariable(TType parent_class) {
+            TModifier mod1 = null;
+
             switch (CurTkn.Kind) {
             case EKind.ref_:
                 GetToken(EKind.ref_);
+                if(mod1 == null) {
+                    mod1 = new TModifier();
+                }
+                mod1.isRef = true;                
                 break;
 
             case EKind.out_:
                 GetToken(EKind.out_);
+                if (mod1 == null) {
+                    mod1 = new TModifier();
+                }
+                mod1.isOut = true;
                 break;
 
             case EKind.params_:
                 GetToken(EKind.params_);
+                if (mod1 == null) {
+                    mod1 = new TModifier();
+                }
+                mod1.isParams = true;
                 break;
 
             }
@@ -504,7 +520,7 @@ namespace Miyu {
                 type = ReadType(parent_class, false);
             }
 
-            return new TVariable(id, type, null);
+            return new TVariable(mod1, id, type, null);
         }
 
         public TVariable ReadVariable(TType type_prepend) {
@@ -533,7 +549,7 @@ namespace Miyu {
                 init = Expression();
             }
 
-            return new TVariable(id, type, init);
+            return new TVariable(null, id, type, init);
         }
 
         public virtual TVariableDeclaration ReadVariableDeclarationLine(TType type_prepend, bool in_for) {
@@ -542,6 +558,7 @@ namespace Miyu {
             if(type_prepend == null) {
 
                 GetToken(EKind.var_);
+                var_decl.IsVar = true;
             }
 
             while (true) {
@@ -581,6 +598,7 @@ namespace Miyu {
 
         public TIfBlock ReadElseLine() {
             TIfBlock if_block = new TIfBlock();
+            if_block.IsElse = true;
 
             GetToken(EKind.else_);
 
@@ -767,7 +785,8 @@ namespace Miyu {
                 break;
 
             case EKind.goto_:
-                GetToken(EKind.Identifier);
+                TToken lbl = GetToken(EKind.Identifier);
+                jump.LabelJmp = lbl.TextTkn;
                 break;
             }
 
@@ -860,8 +879,6 @@ namespace Miyu {
                 NextTkn = EOTToken;
             }
 
-            bool is_static = false;
-
             try {
                 if(parent_stmt is TVariableDeclaration) {
                     TVariable var1 = (parent_stmt as TVariableDeclaration).Variables[0];
@@ -879,47 +896,57 @@ namespace Miyu {
                     return ele;
                 }
 
+                TModifier mod1 = new TModifier();
                 while (true) {
                     switch (CurTkn.Kind) {
                     case EKind.public_:
                         GetToken(EKind.public_);
+                        mod1.isPublic = true;
                         break;
 
                     case EKind.private_:
                         GetToken(EKind.private_);
+                        mod1.isPrivate = true;
                         break;
 
                     case EKind.abstract_:
                         GetToken(EKind.abstract_);
+                        mod1.isAbstract = true;
                         break;
 
                     case EKind.sealed_:
                         GetToken(EKind.sealed_);
+                        mod1.isSealed = true;
                         break;
 
                     case EKind.partial_:
                         GetToken(EKind.partial_);
+                        mod1.isPartial = true;
                         break;
 
                     case EKind.const_:
                         GetToken(EKind.const_);
+                        mod1.isConst = true;
                         break;
 
                     case EKind.static_:
                         GetToken(EKind.static_);
-                        is_static = true;
+                        mod1.isStatic = true;
                         break;
 
                     case EKind.virtual_:
                         GetToken(EKind.virtual_);
+                        mod1.isVirtual = true;
                         break;
 
                     case EKind.override_:
                         GetToken(EKind.override_);
+                        mod1.isOverride = true;
                         break;
 
                     case EKind.async_:
                         GetToken(EKind.async_);
+                        mod1.isAsync = true;
                         break;
 
                     case EKind.RC:
@@ -956,10 +983,10 @@ namespace Miyu {
                 case EKind.class_:
                 case EKind.struct_:
                 case EKind.interface_:
-                    return ReadClassLine();
+                    return ReadClassLine(mod1);
 
                 case EKind.delegate_:
-                    return ReadDelegateLine();
+                    return ReadDelegateLine(mod1);
 
                 case EKind.var_:
                     return ReadVariableDeclarationLine(null, false);
@@ -1007,7 +1034,7 @@ namespace Miyu {
 
                         if (CurTkn.Kind == EKind.LP) {
 
-                            return ReadFunctionLine(cls, class_token, tp, is_static, tp);
+                            return ReadFunctionLine(cls, class_token, tp, mod1, tp);
                         }
 
                         if (CurTkn.Kind != EKind.Identifier) {
@@ -1018,13 +1045,13 @@ namespace Miyu {
 
                         if (NextTkn.Kind == EKind.LP) {
 
-                            return ReadFunctionLine(cls, null, null, is_static, tp);
+                            return ReadFunctionLine(cls, null, null, mod1, tp);
                         }
                         else {
 
                             if (parent_fnc == null) {
 
-                                return ReadFieldLine(cls, is_static, tp);
+                                return ReadFieldLine(cls, mod1, tp);
                             }
                             else {
 
@@ -1043,7 +1070,7 @@ namespace Miyu {
                     if (NextTkn.Kind == EKind.Colon) {
                         if(TokenPos + 2 < TokenList.Length) {
 
-                            return ReadFieldLine(cls, is_static, null);
+                            return ReadFieldLine(cls, mod1, null);
                         }
                         else {
 
@@ -1054,7 +1081,7 @@ namespace Miyu {
                     }
                     else if (parent_fnc == null) {
 
-                        return ReadFunctionLine(cls, null, null, is_static, null);
+                        return ReadFunctionLine(cls, null, null, mod1, null);
                     }
                     else {
 
@@ -1069,7 +1096,7 @@ namespace Miyu {
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
-                    return ReadFunctionLine(cls, null, null, is_static, null);
+                    return ReadFunctionLine(cls, null, null, mod1, null);
 
                 case EKind.LB:
                     GetToken(EKind.LB);
@@ -1144,6 +1171,7 @@ namespace Miyu {
 
             src.ClassesSrc.Clear();
 
+            List<TToken> comments = new List<TToken>();
             List<object> obj_stack = new List<object>();
             for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
@@ -1159,131 +1187,160 @@ namespace Miyu {
 
                 line.Indent = -1;
                 line.ObjLine = null;
-                if (line.Tokens != null && line.Tokens.Length != 0) {
+                if (line.Tokens == null || line.Tokens.Length == 0) {
+                    comments.Add(new TToken(EKind.NL));
+                }
+                else {
+                    int line_top_idx = LineTopTokenIndex(line.Tokens);
 
-                    var v = from x in line.Tokens where x.TokenType != ETokenType.White select x;
-                    if (v.Any()) {
+                    if (line_top_idx == -1) {
+                        comments.Add(line.Tokens[0]);
+                    }
+                    else { 
 
-                        TToken[] token_list = v.ToArray();
-                        int line_top_idx = LineTopTokenIndex(token_list);
+                        TToken line_top_token = line.Tokens[line_top_idx];
+                        line.Indent = line_top_token.StartPos;
 
-                        if (line_top_idx != -1) {
+                        switch (line_top_token.TokenType) {
+                        case ETokenType.VerbatimString:
+                        case ETokenType.VerbatimStringContinued:
+                        case ETokenType.Error:
+                            break;
 
-                            TToken line_top_token = token_list[line_top_idx];
-                            line.Indent = line_top_token.StartPos;
+                        default:
 
-                            switch (line_top_token.TokenType) {
-                            case ETokenType.Undefined:
-                            case ETokenType.VerbatimString:
-                            case ETokenType.VerbatimStringContinued:
-                            case ETokenType.LineComment:
-                            case ETokenType.BlockComment:
-                            case ETokenType.BlockCommentContinued:
-                            case ETokenType.Error:
-                                break;
+                            if (line.Indent < obj_stack.Count) {
 
-                            default:
+                                obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
+                            }
 
-                                if (line.Indent < obj_stack.Count) {
+                            TType cls = null;
+                            TFunction parent_fnc = null;
+                            TBlockStatement parent_stmt = null;
+                            List<object> obj_stack_rev = new List<object>(obj_stack);
+                            obj_stack_rev.Reverse();
 
-                                    obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
+                            // スタックの中からクラスを探します。
+                            var vcls = from x in obj_stack_rev where x is TType select x as TType;
+                            if (vcls.Any()) {
+                                cls = vcls.First();
+
+                                if (cls is TGenericClass) {
+                                    TGenericClass gen = cls as TGenericClass;
+
+                                    var vtkn = from t in gen.GenCla from tk in line.Tokens where tk.TextTkn == t.ClassName select tk;
+                                    foreach (TToken tk in vtkn) {
+                                        tk.Kind = EKind.ClassName;
+                                    }
                                 }
+                            }
+                            line.ClassLine = cls;
+                            CurrentClass = cls;
 
-                                TType cls = null;
-                                TFunction parent_fnc = null;
-                                TBlockStatement parent_stmt = null;
-                                List<object> obj_stack_rev = new List<object>(obj_stack);
-                                obj_stack_rev.Reverse();
+                            // スタックの中から関数を探します。
+                            var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
+                            if (vfnc.Any()) {
+                                parent_fnc = vfnc.First();
+                            }
 
-                                // スタックの中からクラスを探します。
-                                var vcls = from x in obj_stack_rev where x is TType select x as TType;
-                                if (vcls.Any()) {
-                                    cls = vcls.First();
+                            // スタックの中から最も内側の文を探します。
+                            var vstmt = from x in obj_stack_rev where x is TBlockStatement select x as TBlockStatement;
+                            if (vstmt.Any()) {
+                                parent_stmt = vstmt.First();
+                            }
 
-                                    if(cls is TGenericClass) {
-                                        TGenericClass gen = cls as TGenericClass;
+                            if (parent_stmt == null && parent_fnc != null) {
+                                parent_stmt = parent_fnc.BlockFnc;
+                            }
 
-                                        var vtkn = from t in gen.GenCla from tk in line.Tokens where tk.TextTkn == t.ClassName select tk;
-                                        foreach(TToken tk in vtkn) {
-                                            tk.Kind = EKind.ClassName;
+                            //Debug.Write(string.Format("行解析 {0}", line.TextLine));
+                            object obj = ParseLine(cls, parent_fnc, parent_stmt, line_top_idx, line.Tokens);
+                            if (obj != null) {
+
+                                while (obj_stack.Count < line.Indent) {
+                                    obj_stack.Add(null);
+                                }
+                                obj_stack.Add(obj);
+                                Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
+
+                                //StringWriter sw = new StringWriter();
+                                if (obj is TType) {
+                                    TType class_def = obj as TType;
+
+                                    class_def.CommentCls = comments.ToArray();
+                                    //ClassLineText(class_def, sw);
+                                    src.ClassesSrc.Add(class_def);
+                                }
+                                else if (obj is TVariable) {
+
+                                    if (cls != null) {
+
+                                        if (obj is TField) {
+                                            TField fld = obj as TField;
+
+                                            fld.CommentVar = comments.ToArray();
+                                            fld.ClassMember = cls;
+                                            cls.Fields.Add(fld);
+                                            src.FieldsSrc.Add(fld);
+                                        }
+                                        else if (obj is TFunction) {
+                                            TFunction fnc = obj as TFunction;
+
+                                            fnc.CommentVar = comments.ToArray();
+                                            fnc.ClassMember = cls;
+                                            cls.Functions.Add(fnc);
+                                            src.FunctionsSrc.Add(fnc);
                                         }
                                     }
+                                    //VariableText(obj as TVariable, sw);
                                 }
-                                line.ClassLine = cls;
-                                CurrentClass = cls;
+                                else if (obj is TTerm) {
 
-                                // スタックの中から関数を探します。
-                                var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
-                                if (vfnc.Any()) {
-                                    parent_fnc = vfnc.First();
+                                    //TermText(obj as TTerm, sw);
                                 }
+                                else if (obj is TStatement) {
+                                    TStatement stmt = obj as TStatement;
 
-                                // スタックの中から最も内側の文を探します。
-                                var vstmt = from x in obj_stack_rev where x is TBlockStatement select x as TBlockStatement;
-                                if (vstmt.Any()) {
-                                    parent_stmt = vstmt.First();
-                                }
+                                    stmt.CommentStmt = comments.ToArray();
+                                    if (parent_stmt != null || parent_fnc != null) {
 
-                                //Debug.Write(string.Format("行解析 {0}", line.TextLine));
-                                object obj = ParseLine(cls, parent_fnc, parent_stmt, line_top_idx, token_list);
-                                if (obj != null) {
 
-                                    while(obj_stack.Count < line.Indent) {
-                                        obj_stack.Add(null);
-                                    }
-                                    obj_stack.Add(obj);
-                                    Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
+                                        if (stmt is TCase) {
+                                            TCase case1 = stmt as TCase;
 
-                                    //StringWriter sw = new StringWriter();
-                                    if (obj is TType) {
-                                        TType class_def = obj as TType;
+                                            if (parent_stmt.StatementsBlc.Count == 0) {
 
-                                        //ClassLineText(class_def, sw);
-                                        src.ClassesSrc.Add(class_def);
-                                    }
-                                    else if (obj is TVariable) {
-
-                                        if(cls != null) {
-
-                                            if (obj is TField) {
-                                                TField fld = obj as TField;
-
-                                                cls.Fields.Add(fld);
+                                                Debug.WriteLine("caseがブロックの先頭にある。");
                                             }
-                                            else if (obj is TFunction) {
-                                                TFunction fnc = obj as TFunction;
+                                            else {
+                                                TStatement last_stmt = parent_stmt.StatementsBlc[parent_stmt.StatementsBlc.Count - 1];
+                                                if (last_stmt is TSwitch) {
 
-                                                cls.Functions.Add(fnc);
+                                                    (last_stmt as TSwitch).Cases.Add(case1);
+                                                }
+                                                else {
+
+                                                    Debug.WriteLine("caseの前にswitchがない。");
+                                                }
                                             }
                                         }
-                                        //VariableText(obj as TVariable, sw);
-                                    }
-                                    else if (obj is TTerm) {
-
-                                        //TermText(obj as TTerm, sw);
-                                    }
-                                    else if (obj is TStatement) {
-                                        TStatement stmt = obj as TStatement;
-
-                                        if(parent_stmt != null) {
+                                        else {
 
                                             parent_stmt.StatementsBlc.Add(stmt);
                                         }
-                                        else if(parent_fnc != null) {
-
-                                            parent_fnc.BlockFnc.StatementsBlc.Add(stmt);
-                                        }
-                                        //StatementText(stmt, sw, 0);
                                     }
-
-                                    //Debug.WriteLine(sw.ToString());
-
+                                    //StatementText(stmt, sw, 0);
                                 }
 
-                                line.ObjLine = obj;
-                                break;
+                                //Debug.WriteLine(sw.ToString());
+
                             }
+
+                            line.ObjLine = obj;
+
+                            break;
                         }
+                        comments.Clear();
                     }
                 }
             }
@@ -1821,16 +1878,29 @@ namespace Miyu {
             }
 
             while (true) {
+                bool is_out = false;
+                bool is_ref = false;
+
                 switch (CurTkn.Kind) {
                 case EKind.out_:
                     GetToken(EKind.out_);
+                    is_out = true;
                     break;
 
                 case EKind.ref_:
                     GetToken(EKind.ref_);
+                    is_ref = true;
                     break;
                 }
                 TTerm t1 = Expression();
+
+                if(is_out || is_ref) {
+                    TReference ref1 = t1 as TReference;
+
+                    ref1.IsOut = is_out;
+                    ref1.IsRef = is_ref;
+                }
+
                 expr_list.Add(t1);
 
                 if(CurTkn.Kind == EKind.Comma) {
@@ -1848,337 +1918,8 @@ namespace Miyu {
             return ConditionalExpression();
         }
 
-
-        public void ClassLineText(TType cls, StringWriter sw) {
-            sw.Write("class {0}", cls.ClassName);
-
-            for (int i = 0; i < cls.SuperClasses.Count; i++) {
-                if (i == 0) {
-
-                    sw.Write(" : ");
-                }
-                else {
-
-                    sw.Write(" , ");
-                }
-                sw.Write(cls.SuperClasses[i].ClassName);
-            }
-
-            sw.WriteLine();
-        }
-
         public void ClassText(TType cls, StringWriter sw) {
             sw.Write(cls.GetClassText());
-        }
-
-        public void VariableText(TVariable var1, StringWriter sw) {
-            sw.Write(var1.NameVar);
-
-            if (var1.TypeVar != null) {
-
-                sw.Write(" : ");
-                ClassText(var1.TypeVar, sw);
-            }
-
-            if (var1.InitValue != null) {
-
-                sw.Write(" = ");
-                TermText(var1.InitValue, sw);
-            }
-        }
-
-        public void ArgsText(TApply app, StringWriter sw) {
-            foreach (TTerm trm in app.Args) {
-                if (trm != app.Args[0]) {
-
-                    sw.Write(", ");
-                }
-
-                TermText(trm, sw);
-            }
-        }
-
-        public void TermText(TTerm term, StringWriter sw) {
-            if (term is TLiteral) {
-                TLiteral lit = term as TLiteral;
-
-                sw.Write(lit.TokenTrm.TextTkn);
-            }
-            else if (term is TReference) {
-                TReference ref1 = term as TReference;
-
-                if (ref1 is TDotReference) {
-
-                    TermText((ref1 as TDotReference).DotRef, sw);
-                    sw.Write(".");
-                }
-
-                sw.Write(ref1.NameRef);
-            }
-            else if (term is TApply) {
-                TApply app = term as TApply;
-
-                if (app is TDotApply) {
-
-                    TermText((app as TDotApply).DotApp, sw);
-                    sw.Write(".");
-                }
-
-                switch (app.KindApp) {
-                case EKind.FunctionApply:
-                    TermText(app.FunctionApp, sw);
-                    sw.Write("(");
-                    ArgsText(app, sw);
-                    sw.Write(")");
-                    break;
-
-                case EKind.Index:
-                    TermText(app.FunctionApp, sw);
-                    sw.Write("[");
-                    ArgsText(app, sw);
-                    sw.Write("]");
-                    break;
-
-                case EKind.NewInstance:
-                    sw.Write("new ");
-                    ClassText((app as TNewApply).ClassApp, sw);
-                    sw.Write("(");
-                    ArgsText(app, sw);
-                    sw.Write(")");
-                    break;
-
-                case EKind.NewArray:
-                    sw.Write("new ");
-                    ClassText((app as TNewApply).ClassApp, sw);
-                    sw.Write("[");
-                    ArgsText(app, sw);
-                    sw.Write("]");
-                    break;
-
-                case EKind.base_:
-                    sw.Write("base.");
-                    TermText(app.FunctionApp, sw);
-                    sw.Write("(");
-                    ArgsText(app, sw);
-                    sw.Write(")");
-                    break;
-
-                default:
-                    switch (app.Args.Length) {
-                    case 1:
-                        sw.Write("{0} ", KindString[app.KindApp]);
-                        TermText(app.Args[0], sw);
-                        break;
-
-                    case 2:
-                        TermText(app.Args[0], sw);
-                        sw.Write(" {0} ", KindString[app.KindApp]);
-                        TermText(app.Args[1], sw);
-                        break;
-
-                    default:
-                        Debug.Assert(false);
-                        break;
-                    }
-                    break;
-                }
-
-            }
-            else if (term is TQuery) {
-                TQuery qry = term as TQuery;
-
-                if (term is TFrom) {
-                    TFrom from1 = term as TFrom;
-
-                }
-                if (term is TAggregate) {
-                    TAggregate aggr = term as TAggregate;
-
-                }
-                else {
-                    Debug.Assert(false);
-                }
-            }
-            else {
-                Debug.Assert(false);
-            }
-        }
-
-        public void StatementText(TStatement stmt, StringWriter sw, int nest) {
-            if (stmt is TVariableDeclaration) {
-                TVariableDeclaration var_decl = stmt as TVariableDeclaration;
-
-                sw.Write("{0}var ", Tab(nest));
-                foreach (TVariable var1 in var_decl.Variables) {
-                    if (var1 != var_decl.Variables[0]) {
-
-                        sw.Write(", ");
-                    }
-
-                    VariableText(var1, sw);
-                }
-                sw.WriteLine();
-            }
-            else if (stmt is TAssignment) {
-                TAssignment asn = stmt as TAssignment;
-
-                sw.Write("{0}", Tab(nest));
-                TermText(asn.RelAsn, sw);
-                sw.WriteLine();
-            }
-            else if (stmt is TCall) {
-                TCall call1 = stmt as TCall;
-
-                sw.Write("{0}", Tab(nest));
-                TermText(call1.AppCall, sw);
-                sw.WriteLine();
-            }
-            else if (stmt is TJump) {
-                TJump jmp = stmt as TJump;
-            }
-            else if (stmt is TBlockStatement) {
-                TBlockStatement blc_stmt = stmt as TBlockStatement;
-
-                if (stmt is TBlock) {
-                    TBlock block = stmt as TBlock;
-                }
-                else if (stmt is TIfBlock) {
-                    TIfBlock if_block = stmt as TIfBlock;
-
-                    sw.Write("{0}if ", Tab(nest));
-                    TermText(if_block.ConditionIf, sw);
-                    sw.WriteLine();
-                }
-                else if (stmt is TCase) {
-                    TCase cas = stmt as TCase;
-
-                    sw.Write("{0}switch ", Tab(nest));
-                    foreach(TTerm trm in cas.TermsCase) {
-                        if(trm != cas.TermsCase[0]) {
-                            // 最初でない場合
-
-                            sw.Write(", ");
-                            TermText(trm, sw);
-                        }
-                    }
-                    sw.WriteLine();
-                }
-                else if (stmt is TSwitch) {
-                    TSwitch swt = stmt as TSwitch;
-
-                    sw.Write("{0}switch ", Tab(nest));
-                    TermText(swt.TermSwitch, sw);
-                    sw.WriteLine();
-
-                    foreach (TCase cas in swt.Cases) {
-                        StatementText(cas, sw, nest);
-                    }
-                }
-                else if (stmt is TForEach) {
-                    TForEach for1 = stmt as TForEach;
-
-                    sw.Write("{0}foreach ", Tab(nest));
-                    VariableText(for1.LoopVariable, sw);
-                    sw.Write(" in ");
-                    TermText(for1.ListFor, sw);
-                    sw.WriteLine();
-                }
-                else if (stmt is TFor) {
-                    TFor for1 = stmt as TFor;
-
-                    sw.Write("{0}for(", Tab(nest));
-                    if(for1.InitStatement != null) {
-
-                        StatementText(for1.InitStatement, sw, 0);
-                    }
-                    sw.Write(" ; ");
-
-                    if(for1.ConditionFor != null) {
-
-                        TermText(for1.ConditionFor, sw);
-                    }
-                    sw.Write(" ; ");
-
-                    if (for1.PostStatement != null) {
-
-                        StatementText(for1.PostStatement, sw, 0);
-                    }
-                    sw.Write("){");
-                    sw.WriteLine();
-                }
-                else if (stmt is TWhile) {
-                    TWhile while1 = stmt as TWhile;
-
-                    sw.Write("{0}while ", Tab(nest));
-                    TermText(while1.WhileCondition, sw);
-                    sw.WriteLine();
-                }
-                else if (stmt is TTry) {
-                    TTry try1 = stmt as TTry;
-
-                    sw.Write("{0}try ", Tab(nest));
-                    sw.WriteLine();
-                }
-                else if (stmt is TCatch) {
-                    TCatch catch1 = stmt as TCatch;
-
-                    sw.Write("{0}catch ", Tab(nest));
-                    VariableText(catch1.CatchVariable, sw);
-                    sw.WriteLine();
-                }
-                else {
-                    Debug.Assert(false);
-                }
-
-                foreach (TStatement stmt1 in blc_stmt.StatementsBlc) {
-                    StatementText(stmt1, sw, nest + 1);
-                }
-            }
-            else {
-                Debug.Assert(false);
-            }
-        }
-
-        public void SourceFileText(TSourceFile src, StringWriter sw) {
-            foreach (TType cls in src.ClassesSrc) {
-                ClassLineText(cls, sw);
-
-                foreach (TField fld in cls.Fields) {
-                    sw.Write("\t");
-                    VariableText(fld, sw);
-                    sw.WriteLine();
-                }
-
-                foreach (TFunction fnc in cls.Functions) {
-                    if(fnc.TokenVar.TokenType == ETokenType.Symbol) {
-
-                        sw.Write("{0}operator {1}", Tab(0), fnc.NameVar);
-                    }
-                    else {
-
-                        sw.Write("{0}{1}", Tab(1), fnc.NameVar);
-                    }
-
-                    sw.Write("(");
-                    foreach (TVariable var1 in fnc.ArgsFnc) {
-                        if (var1 != fnc.ArgsFnc[0]) {
-                            sw.Write(", ");
-                        }
-
-                        VariableText(var1, sw);
-                    }
-                    sw.Write(")");
-
-                    if (fnc.TypeVar != null) {
-
-                        sw.Write(" : ");
-                        ClassText(fnc.TypeVar, sw);
-                    }
-                    sw.WriteLine();
-
-                    StatementText(fnc.BlockFnc, sw, 1);
-                }
-            }
         }
     }
 
@@ -2189,6 +1930,30 @@ namespace Miyu {
         public int StartPos;
         public int EndPos;
         public Exception ErrorTkn;
+
+        public int TabTkn;
+        public object ObjTkn;
+
+        public TToken() {
+        }
+
+        public TToken(object obj) {
+            ObjTkn = obj;
+        }
+
+        public TToken(EKind kind) {
+            Kind = kind;
+        }
+
+        public TToken(EKind kind, object obj) {
+            Kind = kind;
+            ObjTkn = obj;
+        }
+
+        public TToken(string txt, object obj) {
+            TextTkn = txt;
+            ObjTkn = obj;
+        }
 
         public TToken(ETokenType token_type, EKind kind, string txt, int start_pos, int end_pos) {
             TokenType = token_type;

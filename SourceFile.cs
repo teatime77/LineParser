@@ -23,6 +23,9 @@ namespace Miyu {
 
         public TParser Parser;
 
+        public List<TField> FieldsSrc = new List<TField>();
+        public List<TFunction> FunctionsSrc = new List<TFunction>();
+
         public TSourceFile(string path, TParser parser) {
             PathSrc = path;
             Parser = parser;

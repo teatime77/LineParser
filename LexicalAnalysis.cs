@@ -154,12 +154,14 @@ namespace Miyu {
                         if (k != -1) {
                             // ブロックコメントの終わりがある場合
 
+                            token_kind = EKind.BlockComment;
                             token_type = ETokenType.BlockComment;
                             pos = k + 2;
                         }
                         else {
                             // ブロックコメントの終わりがない場合
 
+                            token_kind = EKind.BlockCommentContinued;
                             token_type = ETokenType.BlockCommentContinued;
                             pos = text_len;
                         }
@@ -344,6 +346,11 @@ namespace Miyu {
                 else if (ch1 == '/' && ch2 == '/') {
                     // 行コメントの場合
 
+                    while (0 < start_pos && char.IsWhiteSpace(text[start_pos - 1])) {
+                        start_pos--;
+                    }
+
+                    token_kind = EKind.LineComment;
                     token_type = ETokenType.LineComment;
 
                     // 改行を探します。
@@ -363,18 +370,24 @@ namespace Miyu {
                 else if (ch1 == '/' && ch2 == '*') {
                     // ブロックコメントの場合
 
+                    while (0 < start_pos && char.IsWhiteSpace(text[start_pos - 1])) {
+                        start_pos--;
+                    }
+
                     // ブロックコメントの終わりを探します。
                     int idx = text.IndexOf("*/", pos + 2);
 
                     if (idx != -1) {
                         // ブロックコメントの終わりがある場合
 
+                        token_kind = EKind.BlockComment;
                         token_type = ETokenType.BlockComment;
                         pos = idx + 2;
                     }
                     else {
                         // ブロックコメントの終わりがない場合
 
+                        token_kind = EKind.BlockCommentContinued;
                         token_type = ETokenType.BlockCommentContinued;
                         pos = text_len;
                     }

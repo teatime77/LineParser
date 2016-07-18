@@ -95,6 +95,7 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="CodeAnalysis.cs" />
     <Compile Include="Compile.cs" />
     <Compile Include="CSharpParser.cs" />
     <Compile Include="Define.cs" />
@@ -104,6 +105,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MakeSourceCode.cs" />
     <Compile Include="MyEditor.xaml.cs">
       <DependentUpon>MyEditor.xaml</DependentUpon>
     </Compile>

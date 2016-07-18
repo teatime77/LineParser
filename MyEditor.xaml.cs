@@ -428,11 +428,6 @@ namespace Miyu {
             // 字句型を更新します。
             SourceFile.UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
 
-            //StringWriter sw = new StringWriter();
-            //sw.WriteLine("プロジェクト テキスト ----------------------------------------------");
-            //Parser.SourceFileText(CurrentSourceFile, sw);
-            //Debug.WriteLine(sw.ToString());
-
             Debug.WriteLine("Dirty ON --------------------------------------------------");
             SourceFile.Parser.Dirty = true;
         }

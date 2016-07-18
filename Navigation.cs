@@ -472,7 +472,29 @@ namespace Miyu {
                 (self as TTerm).ParentTrm = last;
             }
             else if (self is TStatement) {
-                (self as TStatement).ParentStmt = last;
+                TStatement self_stmt = self as TStatement;
+                self_stmt.ParentStmt = last;
+
+                if(last is TBlockStatement) {
+                    TBlockStatement blc_stmt = last as TBlockStatement;
+                    int i = blc_stmt.StatementsBlc.IndexOf(self_stmt);
+                    switch (i) {
+                    case -1:
+                        Debug.Assert(blc_stmt is TFor);
+                        TFor for1 = blc_stmt as TFor;
+                        Debug.Assert(self_stmt == for1.InitStatement || self_stmt == for1.PostStatement);
+                        self_stmt.PrevStatement = null;
+                        break;
+
+                    case 0:
+                        self_stmt.PrevStatement = null;
+                        break;
+
+                    default:
+                        self_stmt.PrevStatement = blc_stmt.StatementsBlc[i - 1];
+                        break;
+                    }
+                }
             }
 
             args.Add(self);
