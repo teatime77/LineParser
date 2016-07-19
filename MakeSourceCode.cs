@@ -128,6 +128,120 @@ namespace Miyu {
             return sw.ToString();
         }
 
+        public string ToHTMLText() {
+            StringWriter sw = new StringWriter();
+
+            sw.WriteLine(TParser.HTMLHead + "<pre><code>");
+            foreach (TToken tk in TokenListTW) {
+                switch (tk.Kind) {
+                case EKind.Space:
+                    sw.Write("&nbsp;");
+                    break;
+
+                case EKind.Tab:
+                    for(int i = 0; i < 4 * tk.TabTkn; i++) {
+                        sw.Write("&nbsp;");
+                    }
+                    break;
+
+                case EKind.NL:
+                    sw.WriteLine();
+                    break;
+
+                case EKind.LineComment:
+                case EKind.BlockComment:
+                    sw.WriteLine("<span class=\"comment\">{0}</span>", tk.TextTkn);
+                    break;
+
+                case EKind.BlockCommentContinued:
+                    sw.WriteLine("<span class=\"comment\">{0}</span>", tk.TextTkn.TrimEnd());
+                    break;
+
+                case EKind.Undefined:
+                    if (tk.ObjTkn != null) {
+                        if (tk.ObjTkn is TReference) {
+                            TReference ref1 = tk.ObjTkn as TReference;
+
+                            if(ref1.ClassRef != null) {
+
+                                sw.Write("<a href=\"\" class=\"class\">{0}</a>", ref1.ClassRef.ClassName);
+                            }
+                            else {
+
+                                if (ref1.VarRef != null) {
+
+                                    sw.Write("<a href=\"\" class=\"\">{0}</a>", ref1.VarRef.NameVar);
+                                }
+                                else {
+
+                                    sw.Write("<span>{0}</span>", ref1.NameRef);
+                                }
+                            }
+                        }
+                        else if (tk.ObjTkn is TLiteral) {
+                            TLiteral lit = tk.ObjTkn as TLiteral;
+
+                            switch (lit.TokenTrm.Kind) {
+                            case EKind.StringLiteral:
+                            case EKind.CharLiteral:
+                                sw.Write("<span class=\"string\">{0}</span>", lit.TokenTrm.TextTkn);
+                                break;
+
+                            case EKind.NumberLiteral:
+                                sw.Write("<span>{0}</span>", lit.TokenTrm.TextTkn);
+                                break;
+
+                            default:
+                                Debug.Assert(false);
+                                break;
+                            }
+                        }
+                        else if (tk.ObjTkn is TVariable) {
+                            TVariable va = tk.ObjTkn as TVariable;
+
+                            sw.Write("<span class=\"\">{0}</span>", va.NameVar);
+                        }
+                        else if (tk.ObjTkn is TType) {
+                            TType tp = tk.ObjTkn as TType;
+
+                            sw.Write("<a href=\"\" class=\"class\">{0}</a>", tp.ClassName);
+                        }
+                        else {
+                            Debug.Assert(false);
+                        }
+                    }
+                    else {
+
+                        sw.Write(tk.TextTkn);
+                    }
+                    break;
+
+                default:
+                    string s = "";
+                    if (Parser.KindString.TryGetValue(tk.Kind, out s)) {
+
+                        if (char.IsLetter(s[0])) {
+
+                            sw.Write("<span class=\"reserved\">{0}</span>", s);
+                        }
+                        else {
+
+                            sw.Write(s);
+                        }
+                    }
+                    else {
+
+                        sw.Write(tk.TextTkn);
+                    }
+                    break;
+                }
+            }
+
+            sw.WriteLine("</code></pre></body></html>");
+
+            return sw.ToString();
+        }
+
         public List<TToken> GetTokenList() {
             return TokenListTW;
         }
@@ -638,17 +752,30 @@ namespace Miyu {
 
                     sw.Fmt(jmp.KindJmp);
 
-                    if(jmp.KindJmp == EKind.goto_) {
-
+                    switch (jmp.KindJmp) {
+                    case EKind.goto_:
                         sw.Fmt(' ', jmp.LabelJmp);
-                    }
-                    else {
+                        break;
 
+                    case EKind.yield_:
+                        if (jmp.RetVal != null) {
+
+                            sw.Fmt(' ', EKind.return_, ' ');
+                            TermText(jmp.RetVal, sw);
+                        }
+                        else {
+
+                            sw.Fmt(' ', EKind.break_);
+                        }
+                        break;
+
+                    default:
                         if (jmp.RetVal != null) {
 
                             sw.Fmt(' ');
                             TermText(jmp.RetVal, sw);
                         }
+                        break;
                     }
                 }
                 else if (stmt is TLabelStatement) {

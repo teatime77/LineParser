@@ -13,6 +13,7 @@ namespace Miyu {
 
     public partial class TParser : TEnv {
         public const int TabSize = 4;
+        public const string HTMLHead = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n<html xmlns=\"http://www.w3.org/1999/xhtml\" >\r\n<head>\r\n<meta charset=\"utf-8\" />\r\n<title>Untitled Page</title>\r\n<style type=\"text/css\">\r\n.reserved {\r\n\tcolor: blue;\r\n}\r\n.class {\r\n\tcolor: Teal;\r\n}\r\n.string {\r\n\tcolor: red;\r\n}\r\n.comment {\r\n\tcolor: #008000;\r\n}\r\n</style>\r\n</head>\r\n<body>";
         public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
         public static TParser theParser;
 
@@ -84,6 +85,8 @@ namespace Miyu {
         }
 
         public TType ReadClassLine(TSourceFile src, TModifier mod1) {
+            EKind kind = CurTkn.Kind;
+
             GetToken(EKind.Undefined);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
@@ -118,7 +121,26 @@ namespace Miyu {
 
                 cls = PrjParser.GetClassByName(id.TextTkn);
             }
-            if(cls.ModifierCls == null || mod1.isPublic) {
+
+            switch (kind) {
+            case EKind.class_:
+                cls.KindClass = EClass.Class;
+                break;
+
+            case EKind.struct_:
+                cls.KindClass = EClass.Struct;
+                break;
+
+            case EKind.interface_:
+                cls.KindClass = EClass.Interface;
+                break;
+
+            default:
+                Debug.Assert(false);
+                break;
+            }
+
+            if (cls.ModifierCls == null || mod1.isPublic) {
 
                 cls.ModifierCls = mod1;
                 cls.SourceFileCls = src;

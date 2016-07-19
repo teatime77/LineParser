@@ -24,6 +24,7 @@ using Microsoft.Graphics.Canvas.UI.Xaml;
 // The User Control item template is documented at http://go.microsoft.com/fwlink/?LinkId=234236
 
 namespace Miyu {
+
     public sealed partial class MyEditor : UserControl {
         // 矢印カーソル
         static CoreCursor ArrowCoreCursor = new CoreCursor(CoreCursorType.Arrow, 1);
@@ -404,8 +405,8 @@ namespace Miyu {
             SelOrigin = sel_start + new_text.Length;
             SelCurrent = SelOrigin;
 
-            // 新しく挿入した文字列に含まれる改行文字の個数
-            int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();//   GetLFCount(sel_start, sel_start + new_text.Length);
+            // 新しく挿入した文字列に含まれる改行文字の個数  GetLFCount(sel_start, sel_start + new_text.Length);
+            int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();
 
             if (new_LF_cnt < old_LF_cnt) {
                 // 行が減った場合
@@ -439,9 +440,13 @@ namespace Miyu {
             int new_sel_current = SelCurrent;
             int current_line_top;
             int next_line_top;
+            int line_diff = 0;
+            int i;
+            int line_idx;
 
             switch (e.VirtualKey) {
-            case VirtualKey.Left: // 左矢印(←)
+            case VirtualKey.Left: 
+                // 左矢印(←)
                 if (0 < SelCurrent) {
                     // 文書の最初でない場合
 
@@ -450,7 +455,8 @@ namespace Miyu {
                 }
                 break;
 
-            case VirtualKey.Right: // 右矢印(→)
+            case VirtualKey.Right: 
+                // 右矢印(→)
                 if (SelCurrent < Chars.Count) {
                     // 文書の最後でない場合
 
@@ -459,62 +465,62 @@ namespace Miyu {
                 }
                 break;
 
-            case VirtualKey.Up: { // 上矢印(↑)
-                    // 現在の行の先頭位置を得ます。
-                    current_line_top = SourceFile.GetLineTop(SelCurrent);
+            case VirtualKey.Up:
+                // 上矢印(↑)
+                // 現在の行の先頭位置を得ます。
+                current_line_top = SourceFile.GetLineTop(SelCurrent);
 
-                    if (current_line_top != 0) {
-                        // 現在の行の先頭が文書の最初でない場合
+                if (current_line_top != 0) {
+                    // 現在の行の先頭が文書の最初でない場合
 
-                        // 直前の行の先頭位置を得ます。
-                        int prev_line_top = SourceFile.GetLineTop(current_line_top - 2);
+                    // 直前の行の先頭位置を得ます。
+                    int prev_line_top = SourceFile.GetLineTop(current_line_top - 2);
 
-                        // 直前の行の文字数
-                        int prev_line_len = (current_line_top - 1) - prev_line_top;
+                    // 直前の行の文字数
+                    int prev_line_len = (current_line_top - 1) - prev_line_top;
 
-                        // 行の先頭からの位置
-                        int col = Math.Min(prev_line_len, SelCurrent - current_line_top);
+                    // 行の先頭からの位置
+                    int col = Math.Min(prev_line_len, SelCurrent - current_line_top);
 
-                        // 新しい選択位置
-                        new_sel_current = prev_line_top + col;
-                    }
+                    // 新しい選択位置
+                    new_sel_current = prev_line_top + col;
                 }
                 break;
 
-            case VirtualKey.Down: { // 下矢印(↓)
-                    // 現在の行の先頭位置を得ます。
-                    current_line_top = SourceFile.GetLineTop(SelCurrent);
+            case VirtualKey.Down:
+                // 下矢印(↓)
+                // 現在の行の先頭位置を得ます。
+                current_line_top = SourceFile.GetLineTop(SelCurrent);
 
-                    // 次の行の先頭位置を得ます。
-                    next_line_top = SourceFile.GetNextLineTop(SelCurrent);
+                // 次の行の先頭位置を得ます。
+                next_line_top = SourceFile.GetNextLineTop(SelCurrent);
 
-                    if (next_line_top != -1) {
-                        // 次の行がある場合
+                if (next_line_top != -1) {
+                    // 次の行がある場合
 
 
-                        // 次の次の行の先頭位置を得ます。
-                        int next_next_line_top = SourceFile.GetNextLineTop(next_line_top);
+                    // 次の次の行の先頭位置を得ます。
+                    int next_next_line_top = SourceFile.GetNextLineTop(next_line_top);
 
-                        // 次の行の文字数
-                        int next_line_len;
+                    // 次の行の文字数
+                    int next_line_len;
 
-                        if (next_next_line_top == -1) {
-                            // 次の次の行がない場合(次の行が文書の最後の場合)
+                    if (next_next_line_top == -1) {
+                        // 次の次の行がない場合(次の行が文書の最後の場合)
 
-                            next_line_len = Chars.Count - next_line_top;
-                        }
-                        else {
-                            // 次の次の行がある場合
-
-                            next_line_len = next_next_line_top - 1 - next_line_top;
-                        }
-
-                        // 行の先頭からの位置
-                        int col = Math.Min(next_line_len, SelCurrent - current_line_top);
-
-                        // 新しい選択位置
-                        new_sel_current = next_line_top + col;
+                        next_line_len = Chars.Count - next_line_top;
                     }
+                    else {
+                        // 次の次の行がある場合
+
+                        next_line_len = next_next_line_top - 1 - next_line_top;
+                    }
+
+                    // 行の先頭からの位置
+                    int col = Math.Min(next_line_len, SelCurrent - current_line_top);
+
+                    // 新しい選択位置
+                    new_sel_current = next_line_top + col;
                 }
                 break;
 
@@ -548,46 +554,42 @@ namespace Miyu {
                 }
                 break;
 
-            case VirtualKey.PageUp: {
-                    int line_diff = 0;
-                    int i;
-                    for (i = Math.Min(SelCurrent, Chars.Count - 1); 0 < i; i--) {
-                        if (Chars[i].Chr == TSourceFile.LF) {
+            case VirtualKey.PageUp:
+                line_diff = 0;
+                for (i = Math.Min(SelCurrent, Chars.Count - 1); 0 < i; i--) {
+                    if (Chars[i].Chr == TSourceFile.LF) {
 
-                            line_diff++;
-                            if (ViewLineCount <= line_diff) {
+                        line_diff++;
+                        if (ViewLineCount <= line_diff) {
 
-                                break;
-                            }
+                            break;
                         }
                     }
-
-                    int line_idx = SourceFile.GetLFCount(0, i);
-                    Debug.WriteLine("PageUp {0}", line_diff);
-                    new_sel_current = i;
-                    EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 }
+
+                line_idx = SourceFile.GetLFCount(0, i);
+                Debug.WriteLine("PageUp {0}", line_diff);
+                new_sel_current = i;
+                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 break;
 
-            case VirtualKey.PageDown: {
-                    int line_diff = 0;
-                    int i;
-                    for (i = SelCurrent; i < Chars.Count; i++) {
-                        if (Chars[i].Chr == TSourceFile.LF) {
+            case VirtualKey.PageDown:
+                line_diff = 0;
+                for (i = SelCurrent; i < Chars.Count; i++) {
+                    if (Chars[i].Chr == TSourceFile.LF) {
 
-                            line_diff++;
-                            if (ViewLineCount <= line_diff) {
+                        line_diff++;
+                        if (ViewLineCount <= line_diff) {
 
-                                break;
-                            }
+                            break;
                         }
                     }
-
-                    int line_idx = SourceFile.GetLFCount(0, i);
-                    Debug.WriteLine("PageDown {0}", line_diff);
-                    new_sel_current = i;
-                    EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 }
+
+                line_idx = SourceFile.GetLFCount(0, i);
+                Debug.WriteLine("PageDown {0}", line_diff);
+                new_sel_current = i;
+                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
                 break;
             }
 
@@ -612,10 +614,10 @@ namespace Miyu {
                 Flyout.ShowAttachedFlyout(OverlappedButton);
                 break;
 
-            case VirtualKey.Left:   // 左矢印(←)
-            case VirtualKey.Right:  // 右矢印(→)
-            case VirtualKey.Up:     // 上矢印(↑)
-            case VirtualKey.Down:  // 下矢印(↓)
+            case VirtualKey.Left:
+            case VirtualKey.Right:
+            case VirtualKey.Up:
+            case VirtualKey.Down:
             case VirtualKey.Home:
             case VirtualKey.End:
             case VirtualKey.PageUp:
@@ -627,41 +629,35 @@ namespace Miyu {
             }
 
             switch (e.VirtualKey) {
-            case VirtualKey.Back: {
-
-                    if (SelOrigin != SelCurrent) {
-
-                        // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelStart(), SelEnd(), "");
-                    }
-                    else if (0 < SelCurrent) {
-
-                        // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelCurrent - 1, SelCurrent, "");
-                    }
-                }
-                break;
-
-            case VirtualKey.Delete: {
-
-                    if (SelOrigin != SelCurrent) {
-
-                        // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelStart(), SelEnd(), "");
-                    }
-                    else if (SelCurrent < Chars.Count) {
-
-                        // 選択した範囲のテキストを別のテキストに置換します。
-                        ReplaceText(SelCurrent, SelCurrent + 1, "");
-                    }
-                }
-                break;
-
-            case VirtualKey.Enter: {
+            case VirtualKey.Back:
+                if (SelOrigin != SelCurrent) {
 
                     // 選択した範囲のテキストを別のテキストに置換します。
-                    ReplaceText(SelStart(), SelEnd(), "\n");
+                    ReplaceText(SelStart(), SelEnd(), "");
                 }
+                else if (0 < SelCurrent) {
+
+                    // 選択した範囲のテキストを別のテキストに置換します。
+                    ReplaceText(SelCurrent - 1, SelCurrent, "");
+                }
+                break;
+
+            case VirtualKey.Delete:
+                if (SelOrigin != SelCurrent) {
+
+                    // 選択した範囲のテキストを別のテキストに置換します。
+                    ReplaceText(SelStart(), SelEnd(), "");
+                }
+                else if (SelCurrent < Chars.Count) {
+
+                    // 選択した範囲のテキストを別のテキストに置換します。
+                    ReplaceText(SelCurrent, SelCurrent + 1, "");
+                }
+                break;
+
+            case VirtualKey.Enter:
+                // 選択した範囲のテキストを別のテキストに置換します。
+                ReplaceText(SelStart(), SelEnd(), "\n");
                 break;
 
             case VirtualKey.C:
@@ -690,7 +686,6 @@ namespace Miyu {
 
                         // LFをCRLFに変換した文字列
                         clipboard_str = text.Replace("\n", "\r\n");
-
                     }
 
                     dataPackage.SetText(clipboard_str);
@@ -1062,7 +1057,6 @@ namespace Miyu {
         */
         private void OverlappedButton_PointerEntered(object sender, PointerRoutedEventArgs e) {
             CoreApplication.GetCurrentView().CoreWindow.PointerCursor = IBeamCoreCursor;
-
         }
 
         /*
@@ -1070,7 +1064,6 @@ namespace Miyu {
         */
         private void OverlappedButton_PointerExited(object sender, PointerRoutedEventArgs e) {
             CoreApplication.GetCurrentView().CoreWindow.PointerCursor = ArrowCoreCursor;
-
         }
 
         /*
@@ -1248,12 +1241,6 @@ namespace Miyu {
         テキストの変更情報
     */
     public class TDiff {
-        public TDiff(int pos, int removed_cound, int inserted_count) {
-            DiffPos = pos;
-            RemovedChars = new TChar[removed_cound];
-            InsertedCount = inserted_count;
-        }
-
         // 変更の開始位置
         public int DiffPos;
 
@@ -1262,6 +1249,12 @@ namespace Miyu {
 
         // 新たに挿入した文字列の長さ
         public int InsertedCount;
+
+        public TDiff(int pos, int removed_cound, int inserted_count) {
+            DiffPos = pos;
+            RemovedChars = new TChar[removed_cound];
+            InsertedCount = inserted_count;
+        }
     }
 
     /*

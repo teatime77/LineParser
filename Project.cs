@@ -139,16 +139,26 @@ namespace Miyu {
 
                     tick = DateTime.Now;
                     string out_dir = ApplicationData.Current.LocalFolder.Path + "\\out";
+                    string html_dir = ApplicationData.Current.LocalFolder.Path + "\\out\\html";
                     if (!Directory.Exists(out_dir)) {
                         Directory.CreateDirectory(out_dir);
                     }
+                    if (!Directory.Exists(html_dir)) {
+                        Directory.CreateDirectory(html_dir);
+                    }
+
                     foreach (TSourceFile src in SourceFiles) {
                         TTokenWriter tw = new TTokenWriter(src.Parser);
                         src.Parser.SourceFileText(src, tw);
 
-                        string path = out_dir + "\\" + Path.GetFileName(src.PathSrc);
-                        File.WriteAllText(path, tw.ToPlainText(), Encoding.UTF8);
+                        string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
+
+                        File.WriteAllText(out_dir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
+                        File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(), Encoding.UTF8);
                     }
+
+
+
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {
