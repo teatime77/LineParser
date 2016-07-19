@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace Miyu {
 
-    //------------------------------------------------------------ TVariable
     partial class TVariable {
         public virtual void ResolveName(TType cls, List<TVariable> vars) {
             if(InitValue != null) {
@@ -35,7 +34,7 @@ namespace Miyu {
 
             if (ArgsFnc.Length < arg_types.Count) {
 
-                if(ArgsFnc.Length == 0 || ArgsFnc[ArgsFnc.Length - 1].KindVar != EKind.params_) {
+                if(ArgsFnc.Length == 0 || ! ArgsFnc[ArgsFnc.Length - 1].isParams()) {
                     // 最後の仮引数が可変個の引数でない場合
 
                     return false;
@@ -45,7 +44,7 @@ namespace Miyu {
             for (int i = 0; i < ArgsFnc.Length; i++) {
                 TVariable var1 = ArgsFnc[i];
 
-                if (var1.KindVar == EKind.params_) {
+                if (var1.isParams()) {
                     // 仮引数が可変個の引数の場合
 
                     if (i != ArgsFnc.Length - 1) {
@@ -100,8 +99,6 @@ namespace Miyu {
             }
         }
     }
-
-    //------------------------------------------------------------ TTerm
 
     partial class TTerm {
         public virtual void ResolveName(TType cls, List<TVariable> vars) {
@@ -169,21 +166,31 @@ namespace Miyu {
 
                 if(TokenTrm == null) {
 
-                    if(ParentTrm is TDotApply) {
-                        TType tp = (ParentTrm as TDotApply).DotApp.TypeTrm;
-                        if(tp is TGenericClass) {
+                    Debug.Assert(VarRef is TFunction);
+                    TFunction lambda = VarRef as TFunction;
+                    Debug.Assert(lambda.KindFnc == EKind.Lambda);
 
-                            TType gen_tp = (tp as TGenericClass).GenCla[0];
+                    if (ParentTrm is TDotApply) {
+                        if (lambda.LambdaFnc != null) {
 
-                            Debug.Assert(VarRef is TFunction);
-                            TFunction lambda = VarRef as TFunction;
-                            Debug.Assert(lambda.LambdaFnc != null);
-                            lambda.ArgsFnc[0].TypeVar = gen_tp;
-                            vars.Add(lambda.ArgsFnc[0]);
-                            lambda.LambdaFnc.ResolveName(cls, vars);
-                            vars.RemoveAt(vars.Count - 1);
+                            TType tp = (ParentTrm as TDotApply).DotApp.TypeTrm;
+                            if (tp is TGenericClass) {
 
-                            TypeTrm = new TType("lambda function", lambda.LambdaFnc.TypeTrm, new TType[] { gen_tp });
+                                TType gen_tp = (tp as TGenericClass).GenCla[0];
+
+                                lambda.ArgsFnc[0].TypeVar = gen_tp;
+                                vars.Add(lambda.ArgsFnc[0]);
+                                lambda.LambdaFnc.ResolveName(cls, vars);
+                                vars.RemoveAt(vars.Count - 1);
+
+                                TypeTrm = new TType("lambda function", lambda.LambdaFnc.TypeTrm, new TType[] { gen_tp });
+                                return;
+                            }
+                        }
+                        else {
+                            Debug.Assert(lambda.BlockFnc.StatementsBlc.Count != 0);
+
+                            TypeTrm = Project.ActionClass;
                             return;
                         }
                     }
@@ -485,8 +492,6 @@ namespace Miyu {
         }
     }
 
-    //------------------------------------------------------------ TStatement
-
     partial class TStatement {
         public virtual void ResolveName(TType cls, List<TVariable> vars) {
         }
@@ -504,7 +509,6 @@ namespace Miyu {
         }
     }
 
-
     partial class TVariableDeclaration {
         public override void ResolveName(TType cls, List<TVariable> vars) {
             foreach(TVariable var1 in Variables) {
@@ -514,20 +518,20 @@ namespace Miyu {
     }
 
     partial class TBlockStatement {
+        /*
+                    int vars_count = vars.Count;
+
+                    foreach (TStatement stmt in StatementsBlc) {
+                        try {
+                            stmt.ResolveName(cls, vars);
+                        }
+                        catch (TResolveNameException) {
+                        }
+                    }
+
+                    vars.RemoveRange(vars_count, vars.Count - vars_count);
+        */
         public void ResolveNameBlock(TType cls, List<TVariable> vars) {
-/*
-            int vars_count = vars.Count;
-
-            foreach (TStatement stmt in StatementsBlc) {
-                try {
-                    stmt.ResolveName(cls, vars);
-                }
-                catch (TResolveNameException) {
-                }
-            }
-
-            vars.RemoveRange(vars_count, vars.Count - vars_count);
-*/
         }
     }
 
@@ -565,12 +569,12 @@ namespace Miyu {
 
     partial class TSwitch {
         public override void ResolveName(TType cls, List<TVariable> vars) {
+            /*
+                        foreach(TCase cas in Cases) {
+                            cas.ResolveName(cls, vars);
+                        }
+            */
             TermSwitch.ResolveName(cls, vars);
-/*
-            foreach(TCase cas in Cases) {
-                cas.ResolveName(cls, vars);
-            }
-*/
         }
     }
 
@@ -664,9 +668,6 @@ namespace Miyu {
         public bool IsSuperClass(TType tp) {
             return tp.IsSubClass(this);
         }
-    }
-
-    partial class TType {
 
         public TField FindSysField(TypeInfo tp, string name) {
             var fields = from f in tp.DeclaredFields where f.Name == name select f;

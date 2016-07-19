@@ -17,6 +17,8 @@ namespace Miyu {
         public List<TChar> Chars = new List<TChar>();
 
         public string PathSrc;
+        public TNamespace Namespace;
+        public List<TUsing> Usings = new List<TUsing>();
         public List<TType> ClassesSrc = new List<TType>();
         public List<TLine> Lines = new List<TLine>();
         public List<MyEditor> Editors = new List<MyEditor>();

@@ -15,25 +15,50 @@ namespace Miyu {
         字句型
     */
     public enum ETokenType {
-        Undefined,      // 未定義
-        White,          // 空白
-        Char_,          // 文字
-        String_,        // 文字列
-        VerbatimString, // 逐語的文字列 ( @"文字列" )
-        VerbatimStringContinued, // "で閉じてない逐語的文字列
-        Identifier,     // 識別子
-        Keyword,        // キーワード
+        // 未定義
+        Undefined,
+
+        // 空白
+        White,
+
+        // 文字
+        Char_,
+
+        // 文字列
+        String_,
+
+        // 逐語的文字列 ( @"文字列" )
+        VerbatimString,
+
+        // "で閉じてない逐語的文字列
+        VerbatimStringContinued,
+
+        // 識別子
+        Identifier,
+
+        // キーワード
+        Keyword,        
         Int,
         Float,
         Double,
-        Symbol,         // 記号
-        LineComment,    // 行コメント      ( // )
-        BlockComment,   // ブロックコメント ( /* */ )
-        BlockCommentContinued,   // */で閉じてないブロックコメント
-        Error,          // エラー
+
+        // 記号
+        Symbol,
+
+        // 行コメント      ( // )
+        LineComment,
+
+        // ブロックコメント ( /* */ )
+        BlockComment,
+
+        // */で閉じてないブロックコメント
+        BlockCommentContinued,
+
+        // エラー
+        Error,          
     }
 
-    public partial class TParser : TEnv {
+    partial class TParser {
         /*
             16進数文字ならtrueを返します。
         */
@@ -99,7 +124,6 @@ namespace Miyu {
                 pos += 2;
                 return '\0';
             }
-
         }
 
         /*
@@ -419,11 +443,6 @@ namespace Miyu {
                     string s = text.Substring(start_pos, pos - start_pos);
                     token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
                 }
-
-                // 各文字の字句型の配列に字句型をセットします。
-                //for (int k = start_pos; k < pos; k++) {
-                //    token_type_list[k] = token_type;
-                //}
             }
 
             // 各文字の字句型の配列を返します。

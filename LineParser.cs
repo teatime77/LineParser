@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 --------------------------------------------------------------------------------*/
 
 namespace Miyu {
-    partial class TParser {
+
+    public partial class TParser : TEnv {
         public const int TabSize = 4;
         public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
         public static TParser theParser;
@@ -67,12 +68,14 @@ namespace Miyu {
         public virtual void Colonopt() {
         }
 
-        public TType ReadEnumLine() {
+        public TType ReadEnumLine(TSourceFile src, TModifier mod1) {
             GetToken(EKind.enum_);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             TType cls = PrjParser.GetClassByName(id.TextTkn);
+            cls.ModifierCls = mod1;
             cls.KindClass = EClass.Enum;
+            cls.SourceFileCls = src;
 
             LCopt();
             GetToken(EKind.EOT);
@@ -80,7 +83,7 @@ namespace Miyu {
             return cls;
         }
 
-        public TType ReadClassLine(TModifier mod1) {
+        public TType ReadClassLine(TSourceFile src, TModifier mod1) {
             GetToken(EKind.Undefined);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
@@ -115,7 +118,11 @@ namespace Miyu {
 
                 cls = PrjParser.GetClassByName(id.TextTkn);
             }
-            cls.ModifierCls = mod1;
+            if(cls.ModifierCls == null || mod1.isPublic) {
+
+                cls.ModifierCls = mod1;
+                cls.SourceFileCls = src;
+            }
 
             if (CurTkn.Kind == EKind.Colon) {
 
@@ -166,6 +173,9 @@ namespace Miyu {
             }
             else if (cls.ClassName == "Type") {
                 Project.TypeClass = cls;
+            }
+            else if (cls.ClassName == "Action") {
+                Project.ActionClass = cls;
             }
             else if (cls.ClassName == "Enumerable") {
                 Project.EnumerableClass = cls as TGenericClass;
@@ -420,9 +430,11 @@ namespace Miyu {
 
         public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
             TToken fnc_name;
+            EKind kind_fnc = EKind.function_;
             
             if(constructor_class != null) {
                 fnc_name = constructor_token;
+                kind_fnc = EKind.constructor_;
             }
             else {
 
@@ -433,7 +445,6 @@ namespace Miyu {
                     if (fnc_name.TokenType != ETokenType.Symbol) {
                         throw new TParseException();
                     }
-
                 }
                 else {
 
@@ -477,37 +488,27 @@ namespace Miyu {
 
             GetToken(EKind.EOT);
 
-            return new TFunction(mod1, fnc_name, vars.ToArray(), ret_type, base_app);
+            return new TFunction(mod1, fnc_name, vars.ToArray(), ret_type, base_app, kind_fnc);
         }
 
         public virtual TVariable ReadArgVariable(TType parent_class) {
-            TModifier mod1 = null;
+            EKind kind = EKind.Undefined;
 
             switch (CurTkn.Kind) {
             case EKind.ref_:
                 GetToken(EKind.ref_);
-                if(mod1 == null) {
-                    mod1 = new TModifier();
-                }
-                mod1.isRef = true;                
+                kind = EKind.ref_;
                 break;
 
             case EKind.out_:
                 GetToken(EKind.out_);
-                if (mod1 == null) {
-                    mod1 = new TModifier();
-                }
-                mod1.isOut = true;
+                kind = EKind.out_;
                 break;
 
             case EKind.params_:
                 GetToken(EKind.params_);
-                if (mod1 == null) {
-                    mod1 = new TModifier();
-                }
-                mod1.isParams = true;
+                kind = EKind.params_;
                 break;
-
             }
 
             TToken id = GetToken(EKind.Identifier);
@@ -520,7 +521,7 @@ namespace Miyu {
                 type = ReadType(parent_class, false);
             }
 
-            return new TVariable(mod1, id, type, null);
+            return new TVariable(id, type, kind);
         }
 
         public TVariable ReadVariable(TType type_prepend) {
@@ -657,6 +658,20 @@ namespace Miyu {
             LCopt();
             GetToken(EKind.EOT);
             return while1;
+        }
+
+        public TLock ReadLockLine() {
+            TLock lock1 = new TLock();
+
+            GetToken(EKind.lock_);
+
+            LPopt();
+            lock1.LockObj = Expression();
+            RPopt();
+
+            LCopt();
+            GetToken(EKind.EOT);
+            return lock1;
         }
 
         public TForEach ReadForEachLine() {
@@ -825,7 +840,14 @@ namespace Miyu {
                     return t1;
                 }
 
-                LineEnd();
+                if(LambdaFunction != null) {
+
+                    GetToken(EKind.EOT);
+                }
+                else {
+
+                    LineEnd();
+                }
             }
 
             if(asn != null) {
@@ -857,7 +879,7 @@ namespace Miyu {
             return -1;
         }
 
-        public object ParseLine(TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
+        public object ParseLine(TSourceFile src, TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
             TokenList = token_list;
             TokenPos = line_top_idx;
 
@@ -951,6 +973,11 @@ namespace Miyu {
 
                     case EKind.RC:
                         GetToken(EKind.RC);
+                        if (CurTkn.Kind == EKind.RP && InLambdaFunction) {
+                            InLambdaFunction = false;
+                            GetToken(EKind.RP);
+                        }
+
                         if(CurTkn.Kind == EKind.SemiColon) {
 
                             GetToken(EKind.SemiColon);
@@ -978,12 +1005,12 @@ namespace Miyu {
                     return ReadNamespace();
 
                 case EKind.enum_:
-                    return ReadEnumLine();
+                    return ReadEnumLine(src, mod1);
 
                 case EKind.class_:
                 case EKind.struct_:
                 case EKind.interface_:
-                    return ReadClassLine(mod1);
+                    return ReadClassLine(src, mod1);
 
                 case EKind.delegate_:
                     return ReadDelegateLine(mod1);
@@ -1005,6 +1032,9 @@ namespace Miyu {
 
                 case EKind.default_:
                     return new TCase();
+
+                case EKind.lock_:
+                    return ReadLockLine();
 
                 case EKind.while_:
                     return ReadWhileLine();
@@ -1028,35 +1058,34 @@ namespace Miyu {
                 case EKind.goto_:
                     return ReadJumpLine();
 
-                case EKind.ClassName: {
-                        TToken class_token = CurTkn;
-                        TType tp = ReadType(null, false);
+                case EKind.ClassName:
+                    TToken class_token = CurTkn;
+                    TType tp = ReadType(null, false);
 
-                        if (CurTkn.Kind == EKind.LP) {
+                    if (CurTkn.Kind == EKind.LP) {
 
-                            return ReadFunctionLine(cls, class_token, tp, mod1, tp);
-                        }
+                        return ReadFunctionLine(cls, class_token, tp, mod1, tp);
+                    }
 
-                        if (CurTkn.Kind != EKind.Identifier) {
+                    if (CurTkn.Kind != EKind.Identifier) {
 
-                            LookaheadClass = tp;
-                            return ReadAssignmentCallLine(false);
-                        }
+                        LookaheadClass = tp;
+                        return ReadAssignmentCallLine(false);
+                    }
 
-                        if (NextTkn.Kind == EKind.LP) {
+                    if (NextTkn.Kind == EKind.LP) {
 
-                            return ReadFunctionLine(cls, null, null, mod1, tp);
+                        return ReadFunctionLine(cls, null, null, mod1, tp);
+                    }
+                    else {
+
+                        if (parent_fnc == null) {
+
+                            return ReadFieldLine(cls, mod1, tp);
                         }
                         else {
 
-                            if (parent_fnc == null) {
-
-                                return ReadFieldLine(cls, mod1, tp);
-                            }
-                            else {
-
-                                return ReadVariableDeclarationLine(tp, false);
-                            }
+                            return ReadVariableDeclarationLine(tp, false);
                         }
                     }
 
@@ -1171,8 +1200,10 @@ namespace Miyu {
 
             src.ClassesSrc.Clear();
 
+            object prev_obj = null;
             List<TToken> comments = new List<TToken>();
             List<object> obj_stack = new List<object>();
+
             for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
 
@@ -1254,16 +1285,30 @@ namespace Miyu {
                             }
 
                             //Debug.Write(string.Format("行解析 {0}", line.TextLine));
-                            object obj = ParseLine(cls, parent_fnc, parent_stmt, line_top_idx, line.Tokens);
+                            LambdaFunction = null;
+                            object obj = ParseLine(src, cls, parent_fnc, parent_stmt, line_top_idx, line.Tokens);
                             if (obj != null) {
 
                                 while (obj_stack.Count < line.Indent) {
                                     obj_stack.Add(null);
                                 }
-                                obj_stack.Add(obj);
-                                Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
 
-                                //StringWriter sw = new StringWriter();
+                                if (LambdaFunction != null) {
+                                    obj_stack.Add(LambdaFunction);
+
+                                    LambdaFunction.ClassMember = cls;
+                                    cls.Functions.Add(LambdaFunction);
+                                    src.FunctionsSrc.Add(LambdaFunction);
+
+                                    LambdaFunction = null;
+                                }
+                                else {
+
+                                    obj_stack.Add(obj);
+                                    Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
+                                }
+
+
                                 if (obj is TType) {
                                     TType class_def = obj as TType;
 
@@ -1272,6 +1317,11 @@ namespace Miyu {
                                     src.ClassesSrc.Add(class_def);
                                 }
                                 else if (obj is TVariable) {
+                                    TVariable var1 = obj as TVariable;
+
+                                    if (prev_obj is TAttribute) {
+                                        var1.AttributeVar = prev_obj as TAttribute;
+                                    }
 
                                     if (cls != null) {
 
@@ -1292,19 +1342,20 @@ namespace Miyu {
                                             src.FunctionsSrc.Add(fnc);
                                         }
                                     }
-                                    //VariableText(obj as TVariable, sw);
                                 }
-                                else if (obj is TTerm) {
+                                else if (obj is TUsing) {
 
-                                    //TermText(obj as TTerm, sw);
+                                    src.Usings.Add(obj as TUsing);
+                                }
+                                else if(obj is TNamespace) {
+                                    src.Namespace = obj as TNamespace;
+                                    src.Namespace.CommentNS = comments.ToArray();
                                 }
                                 else if (obj is TStatement) {
                                     TStatement stmt = obj as TStatement;
 
                                     stmt.CommentStmt = comments.ToArray();
                                     if (parent_stmt != null || parent_fnc != null) {
-
-
                                         if (stmt is TCase) {
                                             TCase case1 = stmt as TCase;
 
@@ -1329,18 +1380,18 @@ namespace Miyu {
                                             parent_stmt.StatementsBlc.Add(stmt);
                                         }
                                     }
-                                    //StatementText(stmt, sw, 0);
                                 }
-
-                                //Debug.WriteLine(sw.ToString());
-
                             }
 
                             line.ObjLine = obj;
+                            prev_obj = obj;
 
                             break;
                         }
-                        comments.Clear();
+                        if(! (prev_obj is TAttribute)) {
+
+                            comments.Clear();
+                        }
                     }
                 }
             }
@@ -1546,6 +1597,16 @@ namespace Miyu {
                         LookaheadClass = cls;
                     }
                 }
+                else if(CurTkn.Kind == EKind.RP) {
+                    GetToken(EKind.RP);
+                    TToken lambda = GetToken(EKind.Lambda);
+                    GetToken(EKind.LC);
+
+                    LambdaFunction = new TFunction(lambda);
+                    InLambdaFunction = true;
+
+                    return new TReference(LambdaFunction);
+                }
 
                 term = Expression();
 
@@ -1633,7 +1694,6 @@ namespace Miyu {
                 cls = ReadType(null, false);
                 GetToken(EKind.RP);
                 return new TApply(opr, new TReference(cls));
-
             }
 
             throw new TParseException();
@@ -1654,7 +1714,10 @@ namespace Miyu {
 
                         TTerm[] args = ExpressionList().ToArray();
 
-                        GetToken(EKind.RP);
+                        if(LambdaFunction == null) {
+
+                            GetToken(EKind.RP);
+                        }
 
                         t1 = new TDotApply(t1, id, args);
                     }

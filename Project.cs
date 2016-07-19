@@ -26,7 +26,8 @@ namespace Miyu {
         public TType BoolClass;
         public TType VoidClass;
         public TType TypeClass;
-        public TGenericClass ArrayClass;
+        public TType ActionClass;
+       public TGenericClass ArrayClass;
         public TGenericClass EnumerableClass;
         public TType NullClass = new TType("null class");
         public TType HandlerClass = new TType("handler class");
@@ -82,7 +83,7 @@ namespace Miyu {
             Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
             Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
 
-            Debug.WriteLine("Sys.cs 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+            Debug.WriteLine("Sys.cs 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
             tick = DateTime.Now;
 
             while (true) {
@@ -107,7 +108,7 @@ namespace Miyu {
                             }
                         }
                     }
-                    Debug.WriteLine("解析終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+                    Debug.WriteLine("解析終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
                     TSetParentNavi set_parent = new TSetParentNavi();
@@ -134,7 +135,7 @@ namespace Miyu {
                     foreach (TSourceFile src in SourceFiles) {
                         src.Parser.ResolveName(src);
                     }
-                    Debug.WriteLine("名前解決 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+                    Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
                     tick = DateTime.Now;
                     string out_dir = ApplicationData.Current.LocalFolder.Path + "\\out";
@@ -148,13 +149,11 @@ namespace Miyu {
                         string path = out_dir + "\\" + Path.GetFileName(src.PathSrc);
                         File.WriteAllText(path, tw.ToPlainText(), Encoding.UTF8);
                     }
-                    Debug.WriteLine("ソース生成 終了 {0}", (DateTime.Now - tick).TotalMilliseconds);
+                    Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {
-
                 }
             }
-
         }
 
         public void SetAssemblyList() {
@@ -232,7 +231,7 @@ namespace Miyu {
                     foreach(Type t in v) {
                         Debug.WriteLine("あいまいな型 : {0}", t.FullName, "");
                     }
-                    if(sys_name == "TimeSpan" || sys_name == "Path") {
+                    if(sys_name == "TimeSpan" || sys_name == "Path" || sys_name== "DateTime") {
 
                         tp.Info = v.Last().GetTypeInfo();
                     }
@@ -240,7 +239,6 @@ namespace Miyu {
 
                         tp.Info = v.First().GetTypeInfo();
                     }
-
                 }
                 SysClassTable.Add(tp.Info.FullName, tp);
             }
@@ -291,8 +289,8 @@ namespace Miyu {
                                 string name = line.Tokens[idx + 1].TextTkn;
                                 if (!class_names.Contains(name)) {
 
-                                    class_names.Add(name);
                                     //Debug.WriteLine("typeof({0}),", name, "");
+                                    class_names.Add(name);
                                 }
                             }
                             else {
@@ -391,7 +389,6 @@ namespace Miyu {
             }
 
             return reg_class;
-
         }
 
         public TGenericClass GetSpecializedClass(TGenericClass org_class, List<TType> param_classes, int dim_cnt) {
@@ -466,7 +463,7 @@ namespace Miyu {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
             TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
-            TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null);
+            TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
 
             return fnc;
         }
@@ -511,5 +508,4 @@ namespace Miyu {
             cls.Functions = (from x in cls.OrgCla.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
         }
     }
-
 }

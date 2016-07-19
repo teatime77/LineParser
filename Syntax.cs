@@ -28,15 +28,14 @@ namespace Miyu {
         SimpleClass,
         ParameterizedClass,
         ArgumentClass,
-        SpecializedClass
+        SpecializedClass,
     }
-
 
     public enum EAggregateFunction {
         Sum,
         Max,
         Min,
-        Average
+        Average,
     }
 
     public class TEnv {
@@ -45,6 +44,12 @@ namespace Miyu {
 
         [ThreadStatic]
         public static TParser Parser;
+
+        [ThreadStatic]
+        public static TFunction LambdaFunction;
+
+        [ThreadStatic]
+        public static bool InLambdaFunction;
     }
 
     public class TUsing {
@@ -52,6 +57,7 @@ namespace Miyu {
     }
 
     public class TNamespace {
+        public TToken[] CommentNS;
         public string NamespaceName;
 
         public TNamespace(string name) {
@@ -108,6 +114,7 @@ namespace Miyu {
         public TFunction DelegateFnc;
         public TypeInfo Info;
         public bool TypeInfoSearched;
+        public TSourceFile SourceFileCls;
 
         public TType RetType;
         public TType[] ArgTypes;
@@ -210,7 +217,6 @@ namespace Miyu {
                 if (tp != null) {
                     return tp;
                 }
-
             }
 
 
@@ -223,7 +229,7 @@ namespace Miyu {
             //    return true;
             //}
             TProject p = Project;
-            if(this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
+            if(KindClass == EClass.Enum || this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
                 return true;
             }
 
@@ -267,7 +273,7 @@ namespace Miyu {
         public string NameVar;
         public TType TypeVar;
         public TTerm InitValue;
-        public EKind KindVar;
+        public TAttribute AttributeVar;
 
         public TVariable() {
         }
@@ -289,12 +295,36 @@ namespace Miyu {
             TokenVar = name;
             NameVar = name.TextTkn;
             TypeVar = type;
-            KindVar = kind;
+
+            if(kind != EKind.Undefined) {
+                ModifierVar = new TModifier();
+                switch (kind) {
+                case EKind.ref_:
+                    ModifierVar.isRef = true;
+                    break;
+
+                case EKind.out_:
+                    ModifierVar.isOut = true;
+                    break;
+
+                case EKind.params_:
+                    ModifierVar.isParams = true;
+                    break;
+
+                default:
+                    Debug.Assert(false);
+                    break;
+                }
+            }
         }
 
         public TVariable(string name, TType type) {
             NameVar = name;
             TypeVar = type;
+        }
+
+        public bool isParams() {
+            return ModifierVar != null && ModifierVar.isParams;
         }
     }
 
@@ -330,25 +360,35 @@ namespace Miyu {
     }
 
     public partial class TFunction : TMember {
+        public EKind KindFnc;
         public TVariable[] ArgsFnc;
         public TApply BaseApp;
         public TBlock BlockFnc = new TBlock();
         public TTerm LambdaFnc;
         public MethodInfo InfoFnc;
 
-        public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app) : base(mod1, name, ret_type, null) {
+        public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
+            KindFnc = kind;
             ArgsFnc = args;
             TypeVar = ret_type;
             BaseApp = base_app;
         }
 
+        public TFunction(TToken lambda) : base() {
+            KindFnc = EKind.Lambda;
+            TokenVar = lambda;
+            ArgsFnc = new TVariable[0];
+        }
+
         public TFunction(TToken name, TTerm trm) : base() {
+            KindFnc = EKind.Lambda;
             ArgsFnc = new TVariable[1];
             ArgsFnc[0] = new TVariable(name);
             LambdaFnc = trm;
         }
 
         public TFunction(TType parent_class, MethodInfo method_info) : base() {
+            KindFnc = EKind.Undefined;
             InfoFnc = method_info;
             TypeVar = Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
         }
@@ -562,6 +602,10 @@ namespace Miyu {
 
     public partial class TWhile : TBlockStatement {
         public TTerm WhileCondition;
+    }
+
+    public partial class TLock : TBlockStatement {
+        public TTerm LockObj;
     }
 
     public abstract class TAbsFor : TBlockStatement {

@@ -196,6 +196,30 @@ namespace Miyu {
             }
         }
 
+        public void InitListText(List<TTerm> v, TTokenWriter sw) {
+            if (v.Count < 10) {
+
+                sw.Fmt(EKind.LC, ' ');
+                foreach (TTerm t in v) {
+                    if (t != v[0]) {
+
+                        sw.Fmt(EKind.Comma, ' ');
+                    }
+                    TermText(t, sw);
+                }
+                sw.Fmt(' ', EKind.RC);
+            }
+            else {
+
+                sw.Fmt(EKind.LC, EKind.NL);
+                foreach (TTerm t in v) {
+                    TermText(t, sw);
+                    sw.Fmt(EKind.Comma, EKind.NL);
+                }
+                sw.Fmt(EKind.RC);
+            }
+        }
+
         public void TermText(TTerm term, TTokenWriter sw) {
             if (term.CastType != null && term.CastType.IsPrimitive()) {
 
@@ -232,7 +256,32 @@ namespace Miyu {
                 }
                 else {
 
-                    sw.Fmt(ref1);
+                    if(ref1.VarRef is TFunction) {
+
+                        TFunction fnc = ref1.VarRef as TFunction;
+                        if(fnc.KindFnc == EKind.Lambda) {
+
+                            if(fnc.ArgsFnc.Length == 0) {
+
+                                sw.Fmt(EKind.LP, EKind.RP, ' ', EKind.Lambda, ' ');
+
+                                StatementText(fnc.BlockFnc, sw, 3);
+                            }
+                            else {
+
+                                sw.Fmt(fnc.ArgsFnc[0].NameVar, ' ', EKind.Lambda, ' ');
+                                TermText(fnc.LambdaFnc, sw);
+                            }
+                        }
+                        else {
+
+                            sw.Fmt(ref1);
+                        }
+                    }
+                    else {
+
+                        sw.Fmt(ref1);
+                    }
                 }
             }
             else if (term is TApply) {
@@ -260,24 +309,44 @@ namespace Miyu {
                     break;
 
                 case EKind.NewInstance:
-                    sw.Fmt(EKind.new_, ' ');
-                    TypeText((app as TNewApply).ClassApp, sw);
-                    sw.Fmt(EKind.LP);
-                    ArgsText(app, sw);
-                    sw.Fmt(EKind.RP);
-                    break;
-
                 case EKind.NewArray:
+                    TNewApply new_app = app as TNewApply;
+
                     sw.Fmt(EKind.new_, ' ');
-                    TypeText((app as TNewApply).ClassApp, sw);
-                    sw.Fmt(EKind.LB);
-                    ArgsText(app, sw);
-                    sw.Fmt(EKind.RB);
+                    TypeText(new_app.ClassApp, sw);
+                    if (app.KindApp == EKind.NewInstance) {
+
+                        if (new_app.InitList.Count == 0) {
+
+                            sw.Fmt(EKind.LP);
+                            ArgsText(app, sw);
+                            sw.Fmt(EKind.RP);
+                        }
+                        else {
+
+                            InitListText(new_app.InitList, sw);
+                        }
+                    }
+                    else {
+
+                        sw.Fmt(EKind.LB);
+                        ArgsText(app, sw);
+                        sw.Fmt(EKind.RB);
+
+                        if (new_app.InitList.Count != 0) {
+
+                            InitListText(new_app.InitList, sw);
+                        }
+                    }
                     break;
 
                 case EKind.base_:
-                    sw.Fmt(EKind.base_, EKind.Dot);
-                    TermText(app.FunctionApp, sw);
+                    sw.Fmt(EKind.base_);
+                    if (app.FunctionApp != null) {
+
+                        sw.Fmt(EKind.Dot);
+                        TermText(app.FunctionApp, sw);
+                    }
                     sw.Fmt(EKind.LP);
                     ArgsText(app, sw);
                     sw.Fmt(EKind.RP);
@@ -322,7 +391,6 @@ namespace Miyu {
                     }
                     break;
                 }
-
             }
             else if (term is TQuery) {
                 TQuery qry = term as TQuery;
@@ -464,8 +532,21 @@ namespace Miyu {
 
                         StatementText(for1.PostStatement, sw, -1);
                     }
-                    sw.Fmt(EKind.RP, EKind.LC);
-                    sw.WriteLine();
+                    sw.Fmt(EKind.RP);
+
+                    if(for1.StatementsBlc.Count == 0) {
+                        sw.Fmt(EKind.SemiColon, EKind.NL);
+                        return;
+                    }
+
+                    sw.Fmt(EKind.LC, EKind.NL);
+                }
+                else if (stmt is TLock) {
+                    TLock lock1 = stmt as TLock;
+
+                    sw.Fmt(EKind.lock_, EKind.LP);
+                    TermText(lock1.LockObj, sw);
+                    sw.Fmt(EKind.RP, EKind.LC, EKind.NL);
                 }
                 else if (stmt is TWhile) {
                     TWhile while1 = stmt as TWhile;
@@ -494,10 +575,18 @@ namespace Miyu {
                     StatementText(stmt1, sw, nest + 1);
                 }
 
-                if(!(stmt is TCase)) {
+                if (!(stmt is TCase)) {
 
                     sw.TAB(nest);
-                    sw.Fmt(EKind.RC, EKind.NL);
+
+                    if (stmt.ParentStmt is TFunction && (stmt.ParentStmt as TFunction).KindFnc == EKind.Lambda) {
+
+                        sw.Fmt(EKind.RC);
+                    }
+                    else {
+
+                        sw.Fmt(EKind.RC, EKind.NL);
+                    }
                 }
             }
             else {
@@ -580,6 +669,15 @@ namespace Miyu {
             }
         }
 
+        public void AttributeText(int nest, TAttribute attr, TTokenWriter sw) {
+            if(attr != null) {
+                sw.TAB(nest);
+                sw.Fmt(EKind.LB);
+                TypeText(attr.Attr, sw);
+                sw.Fmt(EKind.RB, EKind.NL);
+            }
+        }
+
         public void ModifierText(TModifier mod1, TTokenWriter sw) {
             if (mod1 != null) {
 
@@ -588,6 +686,14 @@ namespace Miyu {
                 }
                 if (mod1.isPrivate) {
                     sw.Fmt(EKind.private_, ' ');
+                }
+
+                if (mod1.isSealed) {
+                    sw.Fmt(EKind.sealed_, ' ');
+                }
+
+                if (mod1.isAbstract) {
+                    sw.Fmt(EKind.abstract_, ' ');
                 }
 
                 if (mod1.isPartial) {
@@ -606,16 +712,8 @@ namespace Miyu {
                     sw.Fmt(EKind.override_, ' ');
                 }
 
-                if (mod1.isAbstract) {
-                    sw.Fmt(EKind.abstract_, ' ');
-                }
-
                 if (mod1.isVirtual) {
                     sw.Fmt(EKind.virtual_, ' ');
-                }
-
-                if (mod1.isSealed) {
-                    sw.Fmt(EKind.sealed_, ' ');
                 }
 
                 if (mod1.isAsync) {
@@ -644,48 +742,115 @@ namespace Miyu {
             }
         }
 
-        public void ClassLineText(TType cls, TTokenWriter sw) {
-            ModifierText(cls.ModifierCls, sw);
+        public void ClassLineText(TSourceFile src, TType cls, TTokenWriter sw) {
+            if (cls.SourceFileCls == src) {
 
-            sw.Fmt(EKind.class_, ' ', cls);
-
-            for (int i = 0; i < cls.SuperClasses.Count; i++) {
-                if (i == 0) {
-
-                    sw.Fmt(EKind.Colon);
-                }
-                else {
-
-                    sw.Fmt(EKind.Comma);
-                }
-                TypeText(cls.SuperClasses[i], sw);
+                ModifierText(cls.ModifierCls, sw);
             }
+            else {
+
+                sw.Fmt(EKind.partial_, ' ');
+            }
+
+            switch (cls.KindClass) {
+            case EClass.Class:
+                sw.Fmt(EKind.class_);
+                break;
+            case EClass.Enum:
+                sw.Fmt(EKind.enum_);
+                break;
+            case EClass.Struct:
+                sw.Fmt(EKind.struct_);
+                break;
+            case EClass.Interface:
+                sw.Fmt(EKind.interface_);
+                break;
+            case EClass.Delegate:
+                sw.Fmt(EKind.delegate_);
+                break;
+            }
+            sw.Fmt(' ', cls);
+
+            if (cls.SourceFileCls == src) {
+
+                for (int i = 0; i < cls.SuperClasses.Count; i++) {
+                    if (i == 0) {
+
+                        sw.Fmt(' ', EKind.Colon, ' ');
+                    }
+                    else {
+
+                        sw.Fmt(EKind.Comma);
+                    }
+                    TypeText(cls.SuperClasses[i], sw);
+                }
+            }
+
             sw.Fmt(EKind.LC, EKind.NL);
         }
 
+        public void UsingText(TUsing usng, TTokenWriter sw) {
+            sw.Fmt(EKind.using_, ' ');
+
+            for(int i = 0; i < usng.Packages.Count; i++) {
+                if(i != 0) {
+                    sw.Fmt(EKind.Dot);
+                }
+                sw.Fmt(usng.Packages[i]);
+            }
+            sw.Fmt(EKind.SemiColon, EKind.NL);
+        }
+
         public void SourceFileText(TSourceFile src, TTokenWriter sw) {
+            foreach(TUsing usng in src.Usings) {
+                UsingText(usng,sw);
+            }
+
+            if(src.Namespace != null) {
+                WriteComment(src.Namespace.CommentNS, sw);
+                sw.Fmt(EKind.namespace_, ' ', src.Namespace.NamespaceName, ' ', EKind.LC, EKind.NL);
+            }
+
             foreach (TType cls in src.ClassesSrc) {
 
-                WriteComment(cls.CommentCls, sw);
+                if(cls.SourceFileCls == src) {
+
+                    WriteComment(cls.CommentCls, sw);
+                }
+                else {
+                    sw.WriteLine();
+                }
                 sw.TAB(1);
-                ClassLineText(cls, sw);
+                ClassLineText(src, cls, sw);
 
                 var vfld = from x in src.FieldsSrc where x.ClassMember == cls select x;
                 foreach (TField fld in vfld) {
                     WriteComment(fld.CommentVar, sw);
+
+                    AttributeText(2, fld.AttributeVar, sw);
+
                     sw.TAB(2);
-                    VariableText(fld, sw);
-                    sw.Fmt(EKind.SemiColon, EKind.NL);
+
+                    if(cls.KindClass == EClass.Enum) {
+
+                        sw.Fmt(fld, EKind.Comma, EKind.NL);
+                    }
+                    else {
+
+                        VariableText(fld, sw);
+                        sw.Fmt(EKind.SemiColon, EKind.NL);
+                    }
                 }
 
-                var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls select x;
+                var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls && x.KindFnc != EKind.Lambda select x;
                 foreach (TFunction fnc in vfnc) {
 
                     WriteComment(fnc.CommentVar, sw);
+                    AttributeText(2, fnc.AttributeVar, sw);
                     sw.TAB(2);
 
                     ModifierText(fnc.ModifierVar, sw);
-                    if (fnc.TypeVar != null) {
+                    if (fnc.TypeVar != null && fnc.KindFnc != EKind.constructor_) {
 
                         TypeText(fnc.TypeVar, sw);
                         sw.Fmt(' ');
@@ -707,10 +872,27 @@ namespace Miyu {
                     }
                     sw.Fmt(EKind.RP);
 
-                    StatementText(fnc.BlockFnc, sw, 2);
+                    if(fnc.BaseApp != null) {
+                        sw.Fmt(' ', EKind.Colon, ' ');
+                        TermText(fnc.BaseApp, sw);
+                        sw.Fmt(' ');
+                    }
+
+                    if (fnc.ModifierVar != null && fnc.ModifierVar.isAbstract) {
+
+                        sw.Fmt(EKind.SemiColon, EKind.NL);
+                    }
+                    else {
+
+                        StatementText(fnc.BlockFnc, sw, 2);
+                    }
                 }
 
                 sw.TAB(1);
+                sw.Fmt(EKind.RC, EKind.NL);
+            }
+
+            if (src.Namespace != null) {
                 sw.Fmt(EKind.RC, EKind.NL);
             }
         }

@@ -18,9 +18,14 @@ namespace Miyu {
 
         FunctionApply,
 
-        LineComment,    // 行コメント      ( // )
-        BlockComment,   // ブロックコメント ( /* */ )
-        BlockCommentContinued,   // */で閉じてないブロックコメント
+        // 行コメント      ( // )
+        LineComment,
+
+        // ブロックコメント ( /* */ )
+        BlockComment,
+
+        // */で閉じてないブロックコメント
+        BlockCommentContinued,   
 
         NL,
         Tab,

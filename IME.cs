@@ -2,7 +2,6 @@
 using System.Linq;
 using Windows.Foundation;
 using Windows.UI.Xaml;
-
 using System.Diagnostics;
 using Windows.UI.Text.Core;
 using Windows.ApplicationModel.Core;
@@ -11,7 +10,8 @@ using Windows.Globalization;
 using System.Threading.Tasks;
 
 namespace Miyu {
-    public partial class MyEditor {
+
+    partial class MyEditor {
         // IMEの操作は主にこのオブジェクトを使います。
         CoreTextEditContext editContext;
 
@@ -241,7 +241,6 @@ namespace Miyu {
                 // 選択範囲のテキストを囲む矩形はCanvasを囲む矩形とします。
                 ev.Request.LayoutBounds.TextBounds = canvas_rect;
             }
-
         }
 
         /*

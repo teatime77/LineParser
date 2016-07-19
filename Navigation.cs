@@ -66,7 +66,6 @@ namespace Miyu {
 
             if (trm is TLiteral) {
                 LiteralNavi(trm as TLiteral, args);
-
             }
             else if (trm is TReference) {
                 ReferenceNavi(trm as TReference, args);
@@ -194,6 +193,9 @@ namespace Miyu {
                 else if (stmt is TFor) {
                     ForNavi(stmt as TFor, args);
                 }
+                else if (stmt is TLock) {
+                    LockNavi(stmt as TLock, args);
+                }
                 else if (stmt is TWhile) {
                     WhileNavi(stmt as TWhile, args);
                 }
@@ -317,6 +319,18 @@ namespace Miyu {
             AfterAction(cat, args);
         }
 
+        public virtual void LockNavi(TLock lck, List<object> args) {
+            BeforeAction(lck, args);
+
+            TermNavi(lck.LockObj, args);
+
+            foreach (TStatement stmt in lck.StatementsBlc) {
+                StatementNavi(stmt, args);
+            }
+
+            AfterAction(lck, args);
+        }
+
         public virtual void WhileNavi(TWhile wh, List<object> args) {
             BeforeAction(wh, args);
 
@@ -374,7 +388,6 @@ namespace Miyu {
         void SubTerm(TTerm trm) {
             if (trm is TLiteral) {
                 TLiteral lit = trm as TLiteral;
-
             }
             else if (trm is TReference) {
                 if(trm is TDotReference) {
@@ -383,31 +396,25 @@ namespace Miyu {
                 }
                 else {
                     TReference ref1 = trm as TReference;
-
                 }
             }
             else if (trm is TApply) {
                 if(trm is TDotApply) {
                     TDotApply dapp = trm as TDotApply;
-
                 }
                 else if(trm is TNewApply) {
                     TNewApply napp = trm as TNewApply;
-
                 }
                 else {
                     TApply app = trm as TApply;
-
                 }
             }
             else if(trm is TQuery) {
                 if(trm is TFrom) {
                     TFrom frm = trm as TFrom;
-
                 }
                 else {
                    TAggregate agg = trm as TAggregate;
-
                 }
             }
             else {
@@ -431,7 +438,6 @@ namespace Miyu {
             else if (stmt is TBlockStatement) {
                 TBlockStatement blc_stmt = stmt as TBlockStatement;
 
-
                 if (stmt is TBlock) {
                     TBlock block = stmt as TBlock;
                 }
@@ -446,6 +452,9 @@ namespace Miyu {
                 }
                 else if (stmt is TFor) {
                     TFor for1 = stmt as TFor;
+                }
+                else if (stmt is TLock) {
+                    TLock lck = stmt as TLock;
                 }
                 else if (stmt is TWhile) {
                     TWhile while1 = stmt as TWhile;
@@ -509,4 +518,3 @@ namespace Miyu {
         }
     }
 }
-
