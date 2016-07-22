@@ -38,6 +38,9 @@ namespace Miyu {
         Average,
     }
 
+    public class _weak : Attribute {
+    }
+
     public class TEnv {
         [ThreadStatic]
         public static TProject Project;
@@ -102,6 +105,10 @@ namespace Miyu {
     //------------------------------------------------------------ TType
 
     public partial class TType : TEnv {
+        public List<TField> Fields = new List<TField>();
+        public List<TFunction> Functions = new List<TFunction>();
+
+        [_weak]
         public static int CountClass;
         public int IdxClass;
         public TToken[] CommentCls;
@@ -120,8 +127,6 @@ namespace Miyu {
         public TType[] ArgTypes;
 
         public List<TType> SuperClasses = new List<TType>();
-        public List<TField> Fields = new List<TField>();
-        public List<TFunction> Functions = new List<TFunction>();
 
         public List<TType> SubClasses;
 
@@ -267,11 +272,12 @@ namespace Miyu {
     }
 
     public class TGenericClass : TType {
-        public TGenericClass OrgCla;
         public bool ContainsArgumentClass;
         public int DimCnt;
         public bool SetMember;
 
+        [_weak]
+        public TGenericClass OrgCla;
         public List<TType> GenCla;
 
         public TGenericClass(string name, List<TType> arg_classes) : base(name) {
@@ -298,11 +304,13 @@ namespace Miyu {
 
     public partial class TVariable : TEnv {
         public TModifier ModifierVar;
-        public TToken TokenVar;
         public string NameVar;
-        public TType TypeVar;
         public TTerm InitValue;
-        public TAttribute AttributeVar;
+        public List<TAttribute> Attributes;
+
+        [_weak]
+        public TToken TokenVar;
+        public TType TypeVar;
 
         public TVariable() {
         }
@@ -359,6 +367,8 @@ namespace Miyu {
 
     public class TMember : TVariable {
         public TToken[] CommentVar;
+
+        [_weak]
         public TType ClassMember;
 
         public TMember(TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
@@ -369,6 +379,8 @@ namespace Miyu {
     }
 
     public class TField : TMember {
+        public bool IsWeak;
+
         public TField(TType parent_class, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
             ClassMember = parent_class;
         }
@@ -393,15 +405,17 @@ namespace Miyu {
     }
 
     public partial class TFunction : TMember {
+        public TVariable[] ArgsFnc;
+        public TBlock BlockFnc = new TBlock();
+
         public static int LambdaCnt;
         public EKind KindFnc;
-        public TVariable[] ArgsFnc;
         public TApply BaseApp;
-        public TBlock BlockFnc = new TBlock();
         public TTerm LambdaFnc;
-        public MethodInfo InfoFnc;
         public string FunctionSignature = null;
 
+        [_weak]
+        public MethodInfo InfoFnc;
         public List<TReference> RefFnc = new List<TReference>();
         public List<TApply> AppFnc = new List<TApply>();
 
@@ -496,13 +510,15 @@ namespace Miyu {
     //------------------------------------------------------------ TTerm
 
     public abstract partial class TTerm : TEnv {
+        public bool WithParenthesis;
+        public bool IsType;
+
+        [_weak]
         public TStatement ParentStatementTrm;
         public object ParentTrm;
         public TToken TokenTrm;
         public TType CastType;
         public TType TypeTrm;
-        public bool WithParenthesis;
-        public bool IsType;
     }
 
     public partial class TLiteral : TTerm {
@@ -515,6 +531,8 @@ namespace Miyu {
         public string NameRef;
         public bool IsOut;
         public bool IsRef;
+
+        [_weak]
         public TVariable VarRef;
         public TType ClassRef;
 
@@ -543,8 +561,10 @@ namespace Miyu {
 
     public partial class TApply : TTerm {
         public EKind KindApp;
-        public TTerm FunctionApp;
         public TTerm[] Args;
+
+        [_weak]
+        public TTerm FunctionApp;
 
         public TApply() {
         }
@@ -594,8 +614,10 @@ namespace Miyu {
     }
 
     public class TNewApply : TApply {
-        public TType ClassApp;
         public List<TTerm> InitList;
+
+        [_weak]
+        public TType ClassApp;
 
         public TNewApply(EKind kind, TToken class_token, TType cls, TTerm[] args, List<TTerm> init) {
             TokenTrm = class_token;
@@ -614,26 +636,20 @@ namespace Miyu {
         }
     }
 
-    public partial class TQuery : TTerm {
+    public partial class TFrom : TTerm {
         public TVariable VarQry;
         public TTerm SeqQry;
         public TTerm CndQry;
-    }
-
-    public partial class TFrom : TQuery {
         public TTerm SelFrom;
-        public TTerm TakeFrom;
         public TFrom InnerFrom;
-    }
-
-    public partial class TAggregate : TQuery {
-        public TTerm IntoAggr;
     }
 
     //------------------------------------------------------------ TStatement
 
     public abstract partial class TStatement : TEnv {
         public TToken[] CommentStmt;
+
+        [_weak]
         public object ParentStmt;
         public TStatement PrevStatement;
         public TFunction ParentFunctionStmt;
@@ -665,7 +681,6 @@ namespace Miyu {
     }
 
     public partial class TBlock : TBlockStatement {
-        public List<TVariable> VariablesBlc = new List<TVariable>();
     }
 
     public partial class TIfBlock : TBlockStatement {
@@ -741,6 +756,7 @@ namespace Miyu {
 
     public class TAttribute : TStatement {
         public TType Attr;
+
         public TAttribute(TType attr) {
             Attr = attr;
         }

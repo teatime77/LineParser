@@ -29,6 +29,8 @@ class Assembly {
 }
 class AssemblyName {
 }
+class Attribute {
+}
 class bool {
 }
 class byte {

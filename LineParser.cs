@@ -1345,7 +1345,10 @@ namespace Miyu {
                                     TVariable var1 = obj as TVariable;
 
                                     if (prev_obj is TAttribute) {
-                                        var1.AttributeVar = prev_obj as TAttribute;
+                                        if(var1.Attributes == null) {
+                                            var1.Attributes = new List<TAttribute>();
+                                        }
+                                        var1.Attributes.Add(prev_obj as TAttribute);
                                     }
 
                                     if (cls != null) {

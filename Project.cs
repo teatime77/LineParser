@@ -17,6 +17,11 @@ namespace Miyu {
 
     //------------------------------------------------------------ TProject
     public partial class TProject : TEnv {
+        public static string OutputDir = ApplicationData.Current.LocalFolder.Path + "\\out";
+
+        public List<TType> AppClasses;
+
+        [_weak]
         public TType IntClass;
         public TType FloatClass;
         public TType DoubleClass;
@@ -27,7 +32,8 @@ namespace Miyu {
         public TType VoidClass;
         public TType TypeClass;
         public TType ActionClass;
-       public TGenericClass ArrayClass;
+
+        public TGenericClass ArrayClass;
         public TGenericClass EnumerableClass;
         public TType NullClass = new TType("null class");
         public TType HandlerClass = new TType("handler class");
@@ -69,6 +75,34 @@ namespace Miyu {
             OpenProject();
 
             Modified = new ManualResetEvent(true);
+        }
+
+        /*
+        フィールドの弱参照(IsWeak)を設定します。
+        弱参照のフィールドの後ろにあるフィールドは弱参照とします。
+        */
+        public void SetWeakField() {
+            foreach (TType c in AppClasses) {
+                bool weak_field_is_found = false;
+
+                foreach (TField fld in c.Fields) {
+                    if (!weak_field_is_found) {
+                        // 弱参照のフィールドが前にない場合
+
+                        if (fld.Attributes != null && (from a in fld.Attributes where a.Attr.ClassName == "_weak" select a).Any()) {
+                            // 弱参照のフィールドの場合
+
+                            weak_field_is_found = true;
+                            fld.IsWeak = true;
+                        }
+                    }
+                    else {
+                        // 弱参照のフィールドの後ろにある場合
+
+                        fld.IsWeak = true;
+                    }
+                }
+            }
         }
 
         public void Build() {
@@ -138,16 +172,21 @@ namespace Miyu {
 
                     ParseDone = true;
 
+                    // アプリのクラスのリスト
+                    AppClasses = (from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x).ToList();
+
+                    // フィールドの弱参照(IsWeak)を設定します。
+                    SetWeakField();
+
                     foreach (TSourceFile src in SourceFiles) {
                         src.Parser.ResolveName(src);
                     }
                     Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
                     tick = DateTime.Now;
-                    string out_dir = ApplicationData.Current.LocalFolder.Path + "\\out";
-                    string html_dir = ApplicationData.Current.LocalFolder.Path + "\\out\\html";
-                    if (!Directory.Exists(out_dir)) {
-                        Directory.CreateDirectory(out_dir);
+                    string html_dir = OutputDir + "\\html";
+                    if (!Directory.Exists(OutputDir)) {
+                        Directory.CreateDirectory(OutputDir);
                     }
                     if (!Directory.Exists(html_dir)) {
                         Directory.CreateDirectory(html_dir);
@@ -159,13 +198,17 @@ namespace Miyu {
 
                         string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
 
-                        File.WriteAllText(out_dir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
+                        File.WriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
                         File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(), Encoding.UTF8);
                     }
 
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    tick = DateTime.Now;
 
                     MakeCallGraph();
+                    MakeClassDiagram();
+
+                    Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {
                 }

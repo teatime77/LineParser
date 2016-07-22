@@ -28,12 +28,11 @@ namespace Miyu {
             set_app_fnc.ProjectNavi(this, null);
 
             var vcls = from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x;
+
+            TType main_class = (from x in vcls where x.ClassName == "TProject" select x).First();
+
+
             var vfnc = from c in vcls from f in c.Functions select f;
-            foreach(TFunction f in vfnc) {
-                foreach(TReference ref1 in f.RefFnc) {
-                    //Debug.WriteLine("{0} -> {1}", f.FullName(), ref1.NameRef);
-                }
-            }
 
             Dictionary<string, TFncCall> dic = new Dictionary<string, TFncCall>();
 
@@ -45,8 +44,7 @@ namespace Miyu {
             Stack<TFncCall> stack = new Stack<TFncCall>();
             DmpFncCall(sw, stack, main_call, 0);
 
-            string out_dir = ApplicationData.Current.LocalFolder.Path + "\\out";
-            File.WriteAllText(out_dir + "\\DmpFncCall.txt", sw.ToString(), Encoding.UTF8);
+            File.WriteAllText(OutputDir + "\\DmpFncCall.txt", sw.ToString(), Encoding.UTF8);
 
             TNode.NodeCnt = 0;
             var vnd = (from x in dic.Values select new TNode(x)).ToList();
@@ -58,7 +56,7 @@ namespace Miyu {
                 }
             }
 
-            WriteDotFile("コールグラフ", vnd, out_dir + "\\FncCall.dot");
+            WriteDotFile("コールグラフ", vnd, OutputDir + "\\FncCall.dot");
         }
 
         public void DmpFncCall(StringWriter sw, Stack<TFncCall> stack, TFncCall fnc_call, int nest) {
@@ -174,6 +172,35 @@ namespace Miyu {
                     sw.WriteLine(" }");
                 }
             }
+        }
+
+        public void MakeClassDiagram() {
+            StringWriter sw = new StringWriter();
+
+            sw.WriteLine("@startuml");
+            sw.WriteLine("title <size:18>クラス図</size>");
+
+            foreach(TType c in AppClasses) {
+                if(c.KindClass != EClass.Enum) {
+
+                    sw.WriteLine("class {0} {{", c.ClassName);
+                    sw.WriteLine("\t[[http://www.google.com]]");
+
+                    foreach (TField fld in c.Fields) {
+                        sw.WriteLine("\t\t{0} {1}", fld.TypeVar.GetClassText(), fld.NameVar);
+                    }
+
+                    sw.WriteLine("}");
+
+                    foreach(TType c2 in c.SuperClasses) {
+                        sw.WriteLine("{0} <|-- {1}", c2.ClassName, c.ClassName);
+                    }
+                }
+            }
+
+            sw.WriteLine("@enduml");
+
+            File.WriteAllText(OutputDir + "\\ClassDiagram.txt", sw.ToString(), new UTF8Encoding(false));
         }
     }
 

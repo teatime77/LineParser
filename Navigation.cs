@@ -73,13 +73,8 @@ namespace Miyu {
             else if (trm is TApply) {
                 ApplyNavi(trm as TApply, args);
             }
-            else if (trm is TQuery) {
-                if (trm is TFrom) {
-                    FromNavi(trm as TFrom, args);
-                }
-                else {
-                    AggregateNavi(trm as TAggregate, args);
-                }
+            else if (trm is TFrom) {
+                FromNavi(trm as TFrom, args);
             }
             else {
                 Debug.Assert(false);
@@ -133,22 +128,9 @@ namespace Miyu {
             TermNavi(frm.CndQry, args);
 
             TermNavi(frm.SelFrom, args);
-            TermNavi(frm.TakeFrom, args);
             TermNavi(frm.InnerFrom, args);
 
             AfterAction(frm, args);
-        }
-
-        public virtual void AggregateNavi(TAggregate aggr, List<object> args) {
-            BeforeAction(aggr, args);
-
-            VariableNavi(aggr.VarQry, args);
-            TermNavi(aggr.SeqQry, args);
-            TermNavi(aggr.CndQry, args);
-
-            TermNavi(aggr.IntoAggr, args);
-
-            AfterAction(aggr, args);
         }
 
         public virtual void StatementNavi(TStatement stmt, List<object> args) {
@@ -409,13 +391,8 @@ namespace Miyu {
                     TApply app = trm as TApply;
                 }
             }
-            else if(trm is TQuery) {
-                if(trm is TFrom) {
-                    TFrom frm = trm as TFrom;
-                }
-                else {
-                   TAggregate agg = trm as TAggregate;
-                }
+            else if (trm is TFrom) {
+                TFrom frm = trm as TFrom;
             }
             else {
                 Debug.Assert(false);

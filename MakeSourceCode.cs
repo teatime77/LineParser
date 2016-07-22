@@ -506,32 +506,25 @@ namespace Miyu {
                     break;
                 }
             }
-            else if (term is TQuery) {
-                TQuery qry = term as TQuery;
+            else if (term is TFrom) {
+                TFrom from1 = term as TFrom;
 
-                if (term is TFrom) {
-                    TFrom from1 = term as TFrom;
+                sw.Fmt(EKind.from_, ' ', from1.VarQry, ' ', EKind.in_, ' ');
+                TermText(from1.SeqQry, sw);
 
-                    sw.Fmt(EKind.from_, ' ', from1.VarQry, ' ', EKind.in_, ' ');
-                    TermText(from1.SeqQry, sw);
-
-                    if(from1.CndQry != null) {
-                        sw.Fmt(' ', EKind.where_, ' ');
-                        TermText(from1.CndQry, sw);
-                    }
-
-                    if (from1.SelFrom != null) {
-                        sw.Fmt(' ', EKind.select_, ' ');
-                        TermText(from1.SelFrom, sw);
-                    }
-
-                    if (from1.InnerFrom != null) {
-                        sw.Fmt(' ');
-                        TermText(from1.InnerFrom, sw);
-                    }
+                if (from1.CndQry != null) {
+                    sw.Fmt(' ', EKind.where_, ' ');
+                    TermText(from1.CndQry, sw);
                 }
-                else {
-                    TAggregate aggr = term as TAggregate;
+
+                if (from1.SelFrom != null) {
+                    sw.Fmt(' ', EKind.select_, ' ');
+                    TermText(from1.SelFrom, sw);
+                }
+
+                if (from1.InnerFrom != null) {
+                    sw.Fmt(' ');
+                    TermText(from1.InnerFrom, sw);
                 }
             }
             else {
@@ -796,11 +789,16 @@ namespace Miyu {
             }
         }
 
-        public void AttributeText(int nest, TAttribute attr, TTokenWriter sw) {
-            if(attr != null) {
+        public void AttributesText(int nest, List<TAttribute> attrs, TTokenWriter sw) {
+            if(attrs != null) {
                 sw.TAB(nest);
                 sw.Fmt(EKind.LB);
-                TypeText(attr.Attr, sw);
+                foreach(TAttribute attr in attrs) {
+                    if(attr != attrs[0]) {
+                        sw.Fmt(EKind.Comma);
+                    }
+                    TypeText(attr.Attr, sw);
+                }
                 sw.Fmt(EKind.RB, EKind.NL);
             }
         }
@@ -954,7 +952,7 @@ namespace Miyu {
                 foreach (TField fld in vfld) {
                     WriteComment(fld.CommentVar, sw);
 
-                    AttributeText(2, fld.AttributeVar, sw);
+                    AttributesText(2, fld.Attributes, sw);
 
                     sw.TAB(2);
 
@@ -973,7 +971,7 @@ namespace Miyu {
                 foreach (TFunction fnc in vfnc) {
 
                     WriteComment(fnc.CommentVar, sw);
-                    AttributeText(2, fnc.AttributeVar, sw);
+                    AttributesText(2, fnc.Attributes, sw);
                     sw.TAB(2);
 
                     ModifierText(fnc.ModifierVar, sw);

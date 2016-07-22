@@ -432,29 +432,20 @@ namespace Miyu {
         }
     }
 
-    partial class TQuery {
+    partial class TFrom {
         public override void ResolveName(TType cls, List<TVariable> vars) {
+            vars.Add(VarQry);
+
             SeqQry.ResolveName(cls, vars);
             VarQry.TypeVar = SeqQry.TypeTrm.ElementType();
 
             if(CndQry != null) {
                 CndQry.ResolveName(cls, vars);
             }
-        }
-    }
-
-    partial class TFrom {
-        public override void ResolveName(TType cls, List<TVariable> vars) {
-            vars.Add(VarQry);
-            base.ResolveName(cls, vars);
 
             if(SelFrom != null) {
 
                 SelFrom.ResolveName(cls, vars);
-            }
-
-            if (TakeFrom != null) {
-                TakeFrom.ResolveName(cls, vars);
             }
 
             if (InnerFrom != null) {
@@ -465,23 +456,6 @@ namespace Miyu {
             else {
 
                 TypeTrm = Project.GetSpecializedClass(Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm }, 0);
-            }
-
-            vars.RemoveAt(vars.Count - 1);
-
-            if (CastType != null) {
-                TypeTrm = CastType;
-            }
-        }
-    }
-
-    partial class TAggregate {
-        public override void ResolveName(TType cls, List<TVariable> vars) {
-            vars.Add(VarQry);
-            base.ResolveName(cls, vars);
-
-            if (IntoAggr != null) {
-                IntoAggr.ResolveName(cls, vars);
             }
 
             vars.RemoveAt(vars.Count - 1);
