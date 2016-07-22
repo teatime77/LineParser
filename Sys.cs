@@ -53,6 +53,8 @@ class Colors {
 }
 class Color {
 }
+class Colors {
+}
 class CoreApplication {
 }
 class CoreCursor {

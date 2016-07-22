@@ -155,16 +155,19 @@ namespace Miyu {
                     VarRef = dot_ref.DotRef.TypeTrm.FindField(NameRef);
                     throw new TResolveNameException(this);
                 }
+
                 TypeTrm = VarRef.TypeVar;
             }
             else {
                 if(ClassRef != null) {
+                    // クラスを参照している場合
 
                     TypeTrm = ClassRef;
                     return;
                 }
 
                 if(TokenTrm == null) {
+                    // ラムダ関数を参照している場合
 
                     Debug.Assert(VarRef is TFunction);
                     TFunction lambda = VarRef as TFunction;
@@ -197,6 +200,7 @@ namespace Miyu {
 
                     throw new TResolveNameException();
                 }
+
                 switch (TokenTrm.Kind) {
                 case EKind.this_:
                     TypeTrm = cls;
@@ -258,7 +262,13 @@ namespace Miyu {
                 }
             }
 
-            if(CastType != null) {
+            if(VarRef != null) {
+
+                Debug.Assert(!VarRef.RefsVar.Contains(this));
+                VarRef.RefsVar.Add(this);
+            }
+
+            if (CastType != null) {
 
                 TypeTrm = CastType;
             }

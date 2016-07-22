@@ -195,7 +195,7 @@ namespace Miyu {
                 if (gen.GenCla[0].ClassName == "T") {
                     return null;
                 }
-                if (ClassName == "List" || ClassName == "Array" || ClassName == "IEnumerable" || ClassName == "Enumerable") {
+                if (ClassName == "List" || ClassName == "Stack" || ClassName == "Array" || ClassName == "IEnumerable" || ClassName == "Enumerable") {
 
                     return gen.GenCla[0];
                 }
@@ -309,6 +309,7 @@ namespace Miyu {
         public List<TAttribute> Attributes;
 
         [_weak]
+        public List<TReference> RefsVar = new List<TReference>();
         public TToken TokenVar;
         public TType TypeVar;
 
@@ -416,7 +417,7 @@ namespace Miyu {
 
         [_weak]
         public MethodInfo InfoFnc;
-        public List<TReference> RefFnc = new List<TReference>();
+        public List<TReference> ReferencesInFnc = new List<TReference>();
         public List<TApply> AppFnc = new List<TApply>();
 
         public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
@@ -531,6 +532,7 @@ namespace Miyu {
         public string NameRef;
         public bool IsOut;
         public bool IsRef;
+        public bool Defined;
 
         [_weak]
         public TVariable VarRef;

@@ -505,7 +505,7 @@ namespace Miyu {
 
             if (self is TReference) {
                 if(Funcs.Count != 0) {
-                    Funcs.Peek().RefFnc.Add(self as TReference);
+                    Funcs.Peek().ReferencesInFnc.Add(self as TReference);
                 }
             }
             else if (self is TFunction) {
@@ -555,6 +555,21 @@ namespace Miyu {
             if (self is TFunction) {
                 Funcs.Pop();
             }
+        }
+    }
+
+    public class TSetDefined : TNavigation {
+        public override void BeforeAction(object self, List<object> args) {
+            if(self is TAssignment) {
+                TAssignment asn = self as TAssignment;
+
+                if(asn.RelAsn.Args[0] is TReference) {
+                    (asn.RelAsn.Args[0] as TReference).Defined = true;
+                }
+            }
+        }
+
+        public override void AfterAction(object self, List<object> args) {
         }
     }
 }

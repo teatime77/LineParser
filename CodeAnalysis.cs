@@ -15,12 +15,10 @@ using Windows.UI.Xaml;
 namespace Miyu {
 
     partial class TProject {
+        /*
+        コールグラフを作ります。
+        */
         public void MakeCallGraph() {
-            TType tt = (from x in ClassTable.Values where x.ClassName == "TDotReference" select x).First();
-            foreach(TType t in tt.ThisAncestorSuperClasses()) {
-                Debug.WriteLine("super : {0}", t.ClassName, "");
-            }
-
             TSetRefFnc set_ref_fnc = new TSetRefFnc();
             set_ref_fnc.ProjectNavi(this, null);
 
@@ -31,18 +29,17 @@ namespace Miyu {
 
             TType main_class = (from x in vcls where x.ClassName == "TProject" select x).First();
 
-
             var vfnc = from c in vcls from f in c.Functions select f;
 
             Dictionary<string, TFncCall> dic = new Dictionary<string, TFncCall>();
 
             TFunction main = (from f in vfnc where f.NameVar == "Main" select f).First();
            
-            TFncCall main_call = CallGraphSub(dic, null, main.ClassMember, main);
+            MainCall = CallGraphSub(dic, null, main.ClassMember, main);
 
             StringWriter sw = new StringWriter();
             Stack<TFncCall> stack = new Stack<TFncCall>();
-            DmpFncCall(sw, stack, main_call, 0);
+            DmpFncCall(sw, stack, MainCall, 0);
 
             File.WriteAllText(OutputDir + "\\DmpFncCall.txt", sw.ToString(), Encoding.UTF8);
 
@@ -124,7 +121,7 @@ namespace Miyu {
                 }
             }
 
-            var vlambda = from x in fnc.RefFnc where x.VarRef is TFunction && (x.VarRef as TFunction).KindFnc == EKind.Lambda select (x.VarRef as TFunction);
+            var vlambda = from x in fnc.ReferencesInFnc where x.VarRef is TFunction && (x.VarRef as TFunction).KindFnc == EKind.Lambda select (x.VarRef as TFunction);
             foreach(TFunction lambda in vlambda) {
 
                 CallGraphSub(dic, fnc_call, tp, lambda);
@@ -152,7 +149,14 @@ namespace Miyu {
             foreach(TNode nd1 in vnd) {
                 //sw.WriteLine("\tn{0} [shape = ellipse, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
                 //sw.WriteLine("\tn{0} [shape = circle, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
-                sw.WriteLine("\tn{0} [shape = box, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
+                if(nd1.FontColor == Colors.Blue) {
+
+                    sw.WriteLine("\tn{0} [shape = box, label = \"{1}\", fontcolor = blue ];", nd1.IdxNode, nd1.NameNode);
+                }
+                else {
+
+                    sw.WriteLine("\tn{0} [shape = box, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
+                }
             }
             foreach (TNode nd1 in vnd) {
                 foreach(TNode nd2 in nd1.OutNodes) {
@@ -174,6 +178,83 @@ namespace Miyu {
             }
         }
 
+        public void MakeUseDefineChainSub(TField fld, List<TFncCall> defined_path, Stack<TFncCall> stack, TFncCall fnc_call) {
+            if (stack.Contains(fnc_call) || defined_path.Contains(fnc_call)) {
+                return;
+            }
+            stack.Push(fnc_call);
+
+            var v = from r in fnc_call.FncCall.ReferencesInFnc where r.Defined && r.VarRef == fld select r;
+            if (v.Any()) {
+                fnc_call.FontColor = Colors.Blue;
+
+                defined_path.AddRange( (from x in stack where ! defined_path.Contains(x) select x).ToList() );
+            }
+            else {
+
+                fnc_call.FontColor = Colors.Black;
+            }
+
+            foreach (TFncCall c in fnc_call.CallTo) {
+                MakeUseDefineChainSub(fld, defined_path,stack, c);
+            }
+
+            stack.Pop();
+        }
+
+        /*
+        使用・定義連鎖を作ります。
+        */
+        public void MakeUseDefineChain() {
+            string use_def_dir = OutputDir + "\\UseDef";
+
+            if (! Directory.Exists(use_def_dir)) {
+                Directory.CreateDirectory(use_def_dir);
+            }
+
+            // アプリのクラスに対し
+            foreach (TType cls in AppClasses) {
+
+                // クラスのフィールドに対し
+                foreach (TField fld in cls.Fields) {
+
+                    // フィールドに値を代入する変数参照のリスト
+                    List<TReference> defined_refs = (from x in fld.RefsVar where x.Defined select x).ToList();
+
+                    if (defined_refs.Any()) {
+                        // フィールドに値を代入する変数参照がある場合
+
+                      List<TFncCall> defined_path = new List<TFncCall>();
+
+                      Stack<TFncCall> stack = new Stack<TFncCall>();
+                        MakeUseDefineChainSub(fld, defined_path, stack, MainCall);
+
+                        TNode.NodeCnt = 0;
+                        var vnd = (from x in defined_path select new TNode(x)).ToList();
+                        foreach (TNode nd1 in vnd) {
+                            TFncCall call = nd1.ObjNode as TFncCall;
+                            foreach (TFncCall c in call.CallTo) {
+                                var vnd2 = from x in vnd where x.ObjNode == c select x;
+                                if (vnd2.Any()) {
+
+                                    nd1.OutNodes.AddRange(vnd2);
+                                }
+                            }
+                        }
+
+                        if (vnd.Any()) {
+
+                            string dot_path = string.Format("{0}\\{1}.{2}.dot", use_def_dir, cls.ClassName, fld.NameVar);
+                            WriteDotFile("使用・定義連鎖", vnd, dot_path);
+                        }
+                    }
+                }
+            }
+        }
+
+        /*
+        クラス図を作ります。
+        */
         public void MakeClassDiagram() {
             StringWriter sw = new StringWriter();
 
@@ -209,6 +290,7 @@ namespace Miyu {
         public TFunction FncCall;
         public List<TFncCall> CallTo = new List<TFncCall>();
         public int MaxNest;
+        public Color FontColor = Colors.Black;
 
         public TFncCall(TType tp, TFunction fnc) {
             TypeCall = tp;
@@ -216,7 +298,15 @@ namespace Miyu {
         }
 
         public string Name() {
-            return TypeCall.GetClassText() + "->" + FncCall.FullName();
+            //return TypeCall.GetClassText() + "->" + FncCall.FullName();
+            if (FncCall.NameVar == null) {
+
+                return "λ";
+            }
+            else {
+
+                return FncCall.NameVar;
+            }
         }
     }
 
@@ -227,6 +317,7 @@ namespace Miyu {
         public object ObjNode;
         public int RankNode;
         public List<TNode> OutNodes = new List<TNode>();
+        public Color FontColor = Colors.Black;
 
         public TNode(TFncCall call) {
             IdxNode = NodeCnt;
@@ -235,6 +326,7 @@ namespace Miyu {
             NameNode = call.Name();
             ObjNode = call;
             RankNode = call.MaxNest;
+            FontColor = call.FontColor;
         }
     }
 }

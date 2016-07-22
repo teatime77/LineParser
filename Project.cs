@@ -52,6 +52,8 @@ namespace Miyu {
         public ManualResetEvent Modified;
         public bool ParseDone;
 
+        public TFncCall MainCall;
+
         public TProject() {
         }
 
@@ -192,6 +194,10 @@ namespace Miyu {
                         Directory.CreateDirectory(html_dir);
                     }
 
+                    // 値を代入している変数参照のDefinedをtrueにします。
+                    TSetDefined set_defined = new TSetDefined();
+                    set_defined.ProjectNavi(this, null);
+
                     foreach (TSourceFile src in SourceFiles) {
                         TTokenWriter tw = new TTokenWriter(src.Parser);
                         src.Parser.SourceFileText(src, tw);
@@ -206,6 +212,10 @@ namespace Miyu {
                     tick = DateTime.Now;
 
                     MakeCallGraph();
+
+                    // 使用・定義連鎖を作ります。
+                    MakeUseDefineChain();
+
                     MakeClassDiagram();
 
                     Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
