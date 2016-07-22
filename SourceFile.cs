@@ -9,7 +9,7 @@ using Windows.UI;
 
 namespace Miyu {
 
-    public class TSourceFile : TEnv {
+    public class TSourceFile {
         // 改行文字
         public const char LF = '\n';
 

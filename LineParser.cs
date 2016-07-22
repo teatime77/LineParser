@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Miyu {
 
-    public partial class TParser : TEnv {
+    public partial class TParser {
         public const int TabSize = 4;
         public const string HTMLHead = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n<html xmlns=\"http://www.w3.org/1999/xhtml\" >\r\n<head>\r\n<meta charset=\"utf-8\" />\r\n<title>Untitled Page</title>\r\n<style type=\"text/css\">\r\n.reserved {\r\n\tcolor: blue;\r\n}\r\n.class {\r\n\tcolor: Teal;\r\n}\r\n.string {\r\n\tcolor: red;\r\n}\r\n.comment {\r\n\tcolor: #008000;\r\n}\r\n</style>\r\n</head>\r\n<body>";
         public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
@@ -115,7 +115,7 @@ namespace Miyu {
                 }
                 GetToken(EKind.GT);
 
-                cls = Project.GetParameterizedClass(id.TextTkn, param_classes);
+                cls = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             else {
 
@@ -170,40 +170,40 @@ namespace Miyu {
             GetToken(EKind.EOT);
 
             if (cls.ClassName == "int") {
-                Project.IntClass = cls;
+                TEnv.Project.IntClass = cls;
             }
             else if (cls.ClassName == "float") {
-                Project.FloatClass = cls;
+                TEnv.Project.FloatClass = cls;
             }
             else if (cls.ClassName == "double") {
-                Project.DoubleClass = cls;
+                TEnv.Project.DoubleClass = cls;
             }
             else if (cls.ClassName == "char") {
-                Project.CharClass = cls;
+                TEnv.Project.CharClass = cls;
             }
             else if (cls.ClassName == "object") {
-                Project.ObjectClass = cls;
+                TEnv.Project.ObjectClass = cls;
             }
             else if (cls.ClassName == "string") {
-                Project.StringClass = cls;
+                TEnv.Project.StringClass = cls;
             }
             else if (cls.ClassName == "bool") {
-                Project.BoolClass = cls;
+                TEnv.Project.BoolClass = cls;
             }
             else if (cls.ClassName == "void") {
-                Project.VoidClass = cls;
+                TEnv.Project.VoidClass = cls;
             }
             else if (cls.ClassName == "Type") {
-                Project.TypeClass = cls;
+                TEnv.Project.TypeClass = cls;
             }
             else if (cls.ClassName == "Action") {
-                Project.ActionClass = cls;
+                TEnv.Project.ActionClass = cls;
             }
             else if (cls.ClassName == "Enumerable") {
-                Project.EnumerableClass = cls as TGenericClass;
+                TEnv.Project.EnumerableClass = cls as TGenericClass;
             }
             else if (cls.ClassName == "Array") {
-                Project.ArrayClass = cls as TGenericClass;
+                TEnv.Project.ArrayClass = cls as TGenericClass;
             }
 
             return cls;
@@ -247,7 +247,7 @@ namespace Miyu {
             }
             else {
 
-                dlg = Project.GetParameterizedClass(id.TextTkn, param_classes);
+                dlg = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
 
             List<TVariable> vars = ReadArgs(dlg);
@@ -372,7 +372,7 @@ namespace Miyu {
             else {
                 // 引数がある場合
 
-                cls2 = Project.GetSpecializedClass(cls1 as TGenericClass, param_classes, 0);
+                cls2 = TEnv.Project.GetSpecializedClass(cls1 as TGenericClass, param_classes, 0);
             }
 
             if (dim_cnt == 0) {
@@ -385,13 +385,13 @@ namespace Miyu {
 
             if (cls2.GenericType == EGeneric.ArgumentClass) {
 
-                TGenericClass tmp_class = new TGenericClass(Project.ArrayClass, array_element_class_list, dim_cnt);
+                TGenericClass tmp_class = new TGenericClass(TEnv.Project.ArrayClass, array_element_class_list, dim_cnt);
                 tmp_class.ContainsArgumentClass = true;
 
                 return tmp_class;
             }
 
-            return Project.GetSpecializedClass(Project.ArrayClass, array_element_class_list, dim_cnt);
+            return TEnv.Project.GetSpecializedClass(TEnv.Project.ArrayClass, array_element_class_list, dim_cnt);
         }
 
         public virtual void LineEnd() {
@@ -862,7 +862,7 @@ namespace Miyu {
                     return t1;
                 }
 
-                if(LambdaFunction != null) {
+                if(TEnv.LambdaFunction != null) {
 
                     GetToken(EKind.EOT);
                 }
@@ -995,8 +995,8 @@ namespace Miyu {
 
                     case EKind.RC:
                         GetToken(EKind.RC);
-                        if (CurTkn.Kind == EKind.RP && InLambdaFunction) {
-                            InLambdaFunction = false;
+                        if (CurTkn.Kind == EKind.RP && TEnv.InLambdaFunction) {
+                            TEnv.InLambdaFunction = false;
                             GetToken(EKind.RP);
                         }
 
@@ -1307,7 +1307,7 @@ namespace Miyu {
                             }
 
                             //Debug.Write(string.Format("行解析 {0}", line.TextLine));
-                            LambdaFunction = null;
+                            TEnv.LambdaFunction = null;
                             object obj = ParseLine(src, cls, parent_fnc, parent_stmt, line_top_idx, line.Tokens);
                             if (obj != null) {
 
@@ -1315,14 +1315,14 @@ namespace Miyu {
                                     obj_stack.Add(null);
                                 }
 
-                                if (LambdaFunction != null) {
-                                    obj_stack.Add(LambdaFunction);
+                                if (TEnv.LambdaFunction != null) {
+                                    obj_stack.Add(TEnv.LambdaFunction);
 
-                                    LambdaFunction.ClassMember = cls;
-                                    cls.Functions.Add(LambdaFunction);
-                                    src.FunctionsSrc.Add(LambdaFunction);
+                                    TEnv.LambdaFunction.ClassMember = cls;
+                                    cls.Functions.Add(TEnv.LambdaFunction);
+                                    src.FunctionsSrc.Add(TEnv.LambdaFunction);
 
-                                    LambdaFunction = null;
+                                    TEnv.LambdaFunction = null;
                                 }
                                 else {
 
@@ -1630,10 +1630,10 @@ namespace Miyu {
                     TToken lambda = GetToken(EKind.Lambda);
                     GetToken(EKind.LC);
 
-                    LambdaFunction = new TFunction(lambda);
-                    InLambdaFunction = true;
+                    TEnv.LambdaFunction = new TFunction(lambda);
+                    TEnv.InLambdaFunction = true;
 
-                    return new TReference(LambdaFunction);
+                    return new TReference(TEnv.LambdaFunction);
                 }
 
                 term = Expression();
@@ -1742,7 +1742,7 @@ namespace Miyu {
 
                         TTerm[] args = ExpressionList().ToArray();
 
-                        if(LambdaFunction == null) {
+                        if(TEnv.LambdaFunction == null) {
 
                             GetToken(EKind.RP);
                         }

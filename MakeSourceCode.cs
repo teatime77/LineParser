@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 
 namespace Miyu {
-    public class TTokenWriter : TEnv {
+    public class TTokenWriter {
         public List<TToken> TokenListTW = new List<TToken>();
 
         public TTokenWriter(TParser parser) {
-            Parser = parser;
+            TEnv.Parser = parser;
         }
 
         public void AddToken(EKind kind) {
@@ -113,7 +113,7 @@ namespace Miyu {
 
                 default:
                     string s = "";
-                    if(Parser.KindString.TryGetValue(tk.Kind, out s)) {
+                    if(TEnv.Parser.KindString.TryGetValue(tk.Kind, out s)) {
 
                         sw.Write(s);
                     }
@@ -218,7 +218,7 @@ namespace Miyu {
 
                 default:
                     string s = "";
-                    if (Parser.KindString.TryGetValue(tk.Kind, out s)) {
+                    if (TEnv.Parser.KindString.TryGetValue(tk.Kind, out s)) {
 
                         if (char.IsLetter(s[0])) {
 

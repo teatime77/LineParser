@@ -104,7 +104,7 @@ namespace Miyu {
 
     //------------------------------------------------------------ TType
 
-    public partial class TType : TEnv {
+    public partial class TType {
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
 
@@ -186,8 +186,8 @@ namespace Miyu {
         public TType ElementType() {
             TType tp;
 
-            if (this == Project.StringClass) {
-                return Project.CharClass;
+            if (this == TEnv.Project.StringClass) {
+                return TEnv.Project.CharClass;
             }
             if(this is TGenericClass) {
                 TGenericClass gen = this as TGenericClass;
@@ -209,14 +209,14 @@ namespace Miyu {
 
                     int k = Info.Name.IndexOf('[');
                     string name = Info.Name.Substring(0, k);
-                    tp = Project.GetClassByName(name);
+                    tp = TEnv.Project.GetClassByName(name);
                     if (tp != null) {
                         return tp;
                     }
                 }
 
                 Type t = Info.GenericTypeArguments[0];
-                tp = Project.GetClassByName(t.Name);
+                tp = TEnv.Project.GetClassByName(t.Name);
                 if (tp != null) {
                     return tp;
                 }
@@ -230,7 +230,7 @@ namespace Miyu {
 
             //    return true;
             //}
-            TProject p = Project;
+            TProject p = TEnv.Project;
             if(KindClass == EClass.Enum || this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
                 return true;
             }
@@ -293,7 +293,7 @@ namespace Miyu {
         public override string GetClassText() {
             if(ClassText == null) {
 
-                ClassText = Project.MakeClassText(ClassName, GenCla, DimCnt);
+                ClassText = TEnv.Project.MakeClassText(ClassName, GenCla, DimCnt);
             }
 
             return ClassText;
@@ -302,7 +302,7 @@ namespace Miyu {
 
     //------------------------------------------------------------ TVariable
 
-    public partial class TVariable : TEnv {
+    public partial class TVariable {
         public TModifier ModifierVar;
         public string NameVar;
         public TTerm InitValue;
@@ -388,19 +388,19 @@ namespace Miyu {
         public TField(TType parent_class, FieldInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
+            TypeVar = TEnv.Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
         }
 
         public TField(TType parent_class, PropertyInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
+            TypeVar = TEnv.Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
         }
 
         public TField(TType parent_class, EventInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
+            TypeVar = TEnv.Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
         }
     }
 
@@ -442,7 +442,7 @@ namespace Miyu {
         public TFunction(TType parent_class, MethodInfo method_info) : base() {
             KindFnc = EKind.Undefined;
             InfoFnc = method_info;
-            TypeVar = Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
+            TypeVar = TEnv.Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
         }
 
         public string GetFunctionSignature() {
@@ -509,7 +509,7 @@ namespace Miyu {
 
     //------------------------------------------------------------ TTerm
 
-    public abstract partial class TTerm : TEnv {
+    public abstract partial class TTerm {
         public bool WithParenthesis;
         public bool IsType;
 
@@ -646,7 +646,7 @@ namespace Miyu {
 
     //------------------------------------------------------------ TStatement
 
-    public abstract partial class TStatement : TEnv {
+    public abstract partial class TStatement {
         public TToken[] CommentStmt;
 
         [_weak]

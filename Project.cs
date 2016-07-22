@@ -16,7 +16,7 @@ using Windows.UI.Xaml;
 namespace Miyu {
 
     //------------------------------------------------------------ TProject
-    public partial class TProject : TEnv {
+    public partial class TProject  {
         public static string OutputDir = ApplicationData.Current.LocalFolder.Path + "\\out";
 
         public List<TType> AppClasses;
@@ -64,11 +64,11 @@ namespace Miyu {
         }
 
         public void Init() {
-            Project = this;
+            TEnv.Project = this;
 
             TParser.theParser = new TParser(this);
             TCSharpParser.CSharpParser = new TCSharpParser(this);
-            Parser = TCSharpParser.CSharpParser;
+            TEnv.Parser = TCSharpParser.CSharpParser;
 
             SetAssemblyList();
 
@@ -108,8 +108,8 @@ namespace Miyu {
         public void Build() {
             DateTime tick;
 
-            Project = this;
-            Parser = TCSharpParser.CSharpParser;
+            TEnv.Project = this;
+            TEnv.Parser = TCSharpParser.CSharpParser;
 
             RegisterClassNames();
 
