@@ -517,4 +517,67 @@ namespace Miyu {
             args.RemoveAt(args.Count - 1);
         }
     }
+
+    public class TSetRefFnc : TNavigation {
+        public Stack<TFunction> Funcs = new Stack<TFunction>();
+
+        public override void BeforeAction(object self, List<object> args) {
+            if (self == null) {
+                return;
+            }
+
+            if (self is TReference) {
+                if(Funcs.Count != 0) {
+                    Funcs.Peek().RefFnc.Add(self as TReference);
+                }
+            }
+            else if (self is TFunction) {
+                Funcs.Push(self as TFunction);
+            }
+        }
+
+        public override void AfterAction(object self, List<object> args) {
+            if (self == null) {
+                return;
+            }
+
+            if (self is TFunction) {
+                Funcs.Pop();
+            }
+        }
+    }
+
+    public class TSetAppFnc : TNavigation {
+        public Stack<TFunction> Funcs = new Stack<TFunction>();
+
+        public override void BeforeAction(object self, List<object> args) {
+            if (self == null) {
+                return;
+            }
+
+            if (self is TApply) {
+                if (Funcs.Count != 0) {
+                    Funcs.Peek().AppFnc.Add(self as TApply);
+                }
+            }
+            else if (self is TFunction) {
+                TFunction fnc = self as TFunction;
+                Funcs.Push(fnc);
+
+                if(fnc.BaseApp != null) {
+                    fnc.AppFnc.Add(fnc.BaseApp);
+                }
+            }
+        }
+
+        public override void AfterAction(object self, List<object> args) {
+            if (self == null) {
+                return;
+            }
+
+            if (self is TFunction) {
+                Funcs.Pop();
+            }
+        }
+    }
 }

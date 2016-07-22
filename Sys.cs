@@ -121,6 +121,7 @@ class Enumerable<T> : IEnumerable<T> {
     //T First();
     //T[] ToArray();
     //int Count();
+    T Max();
 }
 class EventInfo {
 }
@@ -237,6 +238,8 @@ class TypeInfo {
 class UnderlineType {
 }
 class UserControl {
+}
+class UTF8Encoding {
 }
 class VirtualKey {
 }

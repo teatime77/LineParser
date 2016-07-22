@@ -23,11 +23,7 @@ namespace Miyu {
             Debug.WriteLine("メイン開始");
 
             MainProject = new TProject();
-            MainProject.Init();
-
-            Task.Run( () => {
-                MainProject.Build();
-            } );
+            MainProject.Main();
 
             foreach (TSourceFile src in MainProject.SourceFiles) {
                 string file_name = Path.GetFileName(src.PathSrc);

@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.UI;
 using Windows.UI.Xaml;
@@ -15,7 +16,6 @@ using Windows.UI.Xaml;
 namespace Miyu {
 
     //------------------------------------------------------------ TProject
-
     public partial class TProject : TEnv {
         public TType IntClass;
         public TType FloatClass;
@@ -41,11 +41,20 @@ namespace Miyu {
 
         Dictionary<string, string> ToSysClassNameTable = new Dictionary<string, string>();
         Dictionary<string, string> FromSysClassNameTable = new Dictionary<string, string>();
+        public TSourceFile SysSourceFile;
 
         public ManualResetEvent Modified;
         public bool ParseDone;
 
         public TProject() {
+        }
+
+        public void Main() {
+            Init();
+
+            Task.Run(() => {
+                Build();
+            });
         }
 
         public void Init() {
@@ -69,13 +78,10 @@ namespace Miyu {
             Parser = TCSharpParser.CSharpParser;
 
             RegisterClassNames();
-            var v = from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src;
-            Debug.Assert(v.Any());
-            TSourceFile sys_src = v.First();
 
             tick = DateTime.Now;
 
-            sys_src.Parser.ParseFile(sys_src);
+            SysSourceFile.Parser.ParseFile(SysSourceFile);
 
             RegisterSysClass();
 
@@ -101,7 +107,7 @@ namespace Miyu {
                     ParseDone = false;
 
                     foreach (TSourceFile src in SourceFiles) {
-                        if(src != sys_src) {
+                        if(src != SysSourceFile) {
 
                             lock (src) {
                                 src.Parser.ParseFile(src);
@@ -157,9 +163,9 @@ namespace Miyu {
                         File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(), Encoding.UTF8);
                     }
 
-
-
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+
+                    MakeCallGraph();
                 }
                 catch (TBuildCancel) {
                 }
@@ -186,6 +192,9 @@ namespace Miyu {
                 string path = localFolder.Path + @"\" + file_name;
 
                 TSourceFile src = new TSourceFile(path, TCSharpParser.CSharpParser);
+                if (file_name == "Sys.cs") {
+                    SysSourceFile = src;
+                }
 
                 SourceFiles.Add(src);
             }
@@ -474,6 +483,7 @@ namespace Miyu {
             TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
             TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
+            fnc.ClassMember = cla1;
 
             return fnc;
         }

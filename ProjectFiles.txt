@@ -1,4 +1,5 @@
 ﻿Sys.cs
+CodeAnalysis.cs
 MakeSourceCode.cs
 MyEditor.xaml.cs
 MyEditor.Ext.cs

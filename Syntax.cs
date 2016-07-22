@@ -156,7 +156,6 @@ namespace Miyu {
             return ClassName;
         }
 
-
         public string GetDelegateText() {
             if(DelegateText == null) {
 
@@ -179,7 +178,6 @@ namespace Miyu {
             return DelegateText;
         }
 
-
         public TType ElementType() {
             TType tp;
 
@@ -192,7 +190,7 @@ namespace Miyu {
                 if (gen.GenCla[0].ClassName == "T") {
                     return null;
                 }
-                if (ClassName == "List" || ClassName == "Array" || ClassName == "IEnumerable") {
+                if (ClassName == "List" || ClassName == "Array" || ClassName == "IEnumerable" || ClassName == "Enumerable") {
 
                     return gen.GenCla[0];
                 }
@@ -219,7 +217,6 @@ namespace Miyu {
                 }
             }
 
-
             return null;
         }
 
@@ -234,6 +231,38 @@ namespace Miyu {
             }
 
             return false;
+        }
+
+        public IEnumerable<TType> AncestorSuperClasses() {
+            foreach (TType t1 in SuperClasses) {
+                yield return t1;
+
+                foreach(TType t2 in t1.AncestorSuperClasses()) {
+                    yield return t2;
+                }
+            }
+        }
+
+        public IEnumerable<TType> ThisAncestorSuperClasses() {
+            yield return this;
+
+            foreach (TType t2 in AncestorSuperClasses()) {
+                yield return t2;
+            }
+        }
+
+        public TFunction GetVirtualFunction(TFunction fnc) {
+            if(fnc.InfoFnc != null) {
+                return fnc;
+            }
+            var v = from c in ThisAncestorSuperClasses() from f in c.Functions where f == fnc || f.NameVar == fnc.NameVar && f.IsEqualType(fnc) select f;
+            if (v.Any()) {
+                return v.First();
+            }
+            else {
+
+                return null;
+            }
         }
     }
 
@@ -341,31 +370,40 @@ namespace Miyu {
 
     public class TField : TMember {
         public TField(TType parent_class, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
+            ClassMember = parent_class;
         }
 
         public TField(TType parent_class, FieldInfo fld_info) {
+            ClassMember = parent_class;
             NameVar = fld_info.Name;
             TypeVar = Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
         }
 
         public TField(TType parent_class, PropertyInfo fld_info) {
+            ClassMember = parent_class;
             NameVar = fld_info.Name;
             TypeVar = Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
         }
 
         public TField(TType parent_class, EventInfo fld_info) {
+            ClassMember = parent_class;
             NameVar = fld_info.Name;
             TypeVar = Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
         }
     }
 
     public partial class TFunction : TMember {
+        public static int LambdaCnt;
         public EKind KindFnc;
         public TVariable[] ArgsFnc;
         public TApply BaseApp;
         public TBlock BlockFnc = new TBlock();
         public TTerm LambdaFnc;
         public MethodInfo InfoFnc;
+        public string FunctionSignature = null;
+
+        public List<TReference> RefFnc = new List<TReference>();
+        public List<TApply> AppFnc = new List<TApply>();
 
         public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
             KindFnc = kind;
@@ -391,6 +429,67 @@ namespace Miyu {
             KindFnc = EKind.Undefined;
             InfoFnc = method_info;
             TypeVar = Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
+        }
+
+        public string GetFunctionSignature() {
+            if(FunctionSignature == null) {
+                StringWriter sw = new StringWriter();
+
+                if(KindFnc == EKind.Lambda) {
+
+                    sw.Write("Lambda-{0}", LambdaCnt);
+                    LambdaCnt++;
+                }
+                else {
+
+                    sw.Write(NameVar);
+                }
+                sw.Write('(');
+                foreach (TVariable va in ArgsFnc) {
+                    if(va != ArgsFnc[0]) {
+                        sw.Write(',');
+                    }
+
+                    if(va.TypeVar != null) {
+                        sw.Write(va.TypeVar.GetClassText());
+                    }
+                    else {
+                        sw.Write("any");
+                    }
+                }
+                sw.Write(')');
+
+                FunctionSignature = sw.ToString();
+            }
+
+            return FunctionSignature;
+        }
+
+        public string FullName() {
+            if(ClassMember == null) {
+                Debug.Assert(KindFnc == EKind.Lambda);
+                return GetFunctionSignature();
+            }
+            else {
+
+                return ClassMember.GetClassText() + "." + GetFunctionSignature();
+            }
+        }
+
+        public bool IsEqualType(TFunction fnc) {
+            if(TypeVar != fnc.TypeVar) {
+                return false;
+            }
+            if(ArgsFnc.Length != fnc.ArgsFnc.Length) {
+                return false;
+            }
+            for(int i = 0; i < ArgsFnc.Length; i++) {
+                if(ArgsFnc[i].TypeVar != fnc.ArgsFnc[i].TypeVar) {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 

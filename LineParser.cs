@@ -1334,7 +1334,10 @@ namespace Miyu {
                                 if (obj is TType) {
                                     TType class_def = obj as TType;
 
-                                    class_def.CommentCls = comments.ToArray();
+                                    if(class_def.SourceFileCls == src) {
+
+                                        class_def.CommentCls = comments.ToArray();
+                                    }
                                     //ClassLineText(class_def, sw);
                                     src.ClassesSrc.Add(class_def);
                                 }
