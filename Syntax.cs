@@ -128,7 +128,7 @@ namespace Miyu {
 
         public List<TType> SuperClasses = new List<TType>();
 
-        public List<TType> SubClasses;
+        public List<TType> SubClasses = new List<TType>();
 
         void SetIdxClass() {
             IdxClass = CountClass;
@@ -256,6 +256,25 @@ namespace Miyu {
             }
         }
 
+
+        public IEnumerable<TType> DescendantSubClasses() {
+            foreach (TType t1 in SubClasses) {
+                yield return t1;
+
+                foreach (TType t2 in t1.DescendantSubClasses()) {
+                    yield return t2;
+                }
+            }
+        }
+
+        public IEnumerable<TType> ThisDescendantSubClasses() {
+            yield return this;
+
+            foreach (TType t2 in DescendantSubClasses()) {
+                yield return t2;
+            }
+        }
+
         public TFunction GetVirtualFunction(TFunction fnc) {
             if(fnc.InfoFnc != null) {
                 return fnc;
@@ -267,6 +286,23 @@ namespace Miyu {
             else {
 
                 return null;
+            }
+        }
+
+        public IEnumerable<TFunction> GetVirtualFunctions(TFunction fnc) {
+            if (fnc.InfoFnc != null) {
+                yield return fnc;
+                yield break;
+            }
+
+            var v = from c in ThisAncestorSuperClasses() from f in c.Functions where f == fnc || f.NameVar == fnc.NameVar && f.IsEqualType(fnc) select f;
+            if (v.Any()) {
+                yield return v.First();
+            }
+
+            var v2 = from c in DescendantSubClasses() from f in c.Functions where f == fnc || f.NameVar == fnc.NameVar && f.IsEqualType(fnc) select f;
+            foreach(TFunction f in v2) {
+                yield return f;
             }
         }
     }
@@ -489,6 +525,16 @@ namespace Miyu {
 
                 return ClassMember.GetClassText() + "." + GetFunctionSignature();
             }
+        }
+
+        public string UniqueName() {
+            var vfnc = from x in ClassMember.Functions where x.NameVar == NameVar select x;
+            Debug.Assert(vfnc.Any());
+            if(vfnc.Count() == 1) {
+                return NameVar;
+            }
+            int idx = vfnc.ToList().IndexOf(this);
+            return string.Format("{0}.{1}", NameVar, idx);
         }
 
         public bool IsEqualType(TFunction fnc) {

@@ -251,5 +251,7 @@ class void {
 }
 class WebUtility {
 }
+class WebUtility {
+}
 class Window {
 }

@@ -18,6 +18,8 @@ namespace Miyu {
     //------------------------------------------------------------ TProject
     public partial class TProject  {
         public static string OutputDir = ApplicationData.Current.LocalFolder.Path + "\\out";
+        public static string WebDir = OutputDir + "\\web";
+        public static string ClassesDir = WebDir + "\\class";
 
         public List<TType> AppClasses;
 
@@ -177,6 +179,15 @@ namespace Miyu {
                     // アプリのクラスのリスト
                     AppClasses = (from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x).ToList();
 
+                    foreach(TType cls in AppClasses) {
+                        foreach(TType spr in cls.SuperClasses) {
+                            if (!spr.SubClasses.Contains(cls)) {
+                                spr.SubClasses.Add(cls);
+                            }
+                        }
+                    }
+
+
                     // フィールドの弱参照(IsWeak)を設定します。
                     SetWeakField();
 
@@ -189,6 +200,9 @@ namespace Miyu {
                     string html_dir = OutputDir + "\\html";
                     if (!Directory.Exists(OutputDir)) {
                         Directory.CreateDirectory(OutputDir);
+                    }
+                    if (!Directory.Exists(WebDir)) {
+                        Directory.CreateDirectory(WebDir);
                     }
                     if (!Directory.Exists(html_dir)) {
                         Directory.CreateDirectory(html_dir);
@@ -205,8 +219,10 @@ namespace Miyu {
                         string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
 
                         File.WriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
-                        File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(), Encoding.UTF8);
+                        File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
                     }
+
+                    MakeSourceCode();
 
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;

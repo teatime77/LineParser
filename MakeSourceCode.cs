@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 
 namespace Miyu {
     public class TTokenWriter {
@@ -128,10 +130,9 @@ namespace Miyu {
             return sw.ToString();
         }
 
-        public string ToHTMLText() {
+        public string ToHTMLText(string title) {
             StringWriter sw = new StringWriter();
 
-            sw.WriteLine(TParser.HTMLHead + "<pre><code>");
             foreach (TToken tk in TokenListTW) {
                 switch (tk.Kind) {
                 case EKind.Space:
@@ -164,13 +165,25 @@ namespace Miyu {
 
                             if(ref1.ClassRef != null) {
 
-                                sw.Write("<a href=\"\" class=\"class\">{0}</a>", ref1.ClassRef.ClassName);
+                                sw.Write("<a href=\"../{0}/index.html\" class=\"class\">{0}</a>", ref1.ClassRef.ClassName);
                             }
                             else {
 
                                 if (ref1.VarRef != null) {
 
-                                    sw.Write("<a href=\"\" class=\"\">{0}</a>", ref1.VarRef.NameVar);
+                                    string url = "";
+                                    if(ref1.VarRef is TField) {
+                                        TField fld = ref1.VarRef as TField;
+                                        url = string.Format("../{0}/{1}.html", fld.ClassMember.ClassName, fld.NameVar);
+                                    }
+                                    else if(ref1.VarRef is TFunction) {
+                                        TFunction fnc = ref1.VarRef as TFunction;
+                                        if(fnc.ClassMember != null) {
+
+                                            url = string.Format("../{0}/{1}.html", fnc.ClassMember.ClassName, fnc.UniqueName());
+                                        }
+                                    }
+                                    sw.Write("<a href=\"{0}\" class=\"\">{1}</a>", url, ref1.VarRef.NameVar);
                                 }
                                 else {
 
@@ -184,7 +197,7 @@ namespace Miyu {
                             switch (lit.TokenTrm.Kind) {
                             case EKind.StringLiteral:
                             case EKind.CharLiteral:
-                                sw.Write("<span class=\"string\">{0}</span>", lit.TokenTrm.TextTkn);
+                                sw.Write("<span class=\"string\">{0}</span>", WebUtility.HtmlEncode(lit.TokenTrm.TextTkn));
                                 break;
 
                             case EKind.NumberLiteral:
@@ -237,9 +250,7 @@ namespace Miyu {
                 }
             }
 
-            sw.WriteLine("</code></pre></body></html>");
-
-            return sw.ToString();
+            return TProject.HTMLPageText(title, sw.ToString());
         }
 
         public List<TToken> GetTokenList() {
@@ -926,6 +937,68 @@ namespace Miyu {
             sw.Fmt(EKind.SemiColon, EKind.NL);
         }
 
+        public void FieldText(TType cls, TField fld, TTokenWriter sw) {
+            WriteComment(fld.CommentVar, sw);
+
+            AttributesText(2, fld.Attributes, sw);
+
+            sw.TAB(2);
+
+            if (cls.KindClass == EClass.Enum) {
+
+                sw.Fmt(fld, EKind.Comma, EKind.NL);
+            }
+            else {
+
+                VariableText(fld, sw);
+                sw.Fmt(EKind.SemiColon, EKind.NL);
+            }
+        }
+
+        public void FunctionText(TFunction fnc, TTokenWriter sw, int nest) {
+            WriteComment(fnc.CommentVar, sw);
+            AttributesText(nest, fnc.Attributes, sw);
+            sw.TAB(nest);
+
+            ModifierText(fnc.ModifierVar, sw);
+            if (fnc.TypeVar != null && fnc.KindFnc != EKind.constructor_) {
+
+                TypeText(fnc.TypeVar, sw);
+                sw.Fmt(' ');
+            }
+
+            if (fnc.TokenVar.TokenType == ETokenType.Symbol) {
+
+                sw.Fmt(EKind.operator_);
+            }
+            sw.Fmt(fnc);
+
+            sw.Fmt(EKind.LP);
+            foreach (TVariable var1 in fnc.ArgsFnc) {
+                if (var1 != fnc.ArgsFnc[0]) {
+                    sw.Fmt(EKind.Comma, ' ');
+                }
+
+                VariableText(var1, sw);
+            }
+            sw.Fmt(EKind.RP);
+
+            if (fnc.BaseApp != null) {
+                sw.Fmt(' ', EKind.Colon, ' ');
+                TermText(fnc.BaseApp, sw);
+                sw.Fmt(' ');
+            }
+
+            if (fnc.ModifierVar != null && fnc.ModifierVar.isAbstract) {
+
+                sw.Fmt(EKind.SemiColon, EKind.NL);
+            }
+            else {
+
+                StatementText(fnc.BlockFnc, sw, nest);
+            }
+        }
+
         public void SourceFileText(TSourceFile src, TTokenWriter sw) {
             foreach(TUsing usng in src.Usings) {
                 UsingText(usng,sw);
@@ -950,67 +1023,12 @@ namespace Miyu {
 
                 var vfld = from x in src.FieldsSrc where x.ClassMember == cls select x;
                 foreach (TField fld in vfld) {
-                    WriteComment(fld.CommentVar, sw);
-
-                    AttributesText(2, fld.Attributes, sw);
-
-                    sw.TAB(2);
-
-                    if(cls.KindClass == EClass.Enum) {
-
-                        sw.Fmt(fld, EKind.Comma, EKind.NL);
-                    }
-                    else {
-
-                        VariableText(fld, sw);
-                        sw.Fmt(EKind.SemiColon, EKind.NL);
-                    }
+                    FieldText(cls, fld, sw);
                 }
 
                 var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls && x.KindFnc != EKind.Lambda select x;
                 foreach (TFunction fnc in vfnc) {
-
-                    WriteComment(fnc.CommentVar, sw);
-                    AttributesText(2, fnc.Attributes, sw);
-                    sw.TAB(2);
-
-                    ModifierText(fnc.ModifierVar, sw);
-                    if (fnc.TypeVar != null && fnc.KindFnc != EKind.constructor_) {
-
-                        TypeText(fnc.TypeVar, sw);
-                        sw.Fmt(' ');
-                    }
-
-                    if (fnc.TokenVar.TokenType == ETokenType.Symbol) {
-
-                        sw.Fmt(EKind.operator_);
-                    }
-                    sw.Fmt(fnc);
-
-                    sw.Fmt(EKind.LP);
-                    foreach (TVariable var1 in fnc.ArgsFnc) {
-                        if (var1 != fnc.ArgsFnc[0]) {
-                            sw.Fmt(EKind.Comma, ' ');
-                        }
-
-                        VariableText(var1, sw);
-                    }
-                    sw.Fmt(EKind.RP);
-
-                    if(fnc.BaseApp != null) {
-                        sw.Fmt(' ', EKind.Colon, ' ');
-                        TermText(fnc.BaseApp, sw);
-                        sw.Fmt(' ');
-                    }
-
-                    if (fnc.ModifierVar != null && fnc.ModifierVar.isAbstract) {
-
-                        sw.Fmt(EKind.SemiColon, EKind.NL);
-                    }
-                    else {
-
-                        StatementText(fnc.BlockFnc, sw, 2);
-                    }
+                    FunctionText(fnc, sw, 2);
                 }
 
                 sw.TAB(1);
@@ -1020,6 +1038,64 @@ namespace Miyu {
             if (src.Namespace != null) {
                 sw.Fmt(EKind.RC, EKind.NL);
             }
+        }
+    }
+
+    partial class TProject {
+        public static string HTMLPageText(string title, string s) {
+            return TParser.HTMLHead1 + title + TParser.HTMLHead2 + "<pre><code>\r\n" + s + "</code></pre></body></html>";
+        }
+
+        public void MakeSourceCode() {
+            StringWriter sw1 = new StringWriter();
+
+            sw1.WriteLine("<h1>クラス リファレンス</h1>");
+            sw1.WriteLine("<ul>");
+
+            foreach (TType cls in AppClasses) {
+                string class_dir = ClassesDir + "\\" + cls.ClassName;
+                if (!Directory.Exists(class_dir)) {
+                    Directory.CreateDirectory(class_dir);
+                }
+
+                if(cls.KindClass != EClass.Enum) {
+
+                    sw1.WriteLine("<li><a href=\"{0}//index.html\">{0}</a></li>", cls.ClassName);
+
+                    StringWriter sw = new StringWriter();
+
+                    sw.WriteLine("<h1>{0}</h1>", cls.ClassName);
+
+                    sw.WriteLine("<h2>フィールド</h2>");
+                    sw.WriteLine("<ul>");
+                    foreach (TField fld in cls.Fields) {
+                        TTokenWriter tw = new TTokenWriter(TEnv.Parser);
+
+                        TEnv.Parser.FieldText(cls, fld, tw);
+                        File.WriteAllText(class_dir + "\\" + fld.NameVar + ".html", tw.ToHTMLText(cls.ClassName + " - " + fld.NameVar), new UTF8Encoding(false));
+
+                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fld.NameVar + ".html", fld.NameVar);
+                    }
+                    sw.WriteLine("</ul>");
+
+                    sw.WriteLine("<h2>メソッド</h2>");
+                    sw.WriteLine("<ul>");
+                    foreach(TFunction fnc in cls.Functions) {
+                        TTokenWriter tw = new TTokenWriter(TEnv.Parser);
+
+                        TEnv.Parser.FunctionText(fnc, tw, 2);
+                        File.WriteAllText(class_dir + "\\" + fnc.UniqueName() + ".html", tw.ToHTMLText(cls.ClassName + " - " + fnc.NameVar), new UTF8Encoding(false));
+
+                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fnc.UniqueName() + ".html", fnc.NameVar);
+                    }
+                    sw.WriteLine("</ul>");
+
+                    File.WriteAllText(class_dir + "\\index.html", HTMLPageText(cls.ClassName, sw.ToString()), new UTF8Encoding(false));
+                }
+            }
+
+            sw1.WriteLine("</ul>");
+            File.WriteAllText(ClassesDir + "\\index.html", HTMLPageText("クラス リファレンス", sw1.ToString()), new UTF8Encoding(false));
         }
     }
 }

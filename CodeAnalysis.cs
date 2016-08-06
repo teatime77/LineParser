@@ -107,9 +107,17 @@ namespace Miyu {
                         TReference ref1 = app.FunctionApp as TReference;
                         Debug.Assert(ref1.VarRef is TFunction);
 
+/*
                         TFunction f1 = tp2.GetVirtualFunction(ref1.VarRef as TFunction);
                         Debug.Assert(f1 != null);
                         CallGraphSub(dic, fnc_call, tp2, f1);
+*/
+                        IEnumerable<TFunction> vf = tp2.GetVirtualFunctions(ref1.VarRef as TFunction);
+                        Debug.Assert(vf.Any());
+                        foreach(TFunction f in vf) {
+
+                            CallGraphSub(dic, fnc_call, tp2, f);
+                        }
                     }
                     break;
 
@@ -153,6 +161,10 @@ namespace Miyu {
 
                     sw.WriteLine("\tn{0} [shape = box, label = \"{1}\", fontcolor = blue ];", nd1.IdxNode, nd1.NameNode);
                 }
+                else if (nd1.FontColor == Colors.Red) {
+
+                    sw.WriteLine("\tn{0} [shape = box, label = \"{1}\", fontcolor = red ];", nd1.IdxNode, nd1.NameNode);
+                }
                 else {
 
                     sw.WriteLine("\tn{0} [shape = box, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
@@ -184,9 +196,17 @@ namespace Miyu {
             }
             stack.Push(fnc_call);
 
-            var v = from r in fnc_call.FncCall.ReferencesInFnc where r.Defined && r.VarRef == fld select r;
+            var v = from r in fnc_call.FncCall.ReferencesInFnc where r.VarRef == fld select r;
             if (v.Any()) {
-                fnc_call.FontColor = Colors.Blue;
+
+                if ( (from x in v where x.Defined select x).Any() ) {
+
+                    fnc_call.FontColor = Colors.Red;
+                }
+                else {
+
+                    fnc_call.FontColor = Colors.Blue;
+                }
 
                 defined_path.AddRange( (from x in stack where ! defined_path.Contains(x) select x).ToList() );
             }
