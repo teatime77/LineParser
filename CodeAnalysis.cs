@@ -250,9 +250,9 @@ namespace Miyu {
                     if (defined_refs.Any()) {
                         // フィールドに値を代入する変数参照がある場合
 
-                      List<TFncCall> defined_path = new List<TFncCall>();
+                        List<TFncCall> defined_path = new List<TFncCall>();
 
-                      Stack<TFncCall> stack = new Stack<TFncCall>();
+                        Stack<TFncCall> stack = new Stack<TFncCall>();
                         MakeUseDefineChainSub(fld, defined_path, stack, MainCall);
 
                         TNode.NodeCnt = 0;
@@ -310,74 +310,25 @@ namespace Miyu {
             File.WriteAllText(OutputDir + "\\ClassDiagram.txt", sw.ToString(), new UTF8Encoding(false));
         }
 
-        public void WriteComment(TToken[] comments, TTokenWriter sw) {
-            if (comments != null && comments.Length != 0) {
-                foreach (TToken tk in comments) {
-                    sw.Fmt(tk);
-                }
-            }
-        }
-
         /*
         要約を作ります。
         */
         public void MakeSummary() {
-
             foreach (TSourceFile src in SourceFiles) {
-                TTokenWriter sw = new TTokenWriter(TEnv.Parser);
-
                 Debug.WriteLine("{0} ------------------------------", src.PathSrc, "");
+
                 foreach (TType cls in src.ClassesSrc) {
+                    var vfnc = from x in src.FunctionsSrc
+                               where x.ClassMember == cls && x.KindFnc != EKind.Lambda && x.CommentVar != null && x.CommentVar.Length != 0 select x;
 
-                    //sw.Fmt(cls.ClassName, " --------------------", EKind.NL);
-                    //if (cls.SourceFileCls == src) {
-
-                    //    WriteComment(cls.CommentCls, sw);
-                    //}
-                    //else {
-                    //    sw.WriteLine();
-                    //}
-
-                    //var vfld = from x in src.FieldsSrc where x.ClassMember == cls select x;
-                    //foreach (TField fld in vfld) {
-                    //    sw.Fmt(fld.NameVar, " ----------", EKind.NL);
-                    //    WriteComment(fld.CommentVar, sw);
-                    //}
-
-                    var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls && x.KindFnc != EKind.Lambda && x.CommentVar != null && x.CommentVar.Length != 0 select x;
                     foreach (TFunction fnc in vfnc) {
                         var vc = from c in fnc.CommentVar where c.Kind == EKind.BlockCommentContinued && c.TextTkn.Trim() != "/*" select c;
                         if (vc.Any()) {
 
-                            //sw.Fmt(fnc.NameVar, " ----------", EKind.NL);
                             Debug.WriteLine("{0} {1}", fnc.NameVar, vc.First().TextTkn.Trim());
-                            //foreach(TToken c in vc) {
-                            //    string s = c.TextTkn.Trim();
-                            //    if(s != "/*" && s != "*/") {
-
-                            //        switch (c.Kind) {
-                            //        case EKind.LineComment:
-                            //            Debug.WriteLine("行 {0}", c.TextTkn, "");
-                            //            break;
-                            //        case EKind.BlockComment:
-                            //            Debug.WriteLine("ブロック {0}", c.TextTkn, "");
-                            //            break;
-                            //        case EKind.BlockCommentContinued:
-                            //            Debug.WriteLine("継続 {0}", c.TextTkn, "");
-                            //            break;
-                            //        }
-
-                            //        break;
-                            //    }
-                            //}
-
-
-                            //WriteComment(fnc.CommentVar, sw);
                         }
                     }
                 }
-
-                //Debug.WriteLine(sw.ToPlainText());
             }
         }
     }

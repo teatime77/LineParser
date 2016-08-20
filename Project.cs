@@ -70,7 +70,6 @@ namespace Miyu {
         public void Init() {
             TEnv.Project = this;
 
-            TParser.theParser = new TParser(this);
             TCSharpParser.CSharpParser = new TCSharpParser(this);
             TEnv.Parser = TCSharpParser.CSharpParser;
 
@@ -257,18 +256,11 @@ namespace Miyu {
 
         public void OpenProject() {
             StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-            string[] project_files = File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8);
-            foreach (string file_name in project_files) {
+            SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
+                           select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
 
-                string path = localFolder.Path + @"\" + file_name;
-
-                TSourceFile src = new TSourceFile(path, TCSharpParser.CSharpParser);
-                if (file_name == "Sys.cs") {
-                    SysSourceFile = src;
-                }
-
-                SourceFiles.Add(src);
-            }
+            var sys_src = from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src;
+            SysSourceFile = sys_src.First();
         }
 
         public TType GetSysClass(TypeInfo inf) {

@@ -15,8 +15,7 @@ namespace Miyu {
         public const int TabSize = 4;
         public const string HTMLHead1 = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n<html xmlns=\"http://www.w3.org/1999/xhtml\" >\r\n<head>\r\n<meta charset=\"utf-8\" />\r\n<title>";
         public const string HTMLHead2 = "</title>\r\n<style type=\"text/css\">\r\n.reserved {\r\n\tcolor: blue;\r\n}\r\n.class {\r\n\tcolor: Teal;\r\n}\r\n.string {\r\n\tcolor: red;\r\n}\r\n.comment {\r\n\tcolor: #008000;\r\n}\r\n</style>\r\n</head>\r\n<body>";
-        public static TToken EOTToken = new TToken(ETokenType.White, EKind.EOT,"", 0, 0);
-        public static TParser theParser;
+        public static TToken EOTToken = new TToken(ETokenType.EOT, EKind.EOT,"", 0, 0);
 
         [ThreadStatic]
         public TType LookaheadClass;
@@ -819,7 +818,8 @@ namespace Miyu {
                 }
                 break;
 
-            case EKind.break_:                
+            case EKind.break_:
+            case EKind.continue_:
                 break;
 
             case EKind.goto_:
@@ -891,7 +891,6 @@ namespace Miyu {
                 case ETokenType.BlockComment:
                 case ETokenType.BlockCommentContinued:
                 case ETokenType.LineComment:
-                case ETokenType.White:
                     break;
 
                 default:
@@ -902,8 +901,7 @@ namespace Miyu {
             return -1;
         }
 
-        public object ParseLine(TSourceFile src, TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx, TToken[] token_list) {
-            TokenList = token_list;
+        public object ParseLine(TSourceFile src, TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx) {
             TokenPos = line_top_idx;
 
             if (TokenPos < TokenList.Length) {
@@ -1078,6 +1076,7 @@ namespace Miyu {
                 case EKind.yield_:
                 case EKind.throw_:
                 case EKind.break_:
+                case EKind.continue_:
                 case EKind.goto_:
                     return ReadJumpLine();
 
@@ -1213,6 +1212,59 @@ namespace Miyu {
             }
         }
 
+        public void SetLineContinued(TSourceFile src) {
+            TLine prev_line = null;
+            foreach(TLine line in src.Lines) {
+                line.Indent = -1;
+                if(line.Tokens != null && line.Tokens.Length != 0) {
+                    // 空行でない場合
+
+                    // 行頭の字句
+                    TToken line_top_token = line.Tokens[0];
+
+                    switch (line_top_token.TokenType) {
+                    case ETokenType.BlockComment:
+                    case ETokenType.BlockCommentContinued:
+                    case ETokenType.LineComment:
+                        break;
+
+                    default:
+                        // コメントでない場合
+
+                        line.Indent = line_top_token.StartPos;
+
+                        if(prev_line != null) {
+                            if (prev_line.Continued) {
+
+                                if (prev_line.Indent == line.Indent) {
+
+                                    line.Continued = true;
+                                    Debug.WriteLine("継続行 {0}", line.TextLine, "");
+                                }
+                            }
+                            else {
+
+                                TToken prev_line_end_token = prev_line.Tokens.Last();
+                                if (prev_line_end_token.Kind != EKind.LC && prev_line_end_token.Kind != EKind.Colon && prev_line.Indent < line.Indent) {
+
+                                    line.Continued = true;
+                                    Debug.WriteLine("継続行 {0}", line.TextLine, "");
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if(line.Indent == -1) {
+                    prev_line = null;
+                }
+                else {
+                    prev_line = line;
+                }
+            }
+        }
+
         public async void ParseFile(TSourceFile src) {
             while (Running) {
                 await Task.Delay(1);
@@ -1227,6 +1279,8 @@ namespace Miyu {
             List<TToken> comments = new List<TToken>();
             List<object> obj_stack = new List<object>();
 
+            SetLineContinued(src);
+
             for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
 
@@ -1238,8 +1292,12 @@ namespace Miyu {
                 }
 
                 TLine line = src.Lines[line_idx];
+                if (line.Continued) {
+                    // 継続行の場合
 
-                line.Indent = -1;
+                    continue;
+                }
+
                 line.ObjLine = null;
                 if (line.Tokens == null || line.Tokens.Length == 0) {
                     comments.Add(new TToken(EKind.NL));
@@ -1253,7 +1311,6 @@ namespace Miyu {
                     else { 
 
                         TToken line_top_token = line.Tokens[line_top_idx];
-                        line.Indent = line_top_token.StartPos;
 
                         switch (line_top_token.TokenType) {
                         case ETokenType.VerbatimString:
@@ -1309,7 +1366,14 @@ namespace Miyu {
 
                             //Debug.Write(string.Format("行解析 {0}", line.TextLine));
                             TEnv.LambdaFunction = null;
-                            object obj = ParseLine(src, cls, parent_fnc, parent_stmt, line_top_idx, line.Tokens);
+
+                            List<TToken> token_list = new List<TToken>(line.Tokens);
+                            for (int cont_line_idx = line_idx + 1; cont_line_idx < src.Lines.Count && src.Lines[cont_line_idx].Continued ; cont_line_idx++) {
+                                token_list.AddRange(src.Lines[cont_line_idx].Tokens);
+                            }
+
+                            TokenList = token_list.ToArray();
+                            object obj = ParseLine(src, cls, parent_fnc, parent_stmt, line_top_idx);
                             if (obj != null) {
 
                                 while (obj_stack.Count < line.Indent) {
@@ -1486,7 +1550,6 @@ namespace Miyu {
                     CurTkn = TokenList[TokenPos];
 
                     switch (CurTkn.TokenType) {
-                    case ETokenType.White:
                     case ETokenType.BlockComment:
                     case ETokenType.BlockCommentContinued:
                     case ETokenType.LineComment:
@@ -2058,6 +2121,7 @@ namespace Miyu {
 
     public class TLine {
         public int Indent;
+        public bool Continued;
         public string TextLine;
         public TToken[] Tokens;
         public object ObjLine;

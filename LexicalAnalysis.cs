@@ -19,7 +19,7 @@ namespace Miyu {
         Undefined,
 
         // 空白
-        White,
+        EOT,
 
         // 文字
         Char_,
@@ -166,6 +166,7 @@ namespace Miyu {
                     ch2 = '\0';
                 }
 
+                bool is_white = false;
                 if (pos == 0 && (prev_token_type == ETokenType.BlockCommentContinued || prev_token_type == ETokenType.VerbatimStringContinued)) {
                     // 文字列の最初で直前が閉じてないブロックコメントか逐語的文字列の場合
 
@@ -215,7 +216,7 @@ namespace Miyu {
                 else if (char.IsWhiteSpace(ch1)) {
                     // 空白の場合
 
-                    token_type = ETokenType.White;
+                    is_white = true;
 
                     // 空白の終わりを探します。
                     for (pos++; pos < text_len && char.IsWhiteSpace(text[pos]); pos++) ;
@@ -438,7 +439,7 @@ namespace Miyu {
                     }
                 }
 
-                if (token_type != ETokenType.White) {
+                if (!is_white) {
 
                     string s = text.Substring(start_pos, pos - start_pos);
                     token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
