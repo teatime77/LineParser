@@ -234,6 +234,8 @@ namespace Miyu {
 
                     MakeClassDiagram();
 
+                    MakeSummary();
+
                     Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {

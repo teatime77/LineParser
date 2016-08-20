@@ -442,18 +442,30 @@ namespace Miyu {
     }
 
     public partial class TFunction : TMember {
+        // メソッドの引数リスト
         public TVariable[] ArgsFnc;
+
+        // メソッドの本体
         public TBlock BlockFnc = new TBlock();
 
         public static int LambdaCnt;
         public EKind KindFnc;
+
+        // コンストラクタのbase呼び出し
         public TApply BaseApp;
+
         public TTerm LambdaFnc;
+
+        // メソッドを一意に識別する文字列(クラス名は含まない)
         public string FunctionSignature = null;
 
         [_weak]
         public MethodInfo InfoFnc;
+
+        // メソッド内の参照のリスト
         public List<TReference> ReferencesInFnc = new List<TReference>();
+
+        // メソッド内のメソッド呼び出しのリスト
         public List<TApply> AppFnc = new List<TApply>();
 
         public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
@@ -482,6 +494,9 @@ namespace Miyu {
             TypeVar = TEnv.Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
         }
 
+        /*
+         * メソッドを一意に識別する文字列(クラス名は含まない)を返します。
+        */
         public string GetFunctionSignature() {
             if(FunctionSignature == null) {
                 StringWriter sw = new StringWriter();
@@ -516,6 +531,9 @@ namespace Miyu {
             return FunctionSignature;
         }
 
+        /*
+         メソッドを一意に識別する文字列(クラス名は含む)を返します。
+        */
         public string FullName() {
             if(ClassMember == null) {
                 Debug.Assert(KindFnc == EKind.Lambda);
@@ -537,15 +555,27 @@ namespace Miyu {
             return string.Format("{0}.{1}", NameVar, idx);
         }
 
+        /*
+         * 戻り値の型と引数の数と型が同じならtrueを返します。
+        */
         public bool IsEqualType(TFunction fnc) {
             if(TypeVar != fnc.TypeVar) {
+                // 戻り値の型が違う場合
+
                 return false;
             }
+
             if(ArgsFnc.Length != fnc.ArgsFnc.Length) {
+                // 引数の数が違う場合
+
                 return false;
             }
+
+            // すべての引数に対し
             for(int i = 0; i < ArgsFnc.Length; i++) {
                 if(ArgsFnc[i].TypeVar != fnc.ArgsFnc[i].TypeVar) {
+                    // 引数の型が違う場合
+
                     return false;
                 }
             }

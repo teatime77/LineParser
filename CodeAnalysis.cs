@@ -16,7 +16,7 @@ namespace Miyu {
 
     partial class TProject {
         /*
-        コールグラフを作ります。
+            コールグラフを作ります。
         */
         public void MakeCallGraph() {
             TSetRefFnc set_ref_fnc = new TSetRefFnc();
@@ -80,6 +80,7 @@ namespace Miyu {
             TFncCall fnc_call;
 
             if (dic.TryGetValue(name, out fnc_call)) {
+                // 処理済みの場合
 
                 if (parent_call != null && !parent_call.CallTo.Contains(fnc_call)) {
                     parent_call.CallTo.Add(fnc_call);
@@ -94,6 +95,7 @@ namespace Miyu {
             }
             dic.Add(name, fnc_call);
 
+            // メソッド内のメソッド呼び出しに対し
             foreach (TApply app in fnc.AppFnc) {
                 TType tp2 = tp;
 
@@ -129,6 +131,7 @@ namespace Miyu {
                 }
             }
 
+            // メソッド内のラムダ関数に対し
             var vlambda = from x in fnc.ReferencesInFnc where x.VarRef is TFunction && (x.VarRef as TFunction).KindFnc == EKind.Lambda select (x.VarRef as TFunction);
             foreach(TFunction lambda in vlambda) {
 
@@ -196,8 +199,10 @@ namespace Miyu {
             }
             stack.Push(fnc_call);
 
+            // メソッド内のfldの参照のリスト
             var v = from r in fnc_call.FncCall.ReferencesInFnc where r.VarRef == fld select r;
             if (v.Any()) {
+                // fldの参照がある場合
 
                 if ( (from x in v where x.Defined select x).Any() ) {
 
@@ -211,6 +216,7 @@ namespace Miyu {
                 defined_path.AddRange( (from x in stack where ! defined_path.Contains(x) select x).ToList() );
             }
             else {
+                // fldの参照がない場合
 
                 fnc_call.FontColor = Colors.Black;
             }
@@ -302,6 +308,77 @@ namespace Miyu {
             sw.WriteLine("@enduml");
 
             File.WriteAllText(OutputDir + "\\ClassDiagram.txt", sw.ToString(), new UTF8Encoding(false));
+        }
+
+        public void WriteComment(TToken[] comments, TTokenWriter sw) {
+            if (comments != null && comments.Length != 0) {
+                foreach (TToken tk in comments) {
+                    sw.Fmt(tk);
+                }
+            }
+        }
+
+        /*
+        要約を作ります。
+        */
+        public void MakeSummary() {
+
+            foreach (TSourceFile src in SourceFiles) {
+                TTokenWriter sw = new TTokenWriter(TEnv.Parser);
+
+                Debug.WriteLine("{0} ------------------------------", src.PathSrc, "");
+                foreach (TType cls in src.ClassesSrc) {
+
+                    //sw.Fmt(cls.ClassName, " --------------------", EKind.NL);
+                    //if (cls.SourceFileCls == src) {
+
+                    //    WriteComment(cls.CommentCls, sw);
+                    //}
+                    //else {
+                    //    sw.WriteLine();
+                    //}
+
+                    //var vfld = from x in src.FieldsSrc where x.ClassMember == cls select x;
+                    //foreach (TField fld in vfld) {
+                    //    sw.Fmt(fld.NameVar, " ----------", EKind.NL);
+                    //    WriteComment(fld.CommentVar, sw);
+                    //}
+
+                    var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls && x.KindFnc != EKind.Lambda && x.CommentVar != null && x.CommentVar.Length != 0 select x;
+                    foreach (TFunction fnc in vfnc) {
+                        var vc = from c in fnc.CommentVar where c.Kind == EKind.BlockCommentContinued && c.TextTkn.Trim() != "/*" select c;
+                        if (vc.Any()) {
+
+                            //sw.Fmt(fnc.NameVar, " ----------", EKind.NL);
+                            Debug.WriteLine("{0} {1}", fnc.NameVar, vc.First().TextTkn.Trim());
+                            //foreach(TToken c in vc) {
+                            //    string s = c.TextTkn.Trim();
+                            //    if(s != "/*" && s != "*/") {
+
+                            //        switch (c.Kind) {
+                            //        case EKind.LineComment:
+                            //            Debug.WriteLine("行 {0}", c.TextTkn, "");
+                            //            break;
+                            //        case EKind.BlockComment:
+                            //            Debug.WriteLine("ブロック {0}", c.TextTkn, "");
+                            //            break;
+                            //        case EKind.BlockCommentContinued:
+                            //            Debug.WriteLine("継続 {0}", c.TextTkn, "");
+                            //            break;
+                            //        }
+
+                            //        break;
+                            //    }
+                            //}
+
+
+                            //WriteComment(fnc.CommentVar, sw);
+                        }
+                    }
+                }
+
+                //Debug.WriteLine(sw.ToPlainText());
+            }
         }
     }
 
