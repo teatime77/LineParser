@@ -1216,7 +1216,7 @@ namespace Miyu {
             TLine prev_line = null;
             foreach(TLine line in src.Lines) {
                 line.Indent = -1;
-                if(line.Tokens != null && line.Tokens.Length != 0) {
+                if(line.Tokens.Length != 0) {
                     // 空行でない場合
 
                     // 行頭の字句
@@ -1299,7 +1299,7 @@ namespace Miyu {
                 }
 
                 line.ObjLine = null;
-                if (line.Tokens == null || line.Tokens.Length == 0) {
+                if (line.Tokens.Length == 0) {
                     comments.Add(new TToken(EKind.NL));
                 }
                 else {
@@ -2126,6 +2126,11 @@ namespace Miyu {
         public TToken[] Tokens;
         public object ObjLine;
         public TType ClassLine;
+
+        public void Invariant() {
+            // newの後でUpdateTokenTypeが呼ばれるから。
+            Debug.Assert(Tokens != null);
+        }
     }
 
     public class TParseException : Exception {

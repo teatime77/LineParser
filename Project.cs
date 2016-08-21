@@ -259,8 +259,7 @@ namespace Miyu {
             SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
                            select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
 
-            var sys_src = from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src;
-            SysSourceFile = sys_src.First();
+            SysSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src).First();
         }
 
         public TType GetSysClass(TypeInfo inf) {
@@ -359,26 +358,29 @@ namespace Miyu {
         }
 
         public void RegisterClassNames() {
+            //var v = from src in SourceFiles
+            //        from line in src.Lines where line.Tokens != null
+            //        from idx in TSys.Indexes(line.Tokens.Length) where line.Tokens[idx].Kind
+
+
             List<string> class_names = new List<string>();
 
             foreach(TSourceFile src in SourceFiles) {
                 foreach(TLine line in src.Lines) {
-                    if(line.Tokens != null) {
-                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
-                        if(idx != -1) {
-                            if(idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+                    int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
+                    if (idx != -1) {
+                        if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
 
-                                string name = line.Tokens[idx + 1].TextTkn;
-                                if (!class_names.Contains(name)) {
+                            string name = line.Tokens[idx + 1].TextTkn;
+                            if (!class_names.Contains(name)) {
 
-                                    //Debug.WriteLine("typeof({0}),", name, "");
-                                    class_names.Add(name);
-                                }
+                                //Debug.WriteLine("typeof({0}),", name, "");
+                                class_names.Add(name);
                             }
-                            else {
+                        }
+                        else {
 
-                                Debug.WriteLine("class syntax error");
-                            }
+                            Debug.WriteLine("class syntax error");
                         }
                     }
                 }
@@ -386,11 +388,9 @@ namespace Miyu {
 
             foreach (TSourceFile src in SourceFiles) {
                 foreach (TLine line in src.Lines) {
-                    if (line.Tokens != null) {
-                        var v = from x in line.Tokens where x.Kind == EKind.Identifier && class_names.Contains(x.TextTkn) select x;
-                        foreach(TToken tkn in v) {
-                            tkn.Kind = EKind.ClassName;
-                        }
+                    var v = from x in line.Tokens where x.Kind == EKind.Identifier && class_names.Contains(x.TextTkn) select x;
+                    foreach (TToken tkn in v) {
+                        tkn.Kind = EKind.ClassName;
                     }
                 }
             }

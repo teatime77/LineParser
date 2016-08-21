@@ -68,6 +68,14 @@ namespace Miyu {
         }
     }
 
+    public class TSys {
+        public static IEnumerable<int> Indexes(int cnt) {
+            for(int i = 0; i < cnt; i++) {
+                yield return i;
+            }
+        }
+    }
+
     //-------------------------------------------------------------------------------- TModifier
     public class TModifier {
         public bool ValidMod;

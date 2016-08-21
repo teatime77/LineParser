@@ -223,14 +223,11 @@ namespace Miyu {
                     if (line_idx < SourceFile.Lines.Count) {
                         TLine line = SourceFile.Lines[line_idx];
 
-                        if (line.Tokens != null) {
+                        int k = phrase_start_pos - start_pos;
+                        var v = from t in line.Tokens where t.StartPos <= k && k < t.EndPos select t;
+                        if (v.Any()) {
 
-                            int k = phrase_start_pos - start_pos;
-                            var v = from t in line.Tokens where t.StartPos <= k && k < t.EndPos select t;
-                            if (v.Any()) {
-
-                                tkn = v.First();
-                            }
+                            tkn = v.First();
                         }
                     }
 
