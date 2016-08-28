@@ -42,7 +42,7 @@ namespace Miyu {
         public override TVariable ReadArgVariable(TType parent_class) {
             EKind kind = EKind.Undefined;
 
-            switch (CurTkn.Kind) {
+            switch (CurrentToken.Kind) {
             case EKind.ref_:
                 GetToken(EKind.ref_);
                 kind = EKind.ref_;

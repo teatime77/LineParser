@@ -49,8 +49,6 @@ class char {
 }
 class Clipboard {
 }
-class Colors {
-}
 class Color {
 }
 class Colors {
@@ -180,8 +178,6 @@ class Math {
 }
 class MethodInfo {
 }
-//class MyEditor {
-//}
 class object {
 }
 class Page {
@@ -248,8 +244,6 @@ class UTF8Encoding {
 class VirtualKey {
 }
 class void {
-}
-class WebUtility {
 }
 class WebUtility {
 }

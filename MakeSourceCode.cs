@@ -250,7 +250,7 @@ namespace Miyu {
                 }
             }
 
-            return TProject.HTMLPageText(title, sw.ToString());
+            return TProject.HTMLSourceCodePageString(title, sw.ToString());
         }
 
         public List<TToken> GetTokenList() {
@@ -265,7 +265,7 @@ namespace Miyu {
 
                 if (gen.DimCnt != 0) {
 
-                    TypeText(gen.GenCla[0], sw);
+                    TypeText(gen.ArgClasses[0], sw);
 
                     sw.Fmt(EKind.LB);
                     for (int i = 0; i < gen.DimCnt - 1; i++) {
@@ -277,11 +277,11 @@ namespace Miyu {
 
                     sw.Fmt(tp);
                     sw.Fmt(EKind.LT);
-                    for(int i = 0; i < gen.GenCla.Count; i++) {
+                    for(int i = 0; i < gen.ArgClasses.Count; i++) {
                         if (i != 0) {
                             sw.Fmt(EKind.Comma, ' ');
                         }
-                        TypeText(gen.GenCla[i], sw);
+                        TypeText(gen.ArgClasses[i], sw);
                     }
                     sw.Fmt(EKind.GT);
                 }
@@ -1042,11 +1042,14 @@ namespace Miyu {
     }
 
     partial class TProject {
-        public static string HTMLPageText(string title, string s) {
+        public static string HTMLSourceCodePageString(string title, string s) {
             return TParser.HTMLHead1 + title + TParser.HTMLHead2 + "<pre><code>\r\n" + s + "</code></pre></body></html>";
         }
 
-        public void MakeSourceCode() {
+        /*
+         * HTMLのソースコードを作ります。
+         */
+        public void MakeHTMLSourceCode() {
             StringWriter sw1 = new StringWriter();
 
             sw1.WriteLine("<h1>クラス リファレンス</h1>");
@@ -1090,12 +1093,12 @@ namespace Miyu {
                     }
                     sw.WriteLine("</ul>");
 
-                    File.WriteAllText(class_dir + "\\index.html", HTMLPageText(cls.ClassName, sw.ToString()), new UTF8Encoding(false));
+                    File.WriteAllText(class_dir + "\\index.html", HTMLSourceCodePageString(cls.ClassName, sw.ToString()), new UTF8Encoding(false));
                 }
             }
 
             sw1.WriteLine("</ul>");
-            File.WriteAllText(ClassesDir + "\\index.html", HTMLPageText("クラス リファレンス", sw1.ToString()), new UTF8Encoding(false));
+            File.WriteAllText(ClassesDir + "\\index.html", HTMLSourceCodePageString("クラス リファレンス", sw1.ToString()), new UTF8Encoding(false));
         }
     }
 }

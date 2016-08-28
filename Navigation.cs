@@ -495,7 +495,11 @@ namespace Miyu {
         }
     }
 
-    public class TSetRefFnc : TNavigation {
+    /*
+     * メソッド内の参照のリスト(ReferencesInFnc)をセットします。
+     */
+    public class TSetReferencesInFnc : TNavigation {
+        // 関数の入れ子のスタック
         public Stack<TFunction> Funcs = new Stack<TFunction>();
 
         public override void BeforeAction(object self, List<object> args) {
@@ -505,10 +509,15 @@ namespace Miyu {
 
             if (self is TReference) {
                 if(Funcs.Count != 0) {
+                    // 関数の入れ子のスタックが空でない場合
+
+                    // スタックのトップの関数内の参照リストに追加します。
                     Funcs.Peek().ReferencesInFnc.Add(self as TReference);
                 }
             }
             else if (self is TFunction) {
+                // 関数の入れ子のスタックに関数をプッシュします。
+
                 Funcs.Push(self as TFunction);
             }
         }
@@ -519,12 +528,18 @@ namespace Miyu {
             }
 
             if (self is TFunction) {
+                // 関数の入れ子のスタックから関数をポップします。
+
                 Funcs.Pop();
             }
         }
     }
 
-    public class TSetAppFnc : TNavigation {
+    /*
+     * メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットします。
+     */
+    public class TSetAppsInFnc : TNavigation {
+        // 関数の入れ子のスタック
         public Stack<TFunction> Funcs = new Stack<TFunction>();
 
         public override void BeforeAction(object self, List<object> args) {
@@ -534,15 +549,23 @@ namespace Miyu {
 
             if (self is TApply) {
                 if (Funcs.Count != 0) {
-                    Funcs.Peek().AppFnc.Add(self as TApply);
+                    // 関数の入れ子のスタックが空でない場合
+
+                    // スタックのトップの関数内のメソッド呼び出しリストに追加します。
+                    Funcs.Peek().AppsInFnc.Add(self as TApply);
                 }
             }
             else if (self is TFunction) {
                 TFunction fnc = self as TFunction;
+
+                // 関数の入れ子のスタックに関数をプッシュします。
                 Funcs.Push(fnc);
 
                 if(fnc.BaseApp != null) {
-                    fnc.AppFnc.Add(fnc.BaseApp);
+                    // base呼び出しをする場合
+
+                    // base呼び出しをメソッド呼び出しリストに追加します。
+                    fnc.AppsInFnc.Add(fnc.BaseApp);
                 }
             }
         }
@@ -553,6 +576,8 @@ namespace Miyu {
             }
 
             if (self is TFunction) {
+                // 関数の入れ子のスタックから関数をポップします。
+
                 Funcs.Pop();
             }
         }

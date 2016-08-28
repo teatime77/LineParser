@@ -143,16 +143,16 @@ namespace Miyu {
             CountClass++;
         }
 
-        public TType() {
-            SetIdxClass();
-        }
-
         public TType(string name) {
+            if(name == "Predicate" || name == "ThreadStatic" || name == "DoubleTappedRoutedEventArgs") {
+                Debug.WriteLine("");
+            }
             SetIdxClass();
             ClassName = name;
         }
 
         public TType(TypeInfo info) {
+            Debug.Assert(info != null);
             SetIdxClass();
             Info = info;
         }
@@ -200,16 +200,16 @@ namespace Miyu {
             if(this is TGenericClass) {
                 TGenericClass gen = this as TGenericClass;
 
-                if (gen.GenCla[0].ClassName == "T") {
+                if (gen.ArgClasses[0].ClassName == "T") {
                     return null;
                 }
                 if (ClassName == "List" || ClassName == "Stack" || ClassName == "Array" || ClassName == "IEnumerable" || ClassName == "Enumerable") {
 
-                    return gen.GenCla[0];
+                    return gen.ArgClasses[0];
                 }
                 else if (ClassName == "Dictionary") {
 
-                    return gen.GenCla[1];
+                    return gen.ArgClasses[1];
                 }
             }
             if(Info != null) {
@@ -283,20 +283,6 @@ namespace Miyu {
             }
         }
 
-        public TFunction GetVirtualFunction(TFunction fnc) {
-            if(fnc.InfoFnc != null) {
-                return fnc;
-            }
-            var v = from c in ThisAncestorSuperClasses() from f in c.Functions where f == fnc || f.NameVar == fnc.NameVar && f.IsEqualType(fnc) select f;
-            if (v.Any()) {
-                return v.First();
-            }
-            else {
-
-                return null;
-            }
-        }
-
         public IEnumerable<TFunction> GetVirtualFunctions(TFunction fnc) {
             if (fnc.InfoFnc != null) {
                 yield return fnc;
@@ -322,22 +308,22 @@ namespace Miyu {
 
         [_weak]
         public TGenericClass OrgCla;
-        public List<TType> GenCla;
+        public List<TType> ArgClasses;
 
         public TGenericClass(string name, List<TType> arg_classes) : base(name) {
-            GenCla = arg_classes;
+            ArgClasses = arg_classes;
         }
 
         public TGenericClass(TGenericClass org_class, List<TType> arg_classes, int dim_cnt) : base(org_class.ClassName) {
             OrgCla = org_class;
-            GenCla = arg_classes;
+            ArgClasses = arg_classes;
             DimCnt = dim_cnt;
         }
 
         public override string GetClassText() {
             if(ClassText == null) {
 
-                ClassText = TEnv.Project.MakeClassText(ClassName, GenCla, DimCnt);
+                ClassText = TEnv.Project.MakeClassText(ClassName, ArgClasses, DimCnt);
             }
 
             return ClassText;
@@ -474,7 +460,7 @@ namespace Miyu {
         public List<TReference> ReferencesInFnc = new List<TReference>();
 
         // メソッド内のメソッド呼び出しのリスト
-        public List<TApply> AppFnc = new List<TApply>();
+        public List<TApply> AppsInFnc = new List<TApply>();
 
         public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
             KindFnc = kind;
@@ -612,6 +598,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 変数参照
+     */
     public partial class TReference : TTerm {
         public string NameRef;
         public bool IsOut;
@@ -637,6 +626,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * ドットつき変数参照
+     */
     public class TDotReference : TReference {
         public TTerm DotRef;
 
@@ -645,6 +637,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 関数呼び出し
+     */
     public partial class TApply : TTerm {
         public EKind KindApp;
         public TTerm[] Args;
@@ -686,6 +681,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * ドットつき関数呼び出し
+     */
     public partial class TDotApply : TApply {
         public TTerm DotApp;
         public TType DotClass;
@@ -699,6 +697,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * new呼び出し
+     */
     public class TNewApply : TApply {
         public List<TTerm> InitList;
 
@@ -722,6 +723,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * from句
+     */
     public partial class TFrom : TTerm {
         public TVariable VarQry;
         public TTerm SeqQry;

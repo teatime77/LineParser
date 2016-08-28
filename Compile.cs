@@ -179,7 +179,7 @@ namespace Miyu {
                             TType tp = (ParentTrm as TDotApply).DotApp.TypeTrm;
                             if (tp is TGenericClass) {
 
-                                TType gen_tp = (tp as TGenericClass).GenCla[0];
+                                TType gen_tp = (tp as TGenericClass).ArgClasses[0];
 
                                 lambda.ArgsFnc[0].TypeVar = gen_tp;
                                 vars.Add(lambda.ArgsFnc[0]);

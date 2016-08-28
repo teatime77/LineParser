@@ -108,6 +108,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * プロジェクトをビルドします。
+         */
         public void Build() {
             DateTime tick;
 
@@ -196,6 +199,8 @@ namespace Miyu {
                     Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
                     tick = DateTime.Now;
+
+                    // HTMLを出力するディレクトリを作ります。
                     string html_dir = OutputDir + "\\html";
                     if (!Directory.Exists(OutputDir)) {
                         Directory.CreateDirectory(OutputDir);
@@ -211,6 +216,7 @@ namespace Miyu {
                     TSetDefined set_defined = new TSetDefined();
                     set_defined.ProjectNavi(this, null);
 
+                    // すべてのソースファイルに対し
                     foreach (TSourceFile src in SourceFiles) {
                         TTokenWriter tw = new TTokenWriter(src.Parser);
                         src.Parser.SourceFileText(src, tw);
@@ -221,18 +227,22 @@ namespace Miyu {
                         File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
                     }
 
-                    MakeSourceCode();
+                    // HTMLのソースコードを作ります。
+                    MakeHTMLSourceCode();
 
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
+                    // コールグラフを作ります。
                     MakeCallGraph();
 
                     // 使用・定義連鎖を作ります。
                     MakeUseDefineChain();
 
+                    // クラス図を作ります。
                     MakeClassDiagram();
 
+                    // 要約を作ります。
                     MakeSummary();
 
                     Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
@@ -242,6 +252,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * アセンブリのリストを作ります。
+         */
         public void SetAssemblyList() {
             AssemblyList.Add(typeof(ApplicationData).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Assembly).GetTypeInfo().Assembly);
@@ -386,13 +399,15 @@ namespace Miyu {
                 }
             }
 
-            foreach (TSourceFile src in SourceFiles) {
-                foreach (TLine line in src.Lines) {
-                    var v = from x in line.Tokens where x.Kind == EKind.Identifier && class_names.Contains(x.TextTkn) select x;
-                    foreach (TToken tkn in v) {
-                        tkn.Kind = EKind.ClassName;
-                    }
-                }
+            // クラス名のトークンのリスト
+            var vtkn = from src in SourceFiles
+                    from line in src.Lines
+                    from tkn in line.Tokens
+                    where tkn.Kind == EKind.Identifier && class_names.Contains(tkn.TextTkn) select tkn;
+
+            foreach (TToken tkn in vtkn) {
+                // 種類はClassNameにする。
+                tkn.Kind = EKind.ClassName;
             }
         }
 
@@ -406,7 +421,7 @@ namespace Miyu {
                 if(TParser.CurrentClass is TGenericClass) {
                     TGenericClass gen = TParser.CurrentClass as TGenericClass;
 
-                    var v = from t in gen.GenCla where t.ClassName == name select t;
+                    var v = from t in gen.ArgClasses where t.ClassName == name select t;
                     if (v.Any()) {
 
                         return v.First();
@@ -425,7 +440,7 @@ namespace Miyu {
             if (cls is TGenericClass) {
                 TGenericClass gen = cls as TGenericClass;
 
-                var v = from c in gen.GenCla where c.ClassName == name select c;
+                var v = from c in gen.ArgClasses where c.ClassName == name select c;
                 if (v.Any()) {
                     return v.First();
                 }
@@ -511,7 +526,7 @@ namespace Miyu {
             bool changed = false;
 
             List<TType> vtp = new List<TType>();
-            foreach(TType tp2 in gen.GenCla) {
+            foreach(TType tp2 in gen.ArgClasses) {
                 TType tp3 = SubstituteArgumentClass(tp2, dic);
                 if(tp3 != tp2) {
                     changed = true;
@@ -566,16 +581,16 @@ namespace Miyu {
 
             Dictionary<string, TType> dic = new Dictionary<string, TType>();
 
-            if(cls.GenCla == null || cls.GenCla.Count != cls.OrgCla.GenCla.Count) {
+            if(cls.ArgClasses == null || cls.ArgClasses.Count != cls.OrgCla.ArgClasses.Count) {
                 throw new TParseException();
             }
 
-            for(int i = 0; i < cls.OrgCla.GenCla.Count; i++) {
-                dic.Add(cls.OrgCla.GenCla[i].ClassName, cls.GenCla[i]);
+            for(int i = 0; i < cls.OrgCla.ArgClasses.Count; i++) {
+                dic.Add(cls.OrgCla.ArgClasses[i].ClassName, cls.ArgClasses[i]);
             }
 
-            for (int i = 0; i < cls.GenCla.Count; i++) {
-                cls.GenCla[i] = SubstituteArgumentClass(cls.GenCla[i], dic);
+            for (int i = 0; i < cls.ArgClasses.Count; i++) {
+                cls.ArgClasses[i] = SubstituteArgumentClass(cls.ArgClasses[i], dic);
             }
 
             cls.KindClass = cls.OrgCla.KindClass;

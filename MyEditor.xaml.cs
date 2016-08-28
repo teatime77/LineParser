@@ -1086,6 +1086,7 @@ namespace Miyu {
 
             Point pt = new Point(pointer.Position.X - canvas_pos.X, pointer.Position.Y - canvas_pos.Y);
 
+            // 描画された図形に対し
             foreach (TShape shape in DrawList) {
                 if (shape.Bounds.Contains(pt)) {
 
@@ -1141,6 +1142,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * キャンバスのサイズを設定します。
+         */
         void UpdateEditCanvasSize() {
             if (!double.IsNaN(LineHeight)) {
                 double document_height = SourceFile.Lines.Count * LineHeight;
@@ -1171,6 +1175,9 @@ namespace Miyu {
             InvalidateCanvas();
         }
 
+        /*
+            キャンバスを再描画します。 
+        */
         public void InvalidateCanvas() {
             UpdateEditCanvasSize();
             Win2DCanvas.Invalidate();

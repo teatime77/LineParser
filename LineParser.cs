@@ -28,8 +28,8 @@ namespace Miyu {
 
         public TToken[] TokenList;
         public int TokenPos;
-        public TToken CurTkn;
-        public TToken NextTkn;
+        public TToken CurrentToken;
+        public TToken NextToken;
         public bool Dirty;
         public bool Running;
         public ELanguage LanguageSP;
@@ -85,14 +85,14 @@ namespace Miyu {
         }
 
         public TType ReadClassLine(TSourceFile src, TModifier mod1) {
-            EKind kind = CurTkn.Kind;
+            EKind kind = CurrentToken.Kind;
 
             GetToken(EKind.Undefined);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             TType cls;
 
-            if (CurTkn.Kind == EKind.LT) {
+            if (CurrentToken.Kind == EKind.LT) {
                 // 総称型の場合
 
                 List<TType> param_classes = new List<TType>();
@@ -106,7 +106,7 @@ namespace Miyu {
 
                     param_classes.Add(param_class);
 
-                    if (CurTkn.Kind != EKind.Comma) {
+                    if (CurrentToken.Kind != EKind.Comma) {
 
                         break;
                     }
@@ -118,6 +118,7 @@ namespace Miyu {
                 cls = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             else {
+                // 総称型でない場合
 
                 cls = PrjParser.GetClassByName(id.TextTkn);
             }
@@ -146,7 +147,8 @@ namespace Miyu {
                 cls.SourceFileCls = src;
             }
 
-            if (CurTkn.Kind == EKind.Colon) {
+            if (CurrentToken.Kind == EKind.Colon) {
+                // 親クラスがある場合
 
                 GetToken(EKind.Colon);
                 while (true) {
@@ -155,7 +157,7 @@ namespace Miyu {
 
                     cls.SuperClasses.Add(super_class);
 
-                    if(CurTkn.Kind == EKind.Comma) {
+                    if(CurrentToken.Kind == EKind.Comma) {
 
                         GetToken(EKind.Comma);
                     }
@@ -211,13 +213,16 @@ namespace Miyu {
 
         public TType ReadDelegateLine(TModifier mod1) {
             GetToken(EKind.delegate_);
+
+            // 戻り値の型を読みます。
             TType ret_type = ReadType(null, false);
 
+            // デリケートの名前を読みます。
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             List<TType> param_classes = new List<TType>();
 
-            if (CurTkn.Kind == EKind.LT) {
+            if (CurrentToken.Kind == EKind.LT) {
                 // 総称型の場合
 
                 GetToken(EKind.LT);
@@ -229,7 +234,7 @@ namespace Miyu {
 
                     param_classes.Add(param_class);
 
-                    if (CurTkn.Kind != EKind.Comma) {
+                    if (CurrentToken.Kind != EKind.Comma) {
 
                         break;
                     }
@@ -249,13 +254,16 @@ namespace Miyu {
 
                 dlg = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
-
-            List<TVariable> vars = ReadArgs(dlg);
-            TType[] arg_types = (from t in vars select t.TypeVar).ToArray();
-
             dlg.KindClass = EClass.Delegate;
+
+            // 引数のリストを読みます。
+            List<TVariable> vars = ReadArgs(dlg);
+
+            // 戻り値の型
             dlg.RetType = ret_type;
-            dlg.ArgTypes = arg_types;
+
+            // 引数の型
+            dlg.ArgTypes = (from t in vars select t.TypeVar).ToArray();
 
             return dlg;
         }
@@ -276,7 +284,8 @@ namespace Miyu {
             }
 
             TTerm init = null;
-            if (CurTkn.Kind == EKind.Assign) {
+            if (CurrentToken.Kind == EKind.Assign) {
+                // 初期値がある場合
 
                 GetToken(EKind.Assign);
 
@@ -297,6 +306,9 @@ namespace Miyu {
             return new TField(parent_class, null, id, parent_class, null);
         }
 
+        /*
+         * 型を読みます。
+         */
         public TType ReadType(TType parent_class, bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
             TType cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
@@ -304,7 +316,7 @@ namespace Miyu {
             List<TType> param_classes = null;
             bool contains_argument_class = false;
 
-            if (CurTkn.Kind == EKind.LT) {
+            if (CurrentToken.Kind == EKind.LT) {
                 // 総称型の場合
 
                 if (! (cls1 is TGenericClass)) {
@@ -326,7 +338,7 @@ namespace Miyu {
 
                     param_classes.Add(param_class);
 
-                    if(CurTkn.Kind != EKind.Comma) {
+                    if(CurrentToken.Kind != EKind.Comma) {
 
                         break;
                     }
@@ -335,18 +347,20 @@ namespace Miyu {
                 }
                 GetToken(EKind.GT);
 
-                if(org_cla.GenCla.Count != param_classes.Count) {
+                if(org_cla.ArgClasses.Count != param_classes.Count) {
 
                     throw new TParseException("総称型の引数の数が一致しません。");
                 }
             }
 
             int dim_cnt = 0;
-            if (CurTkn.Kind == EKind.LB && ! new_class) {
+            if (CurrentToken.Kind == EKind.LB && ! new_class) {
+                // 配列の場合
+
                 GetToken(EKind.LB);
 
                 dim_cnt = 1;
-                while (CurTkn.Kind == EKind.Comma) {
+                while (CurrentToken.Kind == EKind.Comma) {
                     GetToken(EKind.Comma);
                     dim_cnt++;
                 }
@@ -407,7 +421,7 @@ namespace Miyu {
                 TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
                 using1.Packages.Add(id.TextTkn);
-                if(CurTkn.Kind != EKind.Dot) {
+                if(CurrentToken.Kind != EKind.Dot) {
                     break;
                 }
                 GetToken(EKind.Dot);
@@ -428,16 +442,21 @@ namespace Miyu {
             return new TNamespace(id.TextTkn);
         }
 
+        /*
+         * 引数のリストを読みます。
+         */
         public List<TVariable> ReadArgs(TType parent_class) {
             List<TVariable> vars = new List<TVariable>();
 
             GetToken(EKind.LP);
 
-            while (CurTkn.Kind != EKind.RP) {
+            while (CurrentToken.Kind != EKind.RP) {
+
+                // 引数の変数を読みます。
                 TVariable var1 = ReadArgVariable(parent_class);
                 vars.Add(var1);
 
-                if (CurTkn.Kind != EKind.Comma) {
+                if (CurrentToken.Kind != EKind.Comma) {
 
                     break;
                 }
@@ -460,7 +479,7 @@ namespace Miyu {
             }
             else {
 
-                if (CurTkn.Kind == EKind.operator_) {
+                if (CurrentToken.Kind == EKind.operator_) {
 
                     GetToken(EKind.operator_);
                     fnc_name = GetToken(EKind.Undefined);
@@ -474,12 +493,13 @@ namespace Miyu {
                 }
             }
 
+            // 引数のリストを読みます。
             List<TVariable> vars = ReadArgs(parent_class);
 
             TType ret_type = ret_type_prepend;
             TApply base_app = null;
 
-            if(CurTkn.Kind == EKind.Colon) {
+            if(CurrentToken.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
@@ -489,7 +509,7 @@ namespace Miyu {
                 }
                 else if(constructor_class != null) {
 
-                    if(CurTkn.Kind == EKind.base_) {
+                    if(CurrentToken.Kind == EKind.base_) {
 
                         base_app = PrimaryExpression() as TApply;
                     }
@@ -499,7 +519,7 @@ namespace Miyu {
                 }
             }
 
-            if(CurTkn.Kind == EKind.SemiColon) {
+            if(CurrentToken.Kind == EKind.SemiColon) {
 
                 GetToken(EKind.SemiColon);
             }
@@ -513,10 +533,13 @@ namespace Miyu {
             return new TFunction(mod1, fnc_name, vars.ToArray(), ret_type, base_app, kind_fnc);
         }
 
+        /*
+         * 引数の変数を読みます。
+         */
         public virtual TVariable ReadArgVariable(TType parent_class) {
             EKind kind = EKind.Undefined;
 
-            switch (CurTkn.Kind) {
+            switch (CurrentToken.Kind) {
             case EKind.ref_:
                 GetToken(EKind.ref_);
                 kind = EKind.ref_;
@@ -536,7 +559,7 @@ namespace Miyu {
             TToken id = GetToken(EKind.Identifier);
 
             TType type = null;
-            if (CurTkn.Kind == EKind.Colon) {
+            if (CurrentToken.Kind == EKind.Colon) {
 
                 GetToken(EKind.Colon);
 
@@ -556,7 +579,7 @@ namespace Miyu {
             }
             else { 
 
-                if (CurTkn.Kind == EKind.Colon) {
+                if (CurrentToken.Kind == EKind.Colon) {
 
                     GetToken(EKind.Colon);
 
@@ -565,10 +588,12 @@ namespace Miyu {
             }
 
             TTerm init = null;
-            if (CurTkn.Kind == EKind.Assign) {
+            if (CurrentToken.Kind == EKind.Assign) {
+                // 初期値がある場合
 
                 GetToken(EKind.Assign);
 
+                // 初期値の式
                 init = Expression();
             }
 
@@ -589,7 +614,7 @@ namespace Miyu {
 
                 var_decl.Variables.Add(var1);
 
-                if(CurTkn.Kind != EKind.Comma) {
+                if(CurrentToken.Kind != EKind.Comma) {
 
                     break;
                 }
@@ -625,7 +650,7 @@ namespace Miyu {
 
             GetToken(EKind.else_);
 
-            if(CurTkn.Kind == EKind.if_) {
+            if(CurrentToken.Kind == EKind.if_) {
 
                 GetToken(EKind.if_);
                 LPopt();
@@ -661,7 +686,7 @@ namespace Miyu {
             case1.TermsCase.AddRange(expr_list);
 
             Colonopt();
-            if(CurTkn.Kind == EKind.LC) {
+            if(CurrentToken.Kind == EKind.LC) {
                 GetToken(EKind.LC);
             }
             GetToken(EKind.EOT);
@@ -702,7 +727,7 @@ namespace Miyu {
             GetToken(EKind.foreach_);
             LPopt();
 
-            if(CurTkn.Kind == EKind.ClassName) {
+            if(CurrentToken.Kind == EKind.ClassName) {
 
                 for1.LoopVariable = ReadArgVariable(null);
             }
@@ -729,9 +754,9 @@ namespace Miyu {
             GetToken(EKind.for_);
             GetToken(EKind.LP);
 
-            if (CurTkn.Kind != EKind.SemiColon) {
+            if (CurrentToken.Kind != EKind.SemiColon) {
 
-                if (CurTkn.Kind == EKind.ClassName) {
+                if (CurrentToken.Kind == EKind.ClassName) {
                     TType tp = ReadType(null, false);
 
                     for1.InitStatement = ReadVariableDeclarationLine(tp, true);
@@ -739,21 +764,23 @@ namespace Miyu {
                 }
                 else {
 
+                    // 代入文かメソッド呼び出し文を読みます。
                     for1.InitStatement = ReadAssignmentCallLine(true) as TStatement;
                 }
             }
 
             GetToken(EKind.SemiColon);
 
-            if (CurTkn.Kind != EKind.SemiColon) {
+            if (CurrentToken.Kind != EKind.SemiColon) {
 
                 for1.ConditionFor = Expression();
             }
 
             GetToken(EKind.SemiColon);
 
-            if(CurTkn.Kind != EKind.RP) {
+            if(CurrentToken.Kind != EKind.RP) {
 
+                // 代入文かメソッド呼び出し文を読みます。
                 for1.PostStatement = ReadAssignmentCallLine(true) as TStatement;
             }
 
@@ -778,7 +805,7 @@ namespace Miyu {
             TType tp = ReadType(null, false);
 
             string name = "";
-            if(CurTkn.Kind == EKind.Identifier) {
+            if(CurrentToken.Kind == EKind.Identifier) {
                 name = GetToken(EKind.Identifier).TextTkn;
             }
 
@@ -796,12 +823,12 @@ namespace Miyu {
 
             switch (tkn.Kind) {
             case EKind.yield_:
-                if(CurTkn.Kind == EKind.return_) {
+                if(CurrentToken.Kind == EKind.return_) {
 
                     GetToken(EKind.return_);
                     jump.RetVal = Expression();
                 }
-                else if (CurTkn.Kind == EKind.break_) {
+                else if (CurrentToken.Kind == EKind.break_) {
 
                     GetToken(EKind.break_);
                 }
@@ -812,7 +839,7 @@ namespace Miyu {
 
             case EKind.return_:
             case EKind.throw_:
-                if(CurTkn.Kind != EKind.SemiColon && CurTkn.Kind != EKind.EOT) {
+                if(CurrentToken.Kind != EKind.SemiColon && CurrentToken.Kind != EKind.EOT) {
 
                     jump.RetVal = Expression();
                 }
@@ -833,20 +860,25 @@ namespace Miyu {
             return jump;
         }
 
+        /*
+         * 代入文かメソッド呼び出し文を読みます。
+         */
         public object ReadAssignmentCallLine(bool in_for) {
             TAssignment asn = null;
 
             TTerm t1 = Expression();
 
-            switch (CurTkn.Kind) {
+            switch (CurrentToken.Kind) {
             case EKind.Assign:
             case EKind.AddEq:
             case EKind.SubEq:
             case EKind.DivEq:
             case EKind.ModEq:
+                // 代入文の場合
 
                 TToken opr = GetToken(EKind.Undefined);
 
+                // 右辺を読みます。
                 TTerm t2 = Expression();
 
                 TApply app1 = new TApply(opr, t1, t2);
@@ -857,7 +889,7 @@ namespace Miyu {
 
             if(!in_for) {
 
-                if(CurTkn.Kind == EKind.Comma) {
+                if(CurrentToken.Kind == EKind.Comma) {
                     GetToken(EKind.Comma);
                     GetToken(EKind.EOT);
                     return t1;
@@ -881,6 +913,7 @@ namespace Miyu {
                 throw new TParseException();
             }
 
+            // メソッド呼び出し文を返します。
             return new TCall(t1 as TApply);
         }
 
@@ -906,20 +939,20 @@ namespace Miyu {
 
             if (TokenPos < TokenList.Length) {
 
-                CurTkn = TokenList[TokenPos];
+                CurrentToken = TokenList[TokenPos];
             }
             else {
 
-                CurTkn = EOTToken;
+                CurrentToken = EOTToken;
             }
 
             if (TokenPos + 1 < TokenList.Length) {
 
-                NextTkn = TokenList[TokenPos + 1];
+                NextToken = TokenList[TokenPos + 1];
             }
             else {
 
-                NextTkn = EOTToken;
+                NextToken = EOTToken;
             }
 
             try {
@@ -941,7 +974,7 @@ namespace Miyu {
 
                 TModifier mod1 = new TModifier();
                 while (true) {
-                    switch (CurTkn.Kind) {
+                    switch (CurrentToken.Kind) {
                     case EKind.public_:
                         GetToken(EKind.public_);
                         mod1.isPublic = true;
@@ -994,12 +1027,12 @@ namespace Miyu {
 
                     case EKind.RC:
                         GetToken(EKind.RC);
-                        if (CurTkn.Kind == EKind.RP && TEnv.InLambdaFunction) {
+                        if (CurrentToken.Kind == EKind.RP && TEnv.InLambdaFunction) {
                             TEnv.InLambdaFunction = false;
                             GetToken(EKind.RP);
                         }
 
-                        if(CurTkn.Kind == EKind.SemiColon) {
+                        if(CurrentToken.Kind == EKind.SemiColon) {
 
                             GetToken(EKind.SemiColon);
                         }
@@ -1018,7 +1051,7 @@ namespace Miyu {
                 }
                 start_l:
 
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.using_:
                     return ReadUsing();
 
@@ -1081,21 +1114,23 @@ namespace Miyu {
                     return ReadJumpLine();
 
                 case EKind.ClassName:
-                    TToken class_token = CurTkn;
+                    TToken class_token = CurrentToken;
                     TType tp = ReadType(null, false);
 
-                    if (CurTkn.Kind == EKind.LP) {
+                    if (CurrentToken.Kind == EKind.LP) {
 
                         return ReadFunctionLine(cls, class_token, tp, mod1, tp);
                     }
 
-                    if (CurTkn.Kind != EKind.Identifier) {
+                    if (CurrentToken.Kind != EKind.Identifier) {
 
                         LookaheadClass = tp;
+
+                        // 代入文かメソッド呼び出し文を読みます。
                         return ReadAssignmentCallLine(false);
                     }
 
-                    if (NextTkn.Kind == EKind.LP) {
+                    if (NextToken.Kind == EKind.LP) {
 
                         return ReadFunctionLine(cls, null, null, mod1, tp);
                     }
@@ -1118,7 +1153,7 @@ namespace Miyu {
                         return ReadEnumFieldLine(cls);
                     }
 
-                    if (NextTkn.Kind == EKind.Colon) {
+                    if (NextToken.Kind == EKind.Colon) {
                         if(TokenPos + 2 < TokenList.Length) {
 
                             return ReadFieldLine(cls, mod1, null);
@@ -1136,6 +1171,7 @@ namespace Miyu {
                     }
                     else {
 
+                        // 代入文かメソッド呼び出し文を読みます。
                         return ReadAssignmentCallLine(false);
                     }
 
@@ -1144,6 +1180,7 @@ namespace Miyu {
                 case EKind.LP:
                 case EKind.StringLiteral:
                 case EKind.typeof_:
+                    // 代入文かメソッド呼び出し文を読みます。
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
@@ -1156,7 +1193,7 @@ namespace Miyu {
                     return new TAttribute(attr);
 
                 default:
-                    Debug.WriteLine("行頭 {0}", CurTkn.Kind);
+                    Debug.WriteLine("行頭 {0}", CurrentToken.Kind);
                     throw new TParseException();
                 }
             }
@@ -1166,7 +1203,7 @@ namespace Miyu {
             return null;
         }
 
-        public void GetVariableClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
+        public void GetVariablesClass(TSourceFile src, int current_line_idx, out List<TVariable> vars) {
             vars = new List<TVariable>();
 
             int min_indent = src.Lines[current_line_idx].Indent;
@@ -1212,6 +1249,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * ソースファイル内の継続行をセットします。
+         */
         public void SetLineContinued(TSourceFile src) {
             TLine prev_line = null;
             foreach(TLine line in src.Lines) {
@@ -1339,7 +1379,7 @@ namespace Miyu {
                                 if (cls is TGenericClass) {
                                     TGenericClass gen = cls as TGenericClass;
 
-                                    var vtkn = from t in gen.GenCla from tk in line.Tokens where tk.TextTkn == t.ClassName select tk;
+                                    var vtkn = from t in gen.ArgClasses from tk in line.Tokens where tk.TextTkn == t.ClassName select tk;
                                     foreach (TToken tk in vtkn) {
                                         tk.Kind = EKind.ClassName;
                                     }
@@ -1514,7 +1554,7 @@ namespace Miyu {
                     TStatement stmt = line.ObjLine as TStatement;
 
                     List<TVariable> vars;
-                    GetVariableClass(src, line_idx, out vars);
+                    GetVariablesClass(src, line_idx, out vars);
 
                     // 名前解決のエラーをクリアします。
                     lock (src) {
@@ -1535,21 +1575,21 @@ namespace Miyu {
 
         public TToken GetToken(EKind type) {
 
-            if(type != EKind.Undefined && type != CurTkn.Kind) {
+            if(type != EKind.Undefined && type != CurrentToken.Kind) {
 
                 throw new TParseException();
             }
 
-            TToken tkn = CurTkn;
+            TToken tkn = CurrentToken;
 
             while (true) {
 
                 TokenPos++;
                 if (TokenPos < TokenList.Length) {
 
-                    CurTkn = TokenList[TokenPos];
+                    CurrentToken = TokenList[TokenPos];
 
-                    switch (CurTkn.TokenType) {
+                    switch (CurrentToken.TokenType) {
                     case ETokenType.BlockComment:
                     case ETokenType.BlockCommentContinued:
                     case ETokenType.LineComment:
@@ -1561,7 +1601,7 @@ namespace Miyu {
                 }
                 else {
 
-                    CurTkn = EOTToken;
+                    CurrentToken = EOTToken;
                     break;
                 }
             }
@@ -1569,18 +1609,18 @@ namespace Miyu {
 
             if (TokenPos + 1 < TokenList.Length) {
 
-                NextTkn = TokenList[TokenPos + 1];
+                NextToken = TokenList[TokenPos + 1];
             }
             else {
 
-                NextTkn = EOTToken;
+                NextToken = EOTToken;
             }
 
             return tkn;
         }
 
         public TToken GetToken2(EKind kind1, EKind kind2) {
-            if (CurTkn.Kind != kind1 && CurTkn.Kind != kind2) {
+            if (CurrentToken.Kind != kind1 && CurrentToken.Kind != kind2) {
 
                 throw new TParseException();
             }
@@ -1588,7 +1628,7 @@ namespace Miyu {
         }
 
         public void OptGetToken(EKind kind) {
-            if (CurTkn.Kind == kind) {
+            if (CurrentToken.Kind == kind) {
 
                 GetToken(kind);
             }
@@ -1605,17 +1645,17 @@ namespace Miyu {
             GetToken(EKind.in_);
             from1.SeqQry = Expression();
 
-            if (CurTkn.Kind == EKind.where_) {
+            if (CurrentToken.Kind == EKind.where_) {
                 GetToken(EKind.where_);
                 from1.CndQry = Expression();
             }
 
-            if (CurTkn.Kind == EKind.select_) {
+            if (CurrentToken.Kind == EKind.select_) {
                 GetToken(EKind.select_);
                 from1.SelFrom = Expression();
             }
 
-            if (CurTkn.Kind == EKind.from_) {
+            if (CurrentToken.Kind == EKind.from_) {
                 from1.InnerFrom = FromExpression();
             }
 
@@ -1640,7 +1680,7 @@ namespace Miyu {
                 return ref_class;
             }
 
-            switch (CurTkn.Kind) {
+            switch (CurrentToken.Kind) {
             case EKind.Identifier:
             case EKind.this_:
             case EKind.true_:
@@ -1649,7 +1689,7 @@ namespace Miyu {
             case EKind.base_:
                 id = GetToken(EKind.Undefined);
 
-                if (CurTkn.Kind == EKind.LP) {
+                if (CurrentToken.Kind == EKind.LP) {
                     GetToken(EKind.LP);
 
                     TTerm[] expr_list = ExpressionList().ToArray();
@@ -1658,7 +1698,7 @@ namespace Miyu {
 
                     return new TApply(id, expr_list);
                 }
-                else if(CurTkn.Kind == EKind.Lambda) {
+                else if(CurrentToken.Kind == EKind.Lambda) {
                     GetToken(EKind.Lambda);
 
                     TTerm ret = Expression();
@@ -1673,10 +1713,10 @@ namespace Miyu {
 
             case EKind.LP:
                 GetToken(EKind.LP);
-                if(CurTkn.Kind == EKind.ClassName) {
+                if(CurrentToken.Kind == EKind.ClassName) {
 
                     cls = ReadType(null, false);
-                    if(CurTkn.Kind == EKind.RP) {
+                    if(CurrentToken.Kind == EKind.RP) {
 
                         GetToken(EKind.RP);
                         term = Expression();
@@ -1689,7 +1729,7 @@ namespace Miyu {
                         LookaheadClass = cls;
                     }
                 }
-                else if(CurTkn.Kind == EKind.RP) {
+                else if(CurrentToken.Kind == EKind.RP) {
                     GetToken(EKind.RP);
                     TToken lambda = GetToken(EKind.Lambda);
                     GetToken(EKind.LC);
@@ -1719,7 +1759,7 @@ namespace Miyu {
                 TToken new_tkn = GetToken(EKind.new_);
 
                 cls = ReadType(null, true);
-                if(CurTkn.Kind == EKind.LP) {
+                if(CurrentToken.Kind == EKind.LP) {
 
                     GetToken(EKind.LP);
 
@@ -1729,7 +1769,7 @@ namespace Miyu {
 
                     return new TNewApply(EKind.NewInstance, new_tkn, cls, args, null);
                 }
-                else if (CurTkn.Kind == EKind.LB) {
+                else if (CurrentToken.Kind == EKind.LB) {
 
                     GetToken(EKind.LB);
 
@@ -1738,11 +1778,11 @@ namespace Miyu {
                     GetToken(EKind.RB);
 
                     init = null;
-                    if (CurTkn.Kind == EKind.LC) {
+                    if (CurrentToken.Kind == EKind.LC) {
 
                         GetToken(EKind.LC);
 
-                        if(CurTkn.Kind != EKind.EOT) {
+                        if(CurrentToken.Kind != EKind.EOT) {
 
                             init = ExpressionList();
                             GetToken(EKind.RC);
@@ -1751,7 +1791,7 @@ namespace Miyu {
 
                     return new TNewApply(EKind.NewArray, new_tkn, cls, args, init);
                 }
-                else if(CurTkn.Kind == EKind.LC) {
+                else if(CurrentToken.Kind == EKind.LC) {
 
                     GetToken(EKind.LC);
 
@@ -1766,7 +1806,7 @@ namespace Miyu {
                 }
 
             case EKind.ClassName:
-                id = CurTkn;
+                id = CurrentToken;
                 cls = ReadType(null, false);
 
                 //!!!!!!!!!! idとclsは違う !!!!!!!!!!
@@ -1794,14 +1834,14 @@ namespace Miyu {
         public TTerm DotIndexExpression() {
             TTerm t1 = PrimaryExpression();
 
-            while(CurTkn.Kind == EKind.Dot || CurTkn.Kind == EKind.LB) {
-                if(CurTkn.Kind == EKind.Dot) {
+            while(CurrentToken.Kind == EKind.Dot || CurrentToken.Kind == EKind.LB) {
+                if(CurrentToken.Kind == EKind.Dot) {
 
                     GetToken(EKind.Dot);
 
                     TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
-                    if (CurTkn.Kind == EKind.LP) {
+                    if (CurrentToken.Kind == EKind.LP) {
                         GetToken(EKind.LP);
 
                         TTerm[] args = ExpressionList().ToArray();
@@ -1836,7 +1876,7 @@ namespace Miyu {
         public TTerm PostIncDecExpression() {
             TTerm t1 = DotIndexExpression();
 
-            if (CurTkn.Kind == EKind.Inc || CurTkn.Kind == EKind.Dec) {
+            if (CurrentToken.Kind == EKind.Inc || CurrentToken.Kind == EKind.Dec) {
                 TToken opr = GetToken(EKind.Undefined);
 
                 return new TApply(opr, t1);
@@ -1848,7 +1888,7 @@ namespace Miyu {
         }
 
         public TTerm UnaryExpression() {
-            if (CurTkn.Kind == EKind.Add || CurTkn.Kind == EKind.Sub) {
+            if (CurrentToken.Kind == EKind.Add || CurrentToken.Kind == EKind.Sub) {
                 TToken opr = GetToken(EKind.Undefined);
 
                 TTerm t1 = PostIncDecExpression();
@@ -1865,7 +1905,7 @@ namespace Miyu {
             TTerm t1 = UnaryExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Mul:
                 case EKind.Div:
                 case EKind.Mod:
@@ -1886,7 +1926,7 @@ namespace Miyu {
             TTerm t1 = MultiplicativeExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Add:
                 case EKind.Sub:
 
@@ -1906,7 +1946,7 @@ namespace Miyu {
             TTerm t1 = AdditiveExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Eq:
                 case EKind.NE:
                 case EKind.LT:
@@ -1933,7 +1973,7 @@ namespace Miyu {
         }
 
         public TTerm NotExpression() {
-            if(CurTkn.Kind == EKind.Not_) {
+            if(CurrentToken.Kind == EKind.Not_) {
 
                 TToken not_tkn = GetToken(EKind.Not_);
                 TTerm t1 = RelationalExpression();
@@ -1948,7 +1988,7 @@ namespace Miyu {
             TTerm t1 = NotExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Hat:
                 case EKind.Anp:
                 case EKind.BitOR:
@@ -1969,7 +2009,7 @@ namespace Miyu {
             TTerm t1 = BitExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.And_:
 
                     TToken opr = GetToken(EKind.Undefined);
@@ -1988,7 +2028,7 @@ namespace Miyu {
             TTerm t1 = AndExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Or_:
 
                     TToken opr = GetToken(EKind.Undefined);
@@ -2007,7 +2047,7 @@ namespace Miyu {
             TTerm t1 = OrExpression();
 
             while (true) {
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.Question:
                     TToken opr = GetToken(EKind.Question);
                     TTerm t2 = OrExpression();
@@ -2028,7 +2068,7 @@ namespace Miyu {
         public List<TTerm> ExpressionList() {
             List<TTerm> expr_list = new List<TTerm>();
 
-            if (CurTkn.Kind == EKind.RP || CurTkn.Kind == EKind.RB || CurTkn.Kind == EKind.RC) {
+            if (CurrentToken.Kind == EKind.RP || CurrentToken.Kind == EKind.RB || CurrentToken.Kind == EKind.RC) {
                 return expr_list;
             }
 
@@ -2036,7 +2076,7 @@ namespace Miyu {
                 bool is_out = false;
                 bool is_ref = false;
 
-                switch (CurTkn.Kind) {
+                switch (CurrentToken.Kind) {
                 case EKind.out_:
                     GetToken(EKind.out_);
                     is_out = true;
@@ -2058,7 +2098,7 @@ namespace Miyu {
 
                 expr_list.Add(t1);
 
-                if(CurTkn.Kind == EKind.Comma) {
+                if(CurrentToken.Kind == EKind.Comma) {
 
                     GetToken(EKind.Comma);
                 }

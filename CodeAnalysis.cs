@@ -19,11 +19,18 @@ namespace Miyu {
             コールグラフを作ります。
         */
         public void MakeCallGraph() {
-            TSetRefFnc set_ref_fnc = new TSetRefFnc();
+            // メソッド内の参照のリスト(ReferencesInFnc)をセットします。
+            TSetReferencesInFnc set_ref_fnc = new TSetReferencesInFnc();
             set_ref_fnc.ProjectNavi(this, null);
 
-            TSetAppFnc set_app_fnc = new TSetAppFnc();
+            // メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットします。
+            TSetAppsInFnc set_app_fnc = new TSetAppsInFnc();
             set_app_fnc.ProjectNavi(this, null);
+
+            var vcls2 = from x in ClassTable.Values where x.Info == null && x.SourceFileCls == null select x;
+            foreach(TType t in vcls2) {
+                Debug.WriteLine("??? {0}", t.ClassName, "");
+            }
 
             var vcls = from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x;
 
@@ -96,7 +103,7 @@ namespace Miyu {
             dic.Add(name, fnc_call);
 
             // メソッド内のメソッド呼び出しに対し
-            foreach (TApply app in fnc.AppFnc) {
+            foreach (TApply app in fnc.AppsInFnc) {
                 TType tp2 = tp;
 
                 if(app is TDotApply) {
@@ -109,14 +116,9 @@ namespace Miyu {
                         TReference ref1 = app.FunctionApp as TReference;
                         Debug.Assert(ref1.VarRef is TFunction);
 
-/*
-                        TFunction f1 = tp2.GetVirtualFunction(ref1.VarRef as TFunction);
-                        Debug.Assert(f1 != null);
-                        CallGraphSub(dic, fnc_call, tp2, f1);
-*/
-                        IEnumerable<TFunction> vf = tp2.GetVirtualFunctions(ref1.VarRef as TFunction);
-                        Debug.Assert(vf.Any());
-                        foreach(TFunction f in vf) {
+                        IEnumerable<TFunction> virtual_functions = tp2.GetVirtualFunctions(ref1.VarRef as TFunction);
+                        Debug.Assert(virtual_functions.Any());
+                        foreach(TFunction f in virtual_functions) {
 
                             CallGraphSub(dic, fnc_call, tp2, f);
                         }
