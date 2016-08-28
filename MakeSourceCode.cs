@@ -1047,7 +1047,7 @@ namespace Miyu {
         }
 
         /*
-         * HTMLのソースコードを作ります。
+         * HTMLのソースコードを作る。
          */
         public void MakeHTMLSourceCode() {
             StringWriter sw1 = new StringWriter();

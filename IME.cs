@@ -12,15 +12,15 @@ using System.Threading.Tasks;
 namespace Miyu {
 
     partial class MyEditor {
-        // IMEの操作は主にこのオブジェクトを使います。
+        // IMEの操作は主にこのオブジェクトを使う。
         CoreTextEditContext editContext;
 
-        // editContextを作成するのと、IMEの切り替えのイベントを受け取るのに使います。
+        // editContextを作成するのと、IMEの切り替えのイベントを受け取るのに使う。
         CoreTextServicesManager textServiceManager;
 
         /*
             ボタンがフォーカスを取得した。
-            TextBlockはフォーカスの取得/喪失の管理ができないので、TextBlockの上に透明のRadioButtonをかぶせてフォーカスの管理をしています。
+            TextBlockはフォーカスの取得/喪失の管理ができないので、TextBlockの上に透明のRadioButtonをかぶせてフォーカスの管理をする。
         */
         private async void OverlappedButton_GotFocus(object sender, RoutedEventArgs e) {
             MyEditor.WriteLine("<<--- Button GotFocus");
@@ -37,19 +37,19 @@ namespace Miyu {
                 // 少し待たないと「漢字」キーが効かない。
                 await Task.Delay(500);
 
-                // CoreTextServicesManagerを作ります。
+                // CoreTextServicesManagerを作る。
                 MyEditor.WriteLine("--->> GetForCurrentView");
                 textServiceManager = CoreTextServicesManager.GetForCurrentView();
 
-                // IMEの切り替えのイベントハンドラを登録します。
+                // IMEの切り替えのイベントハンドラを登録する。
                 MyEditor.WriteLine("--->> Subscribe InputLanguageChanged");
                 textServiceManager.InputLanguageChanged += TextServiceManager_InputLanguageChanged;
             }
 
-            // editContextを作り直します。
+            // editContextを作り直す。
             UpdateEditContext();
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
@@ -67,16 +67,16 @@ namespace Miyu {
 
             if (editContext != null) {
 
-                // IMEにフォーカスの喪失を知らせます。
+                // IMEにフォーカスの喪失を知らせる。
                 MyEditor.WriteLine("--->> NotifyFocusLeave");
                 editContext.NotifyFocusLeave();
             }
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
         /*
-            editContextを作り直します。
+            editContextを作り直す。
         */
         void UpdateEditContext() {
             if (DesignMode.DesignModeEnabled) {
@@ -85,12 +85,12 @@ namespace Miyu {
                 return;
             }
 
-            // CoreTextEditContextオブジェクトを作ります。
-            // IMEとのやりとりはこのオブジェクトを使います。
+            // CoreTextEditContextオブジェクトを作る。
+            // IMEとのやりとりはこのオブジェクトを使う。
             MyEditor.WriteLine("--->> CreateEditContext");
             editContext = textServiceManager.CreateEditContext();
 
-            // IMEの各種のイベントハンドラを登録します。
+            // IMEの各種のイベントハンドラを登録する。
             MyEditor.WriteLine("--->> Subscribe IME Event");
             editContext.CompositionStarted          += EditContext_CompositionStarted;
             editContext.CompositionCompleted        += EditContext_CompositionCompleted;
@@ -103,7 +103,7 @@ namespace Miyu {
             editContext.TextUpdating                += EditContext_TextUpdating;
             editContext.FormatUpdating              += EditContext_FormatUpdating;
 
-            // IMEにフォーカスの取得を知らせます。
+            // IMEにフォーカスの取得を知らせる。
             MyEditor.WriteLine("--->> NotifyFocusEnter");
             editContext.NotifyFocusEnter();
         }
@@ -114,7 +114,7 @@ namespace Miyu {
         private void TextServiceManager_InputLanguageChanged(CoreTextServicesManager sender, object ev) {
             Debug.Write("<<--- InputLanguageChanged");
 
-            // IMEの名前を得ます。
+            // IMEの名前を得る。
             Language lng = sender.InputLanguage;
             if (lng != null) {
 
@@ -122,7 +122,7 @@ namespace Miyu {
             }
             Debug.WriteLine("");
 
-            // editContextを作り直します。
+            // editContextを作り直す。
             UpdateEditContext();
         }
 
@@ -140,10 +140,10 @@ namespace Miyu {
             );
 */
 
-            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュします。
+            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュする。
             PushUndoRedoStack(ev.Range.StartCaretPosition, ev.Range.EndCaretPosition, ev.Text, UndoStack);
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
 
             TEnv.Project.Modified.Set();
@@ -161,7 +161,7 @@ namespace Miyu {
             );
 */
 
-            // アプリ内で持っているテキストの選択位置を更新します。
+            // アプリ内で持っているテキストの選択位置を更新する。
             SelOrigin = ev.Selection.StartCaretPosition;
             SelCurrent = ev.Selection.EndCaretPosition;
         }
@@ -176,13 +176,13 @@ namespace Miyu {
 
             MyEditor.WriteLine("<<--- SelectionRequested : {0}-{1}", rng.StartCaretPosition, rng.EndCaretPosition);
 
-            // アプリ内で持っているテキストの選択位置を返します。
+            // アプリ内で持っているテキストの選択位置を返す。
             ev.Request.Selection = rng;
         }
 
         /*
             フォーカス喪失の通知が完了した。
-            アプリからNotifyFocusLeaveを呼んだら、このメソッドが呼ばれます。
+            アプリからNotifyFocusLeaveを呼んだら、このメソッドが呼ばれる。
         */
         private void EditContext_NotifyFocusLeaveCompleted(CoreTextEditContext sender, object ev) {
             MyEditor.WriteLine("<<--- NotifyFocusLeaveCompleted");
@@ -195,10 +195,10 @@ namespace Miyu {
             MyEditor.WriteLine("<<--- LayoutRequested range:{0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
 
 
-            // メインウインドウを囲む矩形を得ます。
+            // メインウインドウを囲む矩形を得る。
             Rect wnd_rect = CoreApplication.GetCurrentView().CoreWindow.Bounds;
 
-            // Canvasのページ内の位置を得ます。
+            // Canvasのページ内の位置を得る。
             FrameworkElement root = this;
             for (root = this; root.Parent is FrameworkElement;) {
                 root = root.Parent as FrameworkElement;
@@ -206,39 +206,39 @@ namespace Miyu {
 
             Point edit_pos = TransformToVisual(root).TransformPoint(new Point(0, 0));
 
-            // Canvasのスクリーン座標を計算します。
+            // Canvasのスクリーン座標を計算する。
             double edit_screen_x = wnd_rect.X + edit_pos.X;
             double edit_screen_y = wnd_rect.Y + edit_pos.Y;
 
-            // Canvasを囲む矩形のスクリーン座標を返します。
+            // Canvasを囲む矩形のスクリーン座標を返す。
             Rect canvas_rect = new Rect(edit_screen_x, edit_screen_y, Win2DCanvas.ActualWidth, Win2DCanvas.ActualHeight);
             ev.Request.LayoutBounds.ControlBounds = canvas_rect;
 
-            // 選択位置の語句を描画した図形または直前の図形のリストを得ます。(選択位置が文書の末尾にある場合は直前の図形を使います。)
+            // 選択位置の語句を描画した図形または直前の図形のリストを得る。(選択位置が文書の末尾にある場合は直前の図形を使う。)
             var draw_list = from x in DrawList where x.StartPos <= SelCurrent && SelCurrent <= x.EndPos select x;
             if (draw_list.Any()) {
                 // 図形を得られた場合
 
-                // 語句を描画した図形を得ます。
+                // 語句を描画した図形を得る。
                 TShape phrase_shape = draw_list.First();
 
-                // 描画した語句の先頭から選択位置までのテキストのサイズを得ます。
+                // 描画した語句の先頭から選択位置までのテキストのサイズを得る。
                 Size sz = MeasureText(SourceFile.StringFromRange(phrase_shape.StartPos, SelCurrent), TextFormat);
 
-                // 選択位置のテキストを囲む矩形を計算します。
+                // 選択位置のテキストを囲む矩形を計算する。
                 Rect text_rect;
                 text_rect.X = canvas_rect.X + phrase_shape.Bounds.X + sz.Width;
                 text_rect.Y = canvas_rect.Y + phrase_shape.Bounds.Y;
                 text_rect.Width = SpaceWidth;
                 text_rect.Height = sz.Height;
 
-                // 選択範囲のテキストを囲む矩形をスクリーン座標で返します。
+                // 選択範囲のテキストを囲む矩形をスクリーン座標で返す。
                 ev.Request.LayoutBounds.TextBounds = text_rect;
             }
             else {
                 // 図形を得られない場合
 
-                // 選択範囲のテキストを囲む矩形はCanvasを囲む矩形とします。
+                // 選択範囲のテキストを囲む矩形はCanvasを囲む矩形とする。
                 ev.Request.LayoutBounds.TextBounds = canvas_rect;
             }
         }
@@ -263,17 +263,17 @@ namespace Miyu {
             if (ev.UnderlineType != null) {
                 // 下線がnullでない場合
 
-                // 選択範囲の文字の下線を指定します。
+                // 選択範囲の文字の下線を指定する。
                 for (int i = ev.Range.StartCaretPosition; i < ev.Range.EndCaretPosition; i++) {
 
-                    // TCharはstructなので Chars[i]=ev.UnderlineType.Value; と書くとエラーになります。
+                    // TCharはstructなので Chars[i]=ev.UnderlineType.Value; と書くとエラーになる。
                     TChar ch = Chars[i];
                     ch.Underline = ev.UnderlineType.Value;
                     Chars[i] = ch;
                 }
             }
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
@@ -292,7 +292,7 @@ namespace Miyu {
             InComposition = false;
             StringWriter sw = new StringWriter();
 
-            // 文節ごとのテキスト位置と漢字の読みを得ます。
+            // 文節ごとのテキスト位置と漢字の読みを得る。
             foreach (CoreTextCompositionSegment seg in ev.CompositionSegments) {
                 sw.Write("({0},{1}):{2} ", seg.Range.StartCaretPosition, seg.Range.EndCaretPosition, seg.PreconversionString);
             }
@@ -302,7 +302,7 @@ namespace Miyu {
 
         /*
             アプリ内で持っているテキストが欲しいと言ってきた。
-            CoreTextEditContextを作るとこれが呼ばれます。
+            CoreTextEditContextを作るとこれが呼ばれる。
         */
         private void EditContext_TextRequested(CoreTextEditContext sender, CoreTextTextRequestedEventArgs ev) {
             ev.Request.Text = SourceFile.StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
@@ -319,7 +319,7 @@ namespace Miyu {
         }
 
         /*
-            テキストの選択位置の変更をIMEに伝えます。
+            テキストの選択位置の変更をIMEに伝える。
         */
         void MyNotifySelectionChanged() {
             CoreTextRange new_range;
@@ -331,7 +331,7 @@ namespace Miyu {
         }
 
         /*
-            テキストの変更をIMEに伝えます。
+            テキストの変更をIMEに伝える。
         */
         void MyNotifyTextChanged(int sel_start, int sel_end, int new_text_length) {
             CoreTextRange modifiedRange;

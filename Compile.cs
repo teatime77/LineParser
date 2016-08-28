@@ -23,7 +23,7 @@ namespace Miyu {
 
     partial class TFunction {
         /*
-            関数名と引数の数と型が一致したらtrueを返します。
+            関数名と引数の数と型が一致したらtrueを返す。
         */
         public bool Match(string name, List<TType> arg_types, bool exact) {
             if (NameVar != name || arg_types.Count < ArgsFnc.Length) {
@@ -733,7 +733,7 @@ namespace Miyu {
         }
 
         /*
-            関数名と引数の数と型が一致したらtrueを返します。
+            関数名と引数の数と型が一致したらtrueを返す。
         */
         public bool MatchMethod(MethodInfo method, List<TType> arg_types, bool exact) {
             ParameterInfo[] param_list = method.GetParameters();
@@ -832,13 +832,13 @@ namespace Miyu {
         }
 
         public TFunction MatchFunction(string name, List<TType> arg_types) {
-            // 関数名と引数の数と型が一致する関数を探します。
+            // 関数名と引数の数と型が一致する関数を探す。
             var v1 = from f in Functions where f.Match(name, arg_types, true) select f;
             if (v1.Any()) {
                 return v1.First();
             }
 
-            // 関数名と引数の数と型が一致する関数を探します。
+            // 関数名と引数の数と型が一致する関数を探す。
             var v2 = from f in Functions where f.Match(name, arg_types, false) select f;
             if (v2.Any()) {
                 return v2.First();

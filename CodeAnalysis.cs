@@ -16,14 +16,14 @@ namespace Miyu {
 
     partial class TProject {
         /*
-            コールグラフを作ります。
+            コールグラフを作る。
         */
         public void MakeCallGraph() {
-            // メソッド内の参照のリスト(ReferencesInFnc)をセットします。
+            // メソッド内の参照のリスト(ReferencesInFnc)をセットする。
             TSetReferencesInFnc set_ref_fnc = new TSetReferencesInFnc();
             set_ref_fnc.ProjectNavi(this, null);
 
-            // メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットします。
+            // メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットする。
             TSetAppsInFnc set_app_fnc = new TSetAppsInFnc();
             set_app_fnc.ProjectNavi(this, null);
 
@@ -143,14 +143,14 @@ namespace Miyu {
             return fnc_call;
         }
 
-        // dotファイルに書く
+        // dotファイルに書く。
         public void WriteDotFile(string title, List<TNode> vnd, string path1) {
             StringWriter sw1 = new StringWriter();
 
             sw1.WriteLine("digraph " + title + " {");
             sw1.WriteLine("\tgraph [charset=\"UTF-8\", rankdir = LR];");
 
-            // ノードの集合からdotファイルを作る
+            // ノードの集合からdotファイルを作る。
             Node2Dot(sw1, vnd);
 
             sw1.WriteLine("}");
@@ -231,7 +231,7 @@ namespace Miyu {
         }
 
         /*
-        使用・定義連鎖を作ります。
+        使用・定義連鎖を作る。
         */
         public void MakeUseDefineChain() {
             string use_def_dir = OutputDir + "\\UseDef";
@@ -281,7 +281,7 @@ namespace Miyu {
         }
 
         /*
-        クラス図を作ります。
+        クラス図を作る。
         */
         public void MakeClassDiagram() {
             StringWriter sw = new StringWriter();
@@ -313,7 +313,7 @@ namespace Miyu {
         }
 
         /*
-        要約を作ります。
+        要約を作る。
         */
         public void MakeSummary() {
             foreach (TSourceFile src in SourceFiles) {

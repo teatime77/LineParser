@@ -60,14 +60,14 @@ namespace Miyu {
 
     partial class TParser {
         /*
-            16進数文字ならtrueを返します。
+            16進数文字ならtrueを返す。
         */
         public bool IsHexDigit(char ch) {
             return char.IsDigit(ch) || 'a' <= ch && ch <= 'f' || 'A' <= ch && ch <= 'F';
         }
 
         /*
-            エスケープ文字を読み込み、文字位置(pos)を進めます。
+            エスケープ文字を読み込み、文字位置(pos)を進める。
         */
         public char ReadEscapeChar(string text, ref int pos) {
             if (text.Length <= pos + 1) {
@@ -78,7 +78,7 @@ namespace Miyu {
             string in_str = "\'\"\\0abfnrtv";
             string out_str = "\'\"\\\0\a\b\f\n\r\t\v";
 
-            // 変換リストにあるか調べます。
+            // 変換リストにあるか調べる。
             int k = in_str.IndexOf(text[pos + 1]);
 
             if (k != -1) {
@@ -86,7 +86,7 @@ namespace Miyu {
 
                 pos += 2;
 
-                // 変換した文字を返します。
+                // 変換した文字を返す。
                 return out_str[k];
             }
 
@@ -110,7 +110,7 @@ namespace Miyu {
             case 'x':
                 // \xX...
 
-                // 16進数字の終わりを探します。
+                // 16進数字の終わりを探す。
                 for (pos++; pos < text.Length && IsHexDigit(text[pos]); pos++) ;
 
                 // エスケープ文字の計算は未実装です。
@@ -127,7 +127,7 @@ namespace Miyu {
         }
 
         /*
-            字句解析をして各文字の字句型の配列を返します。
+            字句解析をして各文字の字句型の配列を返す。
         */
         public TToken[] LexicalAnalysis(string text, ETokenType prev_token_type) {
             List<TToken> token_list = new List<TToken>();
@@ -141,7 +141,7 @@ namespace Miyu {
             // 各文字の字句型の配列
             //ETokenType[] token_type_list = new ETokenType[text_len];
 
-            // 文字列の最後までループします。
+            // 文字列の最後までループする。
             while (pos < text_len) {
                 EKind token_kind = EKind.Undefined;
                 ETokenType token_type = ETokenType.Error;
@@ -173,7 +173,7 @@ namespace Miyu {
                     if (prev_token_type == ETokenType.BlockCommentContinued) {
                         // 閉じてないブロックコメントの場合
 
-                        // ブロックコメントの終わりを探します。
+                        // ブロックコメントの終わりを探す。
                         int k = text.IndexOf("*/");
 
                         if (k != -1) {
@@ -196,7 +196,7 @@ namespace Miyu {
 
                         token_kind = EKind.StringLiteral;
 
-                        // 逐語的文字列の終わりを探します。
+                        // 逐語的文字列の終わりを探す。
                         int k = text.IndexOf('\"');
 
                         if (k != -1) {
@@ -218,7 +218,7 @@ namespace Miyu {
 
                     is_white = true;
 
-                    // 空白の終わりを探します。
+                    // 空白の終わりを探す。
                     for (pos++; pos < text_len && char.IsWhiteSpace(text[pos]); pos++) ;
                 }
                 else if (ch1 == '@' && ch2 == '\"') {
@@ -245,7 +245,7 @@ namespace Miyu {
                 else if (char.IsLetter(ch1) || ch1 == '_') {
                     // 識別子の最初の文字の場合
 
-                    // 識別子の文字の最後を探します。識別子の文字はユニコードカテゴリーの文字か数字か'_'です。
+                    // 識別子の文字の最後を探す。識別子の文字はユニコードカテゴリーの文字か数字か'_'。
                     for (pos++; pos < text_len && (char.IsLetterOrDigit(text[pos]) || text[pos] == '_'); pos++) ;
 
                     // 識別子の文字列
@@ -273,7 +273,7 @@ namespace Miyu {
 
                         pos += 2;
 
-                        // 16進数字の終わりを探します。
+                        // 16進数字の終わりを探す。
                         for (; pos < text_len && IsHexDigit(text[pos]); pos++) ;
 
                         token_type = ETokenType.Int;
@@ -281,7 +281,7 @@ namespace Miyu {
                     else {
                         // 10進数の場合
 
-                        // 10進数の終わりを探します。
+                        // 10進数の終わりを探す。
                         for (; pos < text_len && char.IsDigit(text[pos]); pos++) ;
 
                         if (pos < text_len && text[pos] == '.') {
@@ -289,7 +289,7 @@ namespace Miyu {
 
                             pos++;
 
-                            // 10進数の終わりを探します。
+                            // 10進数の終わりを探す。
                             for (; pos < text_len && char.IsDigit(text[pos]); pos++) ;
 
                             if (pos < text_len && text[pos] == 'f') {
@@ -315,7 +315,7 @@ namespace Miyu {
                     if (ch2 == '\\') {
                         // エスケープ文字の場合
 
-                        // エスケープ文字を読み込み、文字位置(pos)を進めます。
+                        // エスケープ文字を読み込み、文字位置(pos)を進める。
                         ReadEscapeChar(text, ref pos);
                     }
                     else {
@@ -343,14 +343,14 @@ namespace Miyu {
                     token_kind = EKind.StringLiteral;
                     token_type = ETokenType.Error;
 
-                    // 文字列の終わりを探します。
+                    // 文字列の終わりを探す。
                     for (pos++; pos < text_len;) {
                         char ch3 = text[pos];
 
                         if (ch3 == '\"') {
                             // 文字列の終わりの場合
 
-                            // ループを抜けます。
+                            // ループを抜ける。
                             pos++;
                             token_type = ETokenType.String_;
                             break;
@@ -358,7 +358,7 @@ namespace Miyu {
                         else if (ch3 == '\\') {
                             // エスケープ文字の場合
 
-                            // エスケープ文字を読み込み、文字位置(pos)を進めます。
+                            // エスケープ文字を読み込み、文字位置(pos)を進める。
                             ReadEscapeChar(text, ref pos);
                         }
                         else {
@@ -378,7 +378,7 @@ namespace Miyu {
                     token_kind = EKind.LineComment;
                     token_type = ETokenType.LineComment;
 
-                    // 改行を探します。
+                    // 改行を探す。
                     int k = text.IndexOf('\n', pos);
 
                     if (k != -1) {
@@ -399,7 +399,7 @@ namespace Miyu {
                         start_pos--;
                     }
 
-                    // ブロックコメントの終わりを探します。
+                    // ブロックコメントの終わりを探す。
                     int idx = text.IndexOf("*/", pos + 2);
 
                     if (idx != -1) {
@@ -418,7 +418,7 @@ namespace Miyu {
                     }
                 }
                 else {
-                    // 上記以外は1文字の記号とします。
+                    // 上記以外は1文字の記号とする。
 
                     if (ch1 < 256 && ch2 < 256 && SymbolTable2[ch1, ch2] != EKind.Undefined) {
 
@@ -446,7 +446,7 @@ namespace Miyu {
                 }
             }
 
-            // 各文字の字句型の配列を返します。
+            // 各文字の字句型の配列を返す。
             return token_list.ToArray();
         }
     }

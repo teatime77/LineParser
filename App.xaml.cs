@@ -17,11 +17,11 @@ using Windows.UI.Xaml.Navigation;
 
 namespace Miyu {
     /// <summary>
-    /// 既定の Application クラスを補完するアプリケーション固有の動作を提供します。
+    /// 既定の Application クラスを補完するアプリケーション固有の動作を提供する。
     /// </summary>
     sealed partial class App : Application {
         /// <summary>
-        /// 単一アプリケーション オブジェクトを初期化します。これは、実行される作成したコードの
+        /// 単一アプリケーション オブジェクトを初期化する。これは、実行される作成したコードの
         ///最初の行であるため、main() または WinMain() と論理的に等価です。
         /// </summary>
         public App()
@@ -31,10 +31,10 @@ namespace Miyu {
         }
 
         /// <summary>
-        /// アプリケーションがエンド ユーザーによって正常に起動されたときに呼び出されます。他のエントリ ポイントは、
-        /// アプリケーションが特定のファイルを開くために起動されたときなどに使用されます。
+        /// アプリケーションがエンド ユーザーによって正常に起動されたときに呼び出される。他のエントリ ポイントは、
+        /// アプリケーションが特定のファイルを開くために起動されたときなどに使用される。
         /// </summary>
-        /// <param name="e">起動の要求とプロセスの詳細を表示します。</param>
+        /// <param name="e">起動の要求とプロセスの詳細を表示する。</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
 #if DEBUG
@@ -49,17 +49,17 @@ namespace Miyu {
             // ウィンドウがアクティブであることだけを確認してください
             if (rootFrame == null)
             {
-                // ナビゲーション コンテキストとして動作するフレームを作成し、最初のページに移動します
+                // ナビゲーション コンテキストとして動作するフレームを作成し、最初のページに移動する
                 rootFrame = new Frame();
 
                 rootFrame.NavigationFailed += OnNavigationFailed;
 
                 if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
                 {
-                    //TODO: 以前中断したアプリケーションから状態を読み込みます
+                    //TODO: 以前中断したアプリケーションから状態を読み込む
                 }
 
-                // フレームを現在のウィンドウに配置します
+                // フレームを現在のウィンドウに配置する
                 Window.Current.Content = rootFrame;
             }
 
@@ -67,18 +67,18 @@ namespace Miyu {
             {
                 if (rootFrame.Content == null)
                 {
-                    // ナビゲーション スタックが復元されない場合は、最初のページに移動します。
+                    // ナビゲーション スタックが復元されない場合は、最初のページに移動する。
                     // このとき、必要な情報をナビゲーション パラメーターとして渡して、新しいページを
-                    //構成します
+                    //構成する
                     rootFrame.Navigate(typeof(MainPage), e.Arguments);
                 }
-                // 現在のウィンドウがアクティブであることを確認します
+                // 現在のウィンドウがアクティブであることを確認する
                 Window.Current.Activate();
             }
         }
 
         /// <summary>
-        /// 特定のページへの移動が失敗したときに呼び出されます
+        /// 特定のページへの移動が失敗したときに呼び出される
         /// </summary>
         /// <param name="sender">移動に失敗したフレーム</param>
         /// <param name="e">ナビゲーション エラーの詳細</param>
@@ -88,16 +88,16 @@ namespace Miyu {
         }
 
         /// <summary>
-        /// アプリケーションの実行が中断されたときに呼び出されます。
+        /// アプリケーションの実行が中断されたときに呼び出される。
         /// アプリケーションが終了されるか、メモリの内容がそのままで再開されるかに
-        /// かかわらず、アプリケーションの状態が保存されます。
+        /// かかわらず、アプリケーションの状態が保存される。
         /// </summary>
         /// <param name="sender">中断要求の送信元。</param>
         /// <param name="e">中断要求の詳細。</param>
         private void OnSuspending(object sender, SuspendingEventArgs e)
         {
             var deferral = e.SuspendingOperation.GetDeferral();
-            //TODO: アプリケーションの状態を保存してバックグラウンドの動作があれば停止します
+            //TODO: アプリケーションの状態を保存してバックグラウンドの動作があれば停止する
             deferral.Complete();
         }
     }

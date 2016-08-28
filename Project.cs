@@ -81,8 +81,8 @@ namespace Miyu {
         }
 
         /*
-        フィールドの弱参照(IsWeak)を設定します。
-        弱参照のフィールドの後ろにあるフィールドは弱参照とします。
+        フィールドの弱参照(IsWeak)を設定する。
+        弱参照のフィールドの後ろにあるフィールドは弱参照とする。
         */
         public void SetWeakField() {
             foreach (TType c in AppClasses) {
@@ -109,7 +109,7 @@ namespace Miyu {
         }
 
         /*
-         * プロジェクトをビルドします。
+         * プロジェクトをビルドする。
          */
         public void Build() {
             DateTime tick;
@@ -190,7 +190,7 @@ namespace Miyu {
                     }
 
 
-                    // フィールドの弱参照(IsWeak)を設定します。
+                    // フィールドの弱参照(IsWeak)を設定する。
                     SetWeakField();
 
                     foreach (TSourceFile src in SourceFiles) {
@@ -200,7 +200,7 @@ namespace Miyu {
 
                     tick = DateTime.Now;
 
-                    // HTMLを出力するディレクトリを作ります。
+                    // HTMLを出力するディレクトリを作る。
                     string html_dir = OutputDir + "\\html";
                     if (!Directory.Exists(OutputDir)) {
                         Directory.CreateDirectory(OutputDir);
@@ -212,7 +212,7 @@ namespace Miyu {
                         Directory.CreateDirectory(html_dir);
                     }
 
-                    // 値を代入している変数参照のDefinedをtrueにします。
+                    // 値を代入している変数参照のDefinedをtrueにする。
                     TSetDefined set_defined = new TSetDefined();
                     set_defined.ProjectNavi(this, null);
 
@@ -227,22 +227,22 @@ namespace Miyu {
                         File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
                     }
 
-                    // HTMLのソースコードを作ります。
+                    // HTMLのソースコードを作る。
                     MakeHTMLSourceCode();
 
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
-                    // コールグラフを作ります。
+                    // コールグラフを作る。
                     MakeCallGraph();
 
-                    // 使用・定義連鎖を作ります。
+                    // 使用・定義連鎖を作る。
                     MakeUseDefineChain();
 
-                    // クラス図を作ります。
+                    // クラス図を作る。
                     MakeClassDiagram();
 
-                    // 要約を作ります。
+                    // 要約を作る。
                     MakeSummary();
 
                     Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
@@ -253,7 +253,7 @@ namespace Miyu {
         }
 
         /*
-         * アセンブリのリストを作ります。
+         * アセンブリのリストを作る。
          */
         public void SetAssemblyList() {
             AssemblyList.Add(typeof(ApplicationData).GetTypeInfo().Assembly);

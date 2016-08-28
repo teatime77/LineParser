@@ -118,7 +118,7 @@ namespace Miyu {
             MyEditor.WriteLine("<<--- Control Loaded");
             CoreWindow wnd = CoreApplication.GetCurrentView().CoreWindow;
 
-            // イベントハンドラを登録します。
+            // イベントハンドラを登録する。
             wnd.KeyDown += CoreWindow_KeyDown;
             wnd.PointerPressed += CoreWindow_PointerPressed;
             wnd.PointerMoved += CoreWindow_PointerMoved;
@@ -139,11 +139,11 @@ namespace Miyu {
             if (double.IsNaN(LineHeight)) {
                 // 最初の場合
 
-                // 1行の高さを計算します。
+                // 1行の高さを計算する。
                 Rect M_rc = new CanvasTextLayout(args.DrawingSession, "M", TextFormat, float.MaxValue, float.MaxValue).LayoutBounds;
                 LineHeight = M_rc.Height;
 
-                // 空白の幅を計算します。
+                // 空白の幅を計算する。
                 Rect sp_M_rc = new CanvasTextLayout(args.DrawingSession, " M", TextFormat, float.MaxValue, float.MaxValue).LayoutBounds;
                 SpaceWidth = sp_M_rc.Width - M_rc.Width;
             }
@@ -155,7 +155,7 @@ namespace Miyu {
             // ビュー内に表示する行数
             ViewLineCount = (int)(view_h / LineHeight);
 
-            // フォーカスの有無によって枠の色を変えます。
+            // フォーカスの有無によって枠の色を変える。
             if (OverlappedButton.FocusState == FocusState.Unfocused) {
                 // フォーカスがない場合
 
@@ -286,18 +286,18 @@ namespace Miyu {
 
                 string line_str = line_sw.ToString();
 
-                // 挿入カーソルの位置を得ます。
+                // 挿入カーソルの位置を得る。
                 int cursor_pos;
                 if (DropPos != -1) {
                     // ドロップ先がある場合
 
-                    // ドロップ先に挿入カーソルを描画します。
+                    // ドロップ先に挿入カーソルを描画する。
                     cursor_pos = DropPos;
                 }
                 else {
                     // ドロップ先がない場合
 
-                    // 現在の選択位置に挿入カーソルを描画します。
+                    // 現在の選択位置に挿入カーソルを描画する。
                     cursor_pos = SelCurrent;
                 }
 
@@ -317,7 +317,7 @@ namespace Miyu {
                     break;
                 }
 
-                // 現在の行の高さを計算して、yに加算します。
+                // 現在の行の高さを計算して、yに加算する。
                 y += (float)MeasureText(line_str, TextFormat).Height;
 
                 if (Chars.Count <= pos) {
@@ -335,18 +335,18 @@ namespace Miyu {
             Stack<TDiff> src_stack;
             Stack<TDiff> dst_stack;
 
-            // アンドゥとリドゥは操作対象のスタックが違うだけです。
+            // アンドゥとリドゥは操作対象のスタックが違うだけ。
             if (is_undo) {
                 // アンドゥの場合
 
-                // アンドゥのスタックからポップして、リドゥのスタックにプッシュします。
+                // アンドゥのスタックからポップして、リドゥのスタックにプッシュする。
                 src_stack = UndoStack;
                 dst_stack = RedoStack;
             }
             else {
                 // リドゥの場合
 
-                // リドゥのスタックからポップして、アンドゥのスタックにプッシュします。
+                // リドゥのスタックからポップして、アンドゥのスタックにプッシュする。
                 src_stack = RedoStack;
                 dst_stack = UndoStack;
             }
@@ -357,48 +357,48 @@ namespace Miyu {
                 return;
             }
 
-            // 変更情報をポップします。
+            // 変更情報をポップする。
             TDiff src_diff = src_stack.Pop();
 
             // 削除された文字列
             string removed_string = new string((from x in src_diff.RemovedChars select x.Chr).ToArray());
 
-            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュします。
+            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュする。
             PushUndoRedoStack(src_diff.DiffPos, src_diff.DiffPos + src_diff.InsertedCount, removed_string, dst_stack);
 
-            // テキストの変更をIMEに伝えます。
+            // テキストの変更をIMEに伝える。
             MyNotifyTextChanged(src_diff.DiffPos, src_diff.DiffPos + src_diff.InsertedCount, src_diff.RemovedChars.Length);
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
         /*
-            テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュします。
+            テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュする。
         */
         void PushUndoRedoStack(int sel_start, int sel_end, string new_text, Stack<TDiff> dst_stack) {
-            // 開始行のインデックス
+            // 開始行のインデックスを得る。
             int start_line_idx = SourceFile.GetLineIndex(sel_start);
 
-            // 変更範囲にある改行文字の個数
+            // 変更範囲にある改行文字の個数を得る。
             int old_LF_cnt = SourceFile.GetLFCount(sel_start, sel_end);
 
-            // 変更情報を作ります。
+            // 変更情報を作る。
             TDiff diff = new TDiff(sel_start, sel_end - sel_start, new_text.Length);
 
-            // 変更情報をアンドゥのスタックにプッシュします。
+            // 変更情報をアンドゥのスタックにプッシュする。
             dst_stack.Push(diff);
 
-            // 削除する文字列をコピーします。
+            // 削除する文字列をコピーする。
             Chars.CopyTo(sel_start, diff.RemovedChars, 0, diff.RemovedChars.Length);
 
-            // 文字列を削除します。
+            // 文字列を削除する。
             Chars.RemoveRange(sel_start, sel_end - sel_start);
 
-            // 新しい文字列を挿入します。
+            // 新しい文字列を挿入する。
             Chars.InsertRange(sel_start, (from x in new_text select new TChar(x)));
 
-            // アプリ内で持っているテキストの選択位置を更新します。
+            // アプリ内で持っているテキストの選択位置を更新する。
             SelOrigin = sel_start + new_text.Length;
             SelCurrent = SelOrigin;
 
@@ -408,7 +408,7 @@ namespace Miyu {
             if (new_LF_cnt < old_LF_cnt) {
                 // 行が減った場合
 
-                // 行を削除します。
+                // 行を削除する。
                 for (int i = 0; i < old_LF_cnt - new_LF_cnt; i++) {
                     SourceFile.Lines.RemoveAt(start_line_idx);
                 }
@@ -416,13 +416,13 @@ namespace Miyu {
             else if (old_LF_cnt < new_LF_cnt) {
                 // 行が増えた場合
 
-                // 行を挿入します。
+                // 行を挿入する。
                 for (int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
                     SourceFile.Lines.Insert(start_line_idx, new TLine());
                 }
             }
 
-            // 字句型を更新します。
+            // 字句型を更新する。
             SourceFile.UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
 
             Debug.WriteLine("Dirty ON --------------------------------------------------");
@@ -430,7 +430,7 @@ namespace Miyu {
         }
 
         /*
-            テキストの選択位置を変更します。
+            テキストの選択位置を変更する。
         */
         void ChangeSelection(KeyEventArgs e) {
             int old_sel_current = SelCurrent;
@@ -464,13 +464,13 @@ namespace Miyu {
 
             case VirtualKey.Up:
                 // 上矢印(↑)
-                // 現在の行の先頭位置を得ます。
+                // 現在の行の先頭位置を得る。
                 current_line_top = SourceFile.GetLineTop(SelCurrent);
 
                 if (current_line_top != 0) {
                     // 現在の行の先頭が文書の最初でない場合
 
-                    // 直前の行の先頭位置を得ます。
+                    // 直前の行の先頭位置を得る。
                     int prev_line_top = SourceFile.GetLineTop(current_line_top - 2);
 
                     // 直前の行の文字数
@@ -486,17 +486,16 @@ namespace Miyu {
 
             case VirtualKey.Down:
                 // 下矢印(↓)
-                // 現在の行の先頭位置を得ます。
+                // 現在の行の先頭位置を得る。
                 current_line_top = SourceFile.GetLineTop(SelCurrent);
 
-                // 次の行の先頭位置を得ます。
+                // 次の行の先頭位置を得る。
                 next_line_top = SourceFile.GetNextLineTop(SelCurrent);
 
                 if (next_line_top != -1) {
                     // 次の行がある場合
 
-
-                    // 次の次の行の先頭位置を得ます。
+                    // 次の次の行の先頭位置を得る。
                     int next_next_line_top = SourceFile.GetNextLineTop(next_line_top);
 
                     // 次の行の文字数
@@ -531,7 +530,7 @@ namespace Miyu {
                 else {
                     // Controlキーが押されてない場合
 
-                    // 現在の行の先頭位置を得ます。
+                    // 現在の行の先頭位置を得る。
                     new_sel_current = SourceFile.GetLineTop(SelCurrent);
                 }
                 break;
@@ -546,7 +545,7 @@ namespace Miyu {
                 else {
                     // Controlキーが押されてない場合
 
-                    // 現在の行の最終位置を得ます。
+                    // 現在の行の最終位置を得る。
                     new_sel_current = SourceFile.GetLineEnd(SelCurrent);
                 }
                 break;
@@ -590,7 +589,7 @@ namespace Miyu {
                 break;
             }
 
-            // 新しい現在の選択位置をセットします。
+            // 新しい現在の選択位置をセットする。
             SetSelection(new_sel_current);
         }
 
@@ -620,7 +619,7 @@ namespace Miyu {
             case VirtualKey.PageUp:
             case VirtualKey.PageDown:
 
-                // テキストの選択位置を変更します。
+                // テキストの選択位置を変更する。
                 ChangeSelection(e);
                 break;
             }
@@ -629,12 +628,12 @@ namespace Miyu {
             case VirtualKey.Back:
                 if (SelOrigin != SelCurrent) {
 
-                    // 選択した範囲のテキストを別のテキストに置換します。
+                    // 選択した範囲のテキストを別のテキストに置換する。
                     ReplaceText(SelStart(), SelEnd(), "");
                 }
                 else if (0 < SelCurrent) {
 
-                    // 選択した範囲のテキストを別のテキストに置換します。
+                    // 選択した範囲のテキストを別のテキストに置換する。
                     ReplaceText(SelCurrent - 1, SelCurrent, "");
                 }
                 break;
@@ -642,18 +641,18 @@ namespace Miyu {
             case VirtualKey.Delete:
                 if (SelOrigin != SelCurrent) {
 
-                    // 選択した範囲のテキストを別のテキストに置換します。
+                    // 選択した範囲のテキストを別のテキストに置換する。
                     ReplaceText(SelStart(), SelEnd(), "");
                 }
                 else if (SelCurrent < Chars.Count) {
 
-                    // 選択した範囲のテキストを別のテキストに置換します。
+                    // 選択した範囲のテキストを別のテキストに置換する。
                     ReplaceText(SelCurrent, SelCurrent + 1, "");
                 }
                 break;
 
             case VirtualKey.Enter:
-                // 選択した範囲のテキストを別のテキストに置換します。
+                // 選択した範囲のテキストを別のテキストに置換する。
                 ReplaceText(SelStart(), SelEnd(), "\n");
                 break;
 
@@ -670,13 +669,13 @@ namespace Miyu {
                     string clipboard_str;
 
                     if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) != 0) {
-                        // Ctrl+Shift+Cの場合 ( HTMLテキストをクリップボードにコピーします。 )
+                        // Ctrl+Shift+Cの場合 ( HTMLテキストをクリップボードにコピーする。 )
 
-                        // 選択範囲からHTML文字列を作ります。
+                        // 選択範囲からHTML文字列を作る。
                         clipboard_str = SourceFile.HTMLStringFromRange(SelStart(), SelEnd());
                     }
                     else {
-                        // Ctrl+Cの場合 ( プレーンテキストをクリップボードにコピーします。 )
+                        // Ctrl+Cの場合 ( プレーンテキストをクリップボードにコピーする。 )
 
                         // 選択範囲の文字列
                         string text = new string((from x in Chars.GetRange(SelStart(), SelEnd() - SelStart()) select x.Chr).ToArray());
@@ -699,7 +698,7 @@ namespace Miyu {
 
                         string text = await dataPackageView.GetTextAsync();
 
-                        // 選択した範囲のテキストを別のテキストに置換します。
+                        // 選択した範囲のテキストを別のテキストに置換する。
                         ReplaceText(SelStart(), SelEnd(), text.Replace("\r\n", "\n"));
                     }
                 }
@@ -724,17 +723,17 @@ namespace Miyu {
         }
 
         /*
-            ポインタのイベントハンドラのコルーチンを継続します。
+            ポインタのイベントハンドラのコルーチンを継続する。
         */
         void ContinuePointerEventLoop(EEvent event_type, PointerEventArgs e) {
             if (PointerEventLoop != null) {
                 //  ポインタのイベントハンドラの実行中の場合
 
-                // イベントの型とイベントをセットします。
+                // イベントの型とイベントをセットする。
                 PointerEventType = event_type;
                 CurrentPointerEvent = e;
 
-                // コルーチンを継続します。
+                // コルーチンを継続する。
                 PointerEventLoop.MoveNext();
             }
         }
@@ -755,7 +754,7 @@ namespace Miyu {
                 PointerEventLoop = PointerHandler(e);
             }
 
-            // ポインタのイベントハンドラのコルーチンを継続します。
+            // ポインタのイベントハンドラのコルーチンを継続する。
             ContinuePointerEventLoop(EEvent.PointerPressed, e);
         }
 
@@ -763,7 +762,7 @@ namespace Miyu {
             ポインタが動いた。
         */
         private void CoreWindow_PointerMoved(CoreWindow sender, PointerEventArgs e) {
-            // ポインタのイベントハンドラのコルーチンを継続します。
+            // ポインタのイベントハンドラのコルーチンを継続する。
             ContinuePointerEventLoop(EEvent.PointerMoved, e);
         }
 
@@ -771,7 +770,7 @@ namespace Miyu {
             ポインタが離された。
         */
         private void CoreWindow_PointerReleased(CoreWindow sender, PointerEventArgs e) {
-            // ポインタのイベントハンドラのコルーチンを継続します。
+            // ポインタのイベントハンドラのコルーチンを継続する。
             ContinuePointerEventLoop(EEvent.PointerReleased, e);
             MyEditor.WriteLine("<<--- CoreWindow PointerReleased");
         }
@@ -783,16 +782,16 @@ namespace Miyu {
             MyEditor.WriteLine("<<--- PointerTimer");
             PointerTimer.Stop();
 
-            // ポインタのイベントハンドラのコルーチンを継続します。
+            // ポインタのイベントハンドラのコルーチンを継続する。
             ContinuePointerEventLoop(EEvent.Timeout, null);
         }
 
         /*
-            選択部分のテキストをドラッグ&ドロップします。
+            選択部分のテキストをドラッグ&ドロップする。
         */
         public IEnumerator DragDropHandler(PointerEventArgs e) {
 
-            // マウスカーソルを矢印に変えます。
+            // マウスカーソルを矢印に変える。
             CoreApplication.GetCurrentView().CoreWindow.PointerCursor = ArrowCoreCursor;
 
             while (true) {
@@ -800,12 +799,12 @@ namespace Miyu {
                 case EEvent.PointerMoved:
                     // ドラッグの場合
 
-                    // ポインターの座標からテキストの位置を得ます。
+                    // ポインターの座標からテキストの位置を得る。
                     int drag_pos = TextPositionFromPointer(CurrentPointerEvent.CurrentPoint);
                     if (drag_pos != -1 && !(SelStart() <= drag_pos && drag_pos < SelEnd())) {
                         // ポインターの下に選択部分以外のテキストがある場合
 
-                        // ドロップ位置をセットします。ドロップ先に挿入カーソルを描画するのに使われます。
+                        // ドロップ位置をセットする。ドロップ先に挿入カーソルを描画するのに使われる。
                         DropPos = drag_pos;
                         Debug.WriteLine("ドロップ中 {0}", DropPos);
                     }
@@ -814,7 +813,7 @@ namespace Miyu {
                         DropPos = -1;
                     }
 
-                    // 再描画します。
+                    // 再描画する。
                     InvalidateCanvas();
                     yield return 0;
 
@@ -834,27 +833,27 @@ namespace Miyu {
                             // 選択位置の後ろにドロップ位置があるならtrue
                             bool drop_after_selection = (SelStart() < DropPos);
 
-                            // 選択されたテキストを削除します。
+                            // 選択されたテキストを削除する。
                             ReplaceText(SelStart(), SelEnd(), "");
 
                             if (drop_after_selection) {
                                 // 選択位置の後ろにドロップ位置があるの場合
 
-                                // ドロップ位置を選択テキストの長さだけ引きます。
+                                // ドロップ位置を選択テキストの長さだけ引く。
                                 DropPos -= sel_str.Length;
                             }
                         }
 
-                        // ドロップ位置に選択テキストを挿入します。
+                        // ドロップ位置に選択テキストを挿入する。
                         ReplaceText(DropPos, DropPos, sel_str);
 
                         DropPos = -1;
                     }
 
-                    // マウスカーソルをIカーソルに戻します。
+                    // マウスカーソルをIカーソルに戻す。
                     CoreApplication.GetCurrentView().CoreWindow.PointerCursor = IBeamCoreCursor;
 
-                    // 再描画します。
+                    // 再描画する。
                     InvalidateCanvas();
                     yield break;
 
@@ -866,12 +865,12 @@ namespace Miyu {
         }
 
         /*
-            ドラッグしてテキストを選択します。
+            ドラッグしてテキストを選択する。
         */
         public IEnumerator SelectByDrag(int start_pos) {
             Debug.WriteLine("ドラッグの選択の始め {0}", start_pos);
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
             yield return 0;
 
@@ -880,7 +879,7 @@ namespace Miyu {
                 case EEvent.PointerMoved:
                     // ドラッグの場合
 
-                    // ポインターの座標からテキストの位置を得ます。
+                    // ポインターの座標からテキストの位置を得る。
                     int pos = TextPositionFromPointer(CurrentPointerEvent.CurrentPoint);
                     if (pos != -1) {
                         // ポインターの下にテキストがある場合
@@ -888,7 +887,7 @@ namespace Miyu {
                         SelCurrent = pos;
                         Debug.WriteLine("ドラッグして選択 {0}", pos);
 
-                        // 再描画します。
+                        // 再描画する。
                         InvalidateCanvas();
                     }
                     break;
@@ -896,7 +895,7 @@ namespace Miyu {
                 case EEvent.PointerReleased:
                     // リリースの場合
 
-                    // テキストの選択位置の変更をIMEに伝えます。
+                    // テキストの選択位置の変更をIMEに伝える。
                     MyNotifySelectionChanged();
 
                     yield break;
@@ -906,30 +905,30 @@ namespace Miyu {
         }
 
         /*
-            ダブルクリックで単語を選択します。
-            単語の文字はIsLetterOrDigitか'_'とします。
+            ダブルクリックで単語を選択する。
+            単語の文字はIsLetterOrDigitか'_'とする。
         */
         public void SelectByDoubleClick(int start_pos) {
             Debug.WriteLine("ダブルクリック");
             // マウス位置にテキストがある場合
 
-            // 単語の始まりを探します。
+            // 単語の始まりを探す。
             int phrase_start = start_pos;
             for (; 0 <= phrase_start && (char.IsLetterOrDigit(Chars[phrase_start].Chr) || Chars[phrase_start].Chr == '_'); phrase_start--) ;
             phrase_start++;
 
-            // 単語の終わりを探します。
+            // 単語の終わりを探す。
             int phrase_end = start_pos;
             for (; phrase_end < Chars.Count && (char.IsLetterOrDigit(Chars[phrase_end].Chr) || Chars[phrase_end].Chr == '_'); phrase_end++) ;
 
-            // 単語の始まりと終わりを選択します
+            // 単語の始まりと終わりを選択する。
             SelOrigin = phrase_start;
             SelCurrent = phrase_end;
 
-            // テキストの選択位置の変更をIMEに伝えます。
+            // テキストの選択位置の変更をIMEに伝える。
             MyNotifySelectionChanged();
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
@@ -939,7 +938,7 @@ namespace Miyu {
         public IEnumerator PointerHandler(PointerEventArgs e) {
             Debug.Assert(PointerEventType == EEvent.PointerPressed);
 
-            // ポインターの座標からテキストの位置を得ます。
+            // ポインターの座標からテキストの位置を得る。
             int start_pos = TextPositionFromPointer(CurrentPointerEvent.CurrentPoint);
 
             if (start_pos == -1) {
@@ -948,7 +947,7 @@ namespace Miyu {
                 goto cleanup;
             }
 
-            // 長押しの判別のためにタイマーを使います。
+            // 長押しの判別のためにタイマーを使う。
             PointerTimer.Interval = TimeSpan.FromMilliseconds(500);
             PointerTimer.Start();
             yield return 0;
@@ -982,7 +981,7 @@ namespace Miyu {
                 case EEvent.PointerReleased:
                     // クリックの場合
 
-                    // ダブルクリックの判別のためにタイマーを使います。
+                    // ダブルクリックの判別のためにタイマーを使う。
                     PointerTimer.Interval = TimeSpan.FromMilliseconds(200);
                     PointerTimer.Start();
                     yield return 0;
@@ -1000,7 +999,7 @@ namespace Miyu {
                         case EEvent.PointerPressed:
                             // ダブルクリックの場合
 
-                            // ダブルクリックで単語を選択します。
+                            // ダブルクリックで単語を選択する。
                             SelectByDoubleClick(start_pos);
 
                             goto cleanup;
@@ -1014,10 +1013,10 @@ namespace Miyu {
             //---------------------------------------------------------------------- ドラッグしてテキストを選択
             select_by_drag_sub:
 
-            // 現在の選択位置をセットします。
+            // 現在の選択位置をセットする。
             SetSelection(start_pos);
 
-            // ドラッグしてテキストを選択します。
+            // ドラッグしてテキストを選択する。
             for (IEnumerator select_by_drag = SelectByDrag(start_pos); select_by_drag.MoveNext();) {
                 yield return 0;
             }
@@ -1044,7 +1043,7 @@ namespace Miyu {
         private void EditScroll_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e) {
             MyEditor.WriteLine("<<--- ViewChanged");
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
@@ -1064,22 +1063,22 @@ namespace Miyu {
         }
 
         /*
-            文字列のサイズを計算します。
+            文字列のサイズを計算する。
         */
         Size MeasureText(string str, CanvasTextFormat text_format) {
             // 文字列が空白だけの場合、CanvasTextLayoutの計算が正しくない。
             // https://github.com/Microsoft/Win2D/issues/103
 
-            // 空白を除いた文字列のサイズを計算します。
+            // 空白を除いた文字列のサイズを計算する。
             string str_no_space = str.Replace(" ", "");
             Rect rc = (new CanvasTextLayout(Win2DCanvas, str_no_space, text_format, float.MaxValue, float.MaxValue)).LayoutBounds;
 
-            // 空白を除いた文字列の幅に空白の幅を加えます。
+            // 空白を除いた文字列の幅に空白の幅を加える。
             return new Size(rc.Width + (str.Length - str_no_space.Length) * SpaceWidth, rc.Height);
         }
 
         /*
-            ポインターの座標からテキストの位置を得ます。
+            ポインターの座標からテキストの位置を得る。
         */
         int TextPositionFromPointer(PointerPoint pointer) {
             Point canvas_pos = Win2DCanvas.TransformToVisual(Window.Current.Content).TransformPoint(new Point(0, 0));
@@ -1102,7 +1101,7 @@ namespace Miyu {
                         // 現在の文字の幅
                         double this_char_width = sz.Width - prev_width;
 
-                        // 現在の文字の左端より文字幅の20%ぐらい左を、矩形の左端にします。
+                        // 現在の文字の左端より文字幅の20%ぐらい左を、矩形の左端にする。
                         Rect sub_phrase_rc = new Rect(shape.Bounds.X - this_char_width * 0.2, shape.Bounds.Y, sz.Width, sz.Height);
                         if (sub_phrase_rc.Contains(pt)) {
                             // 矩形に含まれる場合
@@ -1119,8 +1118,8 @@ namespace Miyu {
         }
 
         /*
-            現在の選択位置をセットします。
-            シフトキーが押されてない場合は選択を始めた位置を現在の選択位置にします。
+            現在の選択位置をセットする。
+            シフトキーが押されてない場合は選択を始めた位置を現在の選択位置にする。
         */
         void SetSelection(int pos) {
             if (pos != -1 && pos != SelCurrent) {
@@ -1134,16 +1133,16 @@ namespace Miyu {
                     SelOrigin = SelCurrent;
                 }
 
-                // テキストの選択位置の変更をIMEに伝えます。
+                // テキストの選択位置の変更をIMEに伝える。
                 MyNotifySelectionChanged();
 
-                // 再描画します。
+                // 再描画する。
                 InvalidateCanvas();
             }
         }
 
         /*
-         * キャンバスのサイズを設定します。
+         * キャンバスのサイズを設定する。
          */
         void UpdateEditCanvasSize() {
             if (!double.IsNaN(LineHeight)) {
@@ -1157,26 +1156,26 @@ namespace Miyu {
         }
 
         /*
-            選択した範囲のテキストを別のテキストに置換します。
+            選択した範囲のテキストを別のテキストに置換する。
         */
         void ReplaceText(int sel_start, int sel_end, string new_text) {
-            // リドゥのスタックはクリアします。
+            // リドゥのスタックはクリアする。
             RedoStack.Clear();
 
-            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュします。
+            // テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュする。
             PushUndoRedoStack(sel_start, sel_end, new_text, UndoStack);
 
-            // テキストの変更をIMEに伝えます。
+            // テキストの変更をIMEに伝える。
             MyNotifyTextChanged(sel_start, sel_end, new_text.Length);
 
             UpdateEditCanvasSize();
 
-            // 再描画します。
+            // 再描画する。
             InvalidateCanvas();
         }
 
         /*
-            キャンバスを再描画します。 
+            キャンバスを再描画する。 
         */
         public void InvalidateCanvas() {
             UpdateEditCanvasSize();
@@ -1218,7 +1217,7 @@ namespace Miyu {
 
     /*
         書式付きの文字のクラス
-        本当はstructの方がよいですが、structだと以下のようなことができないのでclassにしています。
+        本当はstructの方がよいが、structだと以下のようなことができないのでclassにする。
             Chars[i].Underline = 代入値;
     */
     public struct TChar {
@@ -1263,7 +1262,7 @@ namespace Miyu {
 
     /*
         描画される図形のクラス
-        現在は文字列描画のみですが、将来的には画像を描画することも考えています。
+        現在は文字列描画のみだが、将来的には画像なども可能にする。
     */
     public class TShape {
         // 図形を囲む矩形

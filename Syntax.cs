@@ -489,7 +489,7 @@ namespace Miyu {
         }
 
         /*
-         * メソッドを一意に識別する文字列(クラス名は含まない)を返します。
+         * メソッドを一意に識別する文字列(クラス名は含まない)を返す。
         */
         public string GetFunctionSignature() {
             if(FunctionSignature == null) {
@@ -526,7 +526,7 @@ namespace Miyu {
         }
 
         /*
-         メソッドを一意に識別する文字列(クラス名は含む)を返します。
+         メソッドを一意に識別する文字列(クラス名は含む)を返す。
         */
         public string FullName() {
             if(ClassMember == null) {
@@ -550,7 +550,7 @@ namespace Miyu {
         }
 
         /*
-         * 戻り値の型と引数の数と型が同じならtrueを返します。
+         * 戻り値の型と引数の数と型が同じならtrueを返す。
         */
         public bool IsEqualType(TFunction fnc) {
             if(TypeVar != fnc.TypeVar) {

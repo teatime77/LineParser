@@ -23,9 +23,6 @@ namespace Miyu {
         [ThreadStatic]
         public static TType CurrentClass;
 
-        [ThreadStatic]
-        public TProject PrjParser;
-
         public TToken[] TokenList;
         public int TokenPos;
         public TToken CurrentToken;
@@ -43,16 +40,18 @@ namespace Miyu {
         // 1文字の記号の表
         public EKind[] SymbolTable1 = new EKind[256];
 
+        // トークンの種類の文字列の辞書
         public Dictionary<EKind, string> KindString = new Dictionary<EKind, string>();
 
 
         public TParser(TProject prj) {
-            PrjParser = prj;
-
-            // 字句解析の初期処理をします。
+            // 字句解析の初期処理をする。
             InitializeLexicalAnalysis();
         }
 
+        /*
+         * タブ数から空白の文字列を得る。
+         */
         public string Tab(int nest) {
             return new string(' ', nest * TabSize);
         }
@@ -69,11 +68,14 @@ namespace Miyu {
         public virtual void Colonopt() {
         }
 
+        /*
+         * enumの開始行を読む。
+         */
         public TType ReadEnumLine(TSourceFile src, TModifier mod1) {
             GetToken(EKind.enum_);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
-            TType cls = PrjParser.GetClassByName(id.TextTkn);
+            TType cls = TEnv.Project.GetClassByName(id.TextTkn);
             cls.ModifierCls = mod1;
             cls.KindClass = EClass.Enum;
             cls.SourceFileCls = src;
@@ -84,6 +86,9 @@ namespace Miyu {
             return cls;
         }
 
+        /*
+         * classの開始行を読む。
+         */
         public TType ReadClassLine(TSourceFile src, TModifier mod1) {
             EKind kind = CurrentToken.Kind;
 
@@ -120,7 +125,7 @@ namespace Miyu {
             else {
                 // 総称型でない場合
 
-                cls = PrjParser.GetClassByName(id.TextTkn);
+                cls = TEnv.Project.GetClassByName(id.TextTkn);
             }
 
             switch (kind) {
@@ -211,13 +216,16 @@ namespace Miyu {
             return cls;
         }
 
+        /*
+         * デリゲートの行を読む。
+         */
         public TType ReadDelegateLine(TModifier mod1) {
             GetToken(EKind.delegate_);
 
-            // 戻り値の型を読みます。
+            // 戻り値の型を読む。
             TType ret_type = ReadType(null, false);
 
-            // デリケートの名前を読みます。
+            // デリケートの名前を読む。
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             List<TType> param_classes = new List<TType>();
@@ -248,7 +256,7 @@ namespace Miyu {
 
             if (param_classes.Count == 0) {
 
-                dlg = PrjParser.GetClassByName(id.TextTkn);
+                dlg = TEnv.Project.GetClassByName(id.TextTkn);
             }
             else {
 
@@ -256,7 +264,7 @@ namespace Miyu {
             }
             dlg.KindClass = EClass.Delegate;
 
-            // 引数のリストを読みます。
+            // 引数のリストを読む。
             List<TVariable> vars = ReadArgs(dlg);
 
             // 戻り値の型
@@ -268,6 +276,9 @@ namespace Miyu {
             return dlg;
         }
 
+        /*
+         * フィールドの行を読む。
+         */
         public TField ReadFieldLine(TType parent_class, TModifier mod1, TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
@@ -297,6 +308,9 @@ namespace Miyu {
             return new TField(parent_class, mod1, id, tp, init);
         }
 
+        /*
+         * enumのフィールドの行を読む。
+         */
         public TField ReadEnumFieldLine(TType parent_class) {
             TToken id = GetToken(EKind.Identifier);
 
@@ -307,11 +321,11 @@ namespace Miyu {
         }
 
         /*
-         * 型を読みます。
+         * 型を読む。
          */
         public TType ReadType(TType parent_class, bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TType cls1 = PrjParser.GetParamClassByName(parent_class, id.TextTkn);
+            TType cls1 = TEnv.Project.GetParamClassByName(parent_class, id.TextTkn);
 
             List<TType> param_classes = null;
             bool contains_argument_class = false;
@@ -412,6 +426,9 @@ namespace Miyu {
             GetToken(EKind.EOT);
         }
 
+        /*
+         * usingの行を読む。
+         */
         public TUsing ReadUsing() {
             TUsing using1 = new TUsing();
 
@@ -432,6 +449,9 @@ namespace Miyu {
             return using1;
         }
 
+        /*
+         * namespaceの開始行を読む。
+         */
         public TNamespace ReadNamespace() {
             GetToken(EKind.namespace_);
 
@@ -443,7 +463,7 @@ namespace Miyu {
         }
 
         /*
-         * 引数のリストを読みます。
+         * 引数のリストを読む。
          */
         public List<TVariable> ReadArgs(TType parent_class) {
             List<TVariable> vars = new List<TVariable>();
@@ -452,7 +472,7 @@ namespace Miyu {
 
             while (CurrentToken.Kind != EKind.RP) {
 
-                // 引数の変数を読みます。
+                // 引数の変数を読む。
                 TVariable var1 = ReadArgVariable(parent_class);
                 vars.Add(var1);
 
@@ -469,6 +489,9 @@ namespace Miyu {
             return vars;
         }
 
+        /*
+         * 関数定義の開始行を読む。
+         */
         public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
             TToken fnc_name;
             EKind kind_fnc = EKind.function_;
@@ -493,7 +516,7 @@ namespace Miyu {
                 }
             }
 
-            // 引数のリストを読みます。
+            // 引数のリストを読む。
             List<TVariable> vars = ReadArgs(parent_class);
 
             TType ret_type = ret_type_prepend;
@@ -534,7 +557,7 @@ namespace Miyu {
         }
 
         /*
-         * 引数の変数を読みます。
+         * 引数の変数を読む。
          */
         public virtual TVariable ReadArgVariable(TType parent_class) {
             EKind kind = EKind.Undefined;
@@ -600,6 +623,9 @@ namespace Miyu {
             return new TVariable(null, id, type, init);
         }
 
+        /*
+         * 変数宣言の行を読む。
+         */
         public virtual TVariableDeclaration ReadVariableDeclarationLine(TType type_prepend, bool in_for) {
             TVariableDeclaration var_decl = new TVariableDeclaration();
 
@@ -630,6 +656,9 @@ namespace Miyu {
             return var_decl;
         }
 
+        /*
+         * ifの開始行を読む。
+         */
         public TIfBlock ReadIfLine() {
             TIfBlock if_block = new TIfBlock();
 
@@ -644,6 +673,9 @@ namespace Miyu {
             return if_block;
         }
 
+        /*
+         * else/else ifの開始行を読む。
+         */
         public TIfBlock ReadElseLine() {
             TIfBlock if_block = new TIfBlock();
             if_block.IsElse = true;
@@ -663,6 +695,9 @@ namespace Miyu {
             return if_block;
         }
 
+        /*
+         * switchの開始行を読む。
+         */
         public TSwitch ReadSwitchLine() {
             TSwitch switch1 = new TSwitch();
 
@@ -677,6 +712,9 @@ namespace Miyu {
             return switch1;
         }
 
+        /*
+         * caseの行を読む。
+         */
         public TCase ReadCaseLine() {
             TCase case1 = new TCase();
 
@@ -693,6 +731,9 @@ namespace Miyu {
             return case1;
         }
 
+        /*
+         * whileの開始行を読む。
+         */
         public TWhile ReadWhileLine() {
             TWhile while1 = new TWhile();
 
@@ -707,6 +748,9 @@ namespace Miyu {
             return while1;
         }
 
+        /*
+         * lockの開始行を読む。
+         */
         public TLock ReadLockLine() {
             TLock lock1 = new TLock();
 
@@ -721,6 +765,9 @@ namespace Miyu {
             return lock1;
         }
 
+        /*
+         * foreachの開始行を読む。
+         */
         public TForEach ReadForEachLine() {
             TForEach for1 = new TForEach();
 
@@ -748,6 +795,9 @@ namespace Miyu {
             return for1;
         }
 
+        /*
+         * forの開始行を読む。
+         */
         public TFor ReadForLine() {
             TFor for1 = new TFor();
 
@@ -764,7 +814,7 @@ namespace Miyu {
                 }
                 else {
 
-                    // 代入文かメソッド呼び出し文を読みます。
+                    // 代入文かメソッド呼び出し文を読む。
                     for1.InitStatement = ReadAssignmentCallLine(true) as TStatement;
                 }
             }
@@ -780,7 +830,7 @@ namespace Miyu {
 
             if(CurrentToken.Kind != EKind.RP) {
 
-                // 代入文かメソッド呼び出し文を読みます。
+                // 代入文かメソッド呼び出し文を読む。
                 for1.PostStatement = ReadAssignmentCallLine(true) as TStatement;
             }
 
@@ -791,6 +841,9 @@ namespace Miyu {
             return for1;
         }
 
+        /*
+         * tryの開始行を読む。
+         */
         public TTry ReadTryLine() {
             GetToken(EKind.try_);
             LCopt();
@@ -798,6 +851,9 @@ namespace Miyu {
             return new TTry();
         }
 
+        /*
+         * catchの開始行を読む。
+         */
         public TCatch ReadCatchLine() {
             GetToken(EKind.catch_);
             LPopt();
@@ -816,6 +872,9 @@ namespace Miyu {
             return new TCatch(new TVariable(name, tp));
         }
 
+        /*
+         * goto,returnなどの制御の移動の行を読む。
+         */
         public TJump ReadJumpLine() {
             TToken tkn = GetToken(EKind.Undefined);
 
@@ -861,7 +920,7 @@ namespace Miyu {
         }
 
         /*
-         * 代入文かメソッド呼び出し文を読みます。
+         * 代入文かメソッド呼び出し文を読む。
          */
         public object ReadAssignmentCallLine(bool in_for) {
             TAssignment asn = null;
@@ -878,7 +937,7 @@ namespace Miyu {
 
                 TToken opr = GetToken(EKind.Undefined);
 
-                // 右辺を読みます。
+                // 右辺を読む。
                 TTerm t2 = Expression();
 
                 TApply app1 = new TApply(opr, t1, t2);
@@ -913,7 +972,7 @@ namespace Miyu {
                 throw new TParseException();
             }
 
-            // メソッド呼び出し文を返します。
+            // メソッド呼び出し文を返す。
             return new TCall(t1 as TApply);
         }
 
@@ -934,6 +993,9 @@ namespace Miyu {
             return -1;
         }
 
+        /*
+         * 1行の構文解析をする。
+         */
         public object ParseLine(TSourceFile src, TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx) {
             TokenPos = line_top_idx;
 
@@ -1126,7 +1188,7 @@ namespace Miyu {
 
                         LookaheadClass = tp;
 
-                        // 代入文かメソッド呼び出し文を読みます。
+                        // 代入文かメソッド呼び出し文を読む。
                         return ReadAssignmentCallLine(false);
                     }
 
@@ -1171,7 +1233,7 @@ namespace Miyu {
                     }
                     else {
 
-                        // 代入文かメソッド呼び出し文を読みます。
+                        // 代入文かメソッド呼び出し文を読む。
                         return ReadAssignmentCallLine(false);
                     }
 
@@ -1180,7 +1242,7 @@ namespace Miyu {
                 case EKind.LP:
                 case EKind.StringLiteral:
                 case EKind.typeof_:
-                    // 代入文かメソッド呼び出し文を読みます。
+                    // 代入文かメソッド呼び出し文を読む。
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
@@ -1250,7 +1312,7 @@ namespace Miyu {
         }
 
         /*
-         * ソースファイル内の継続行をセットします。
+         * ソースファイル内の継続行をセットする。
          */
         public void SetLineContinued(TSourceFile src) {
             TLine prev_line = null;
@@ -1371,7 +1433,7 @@ namespace Miyu {
                             List<object> obj_stack_rev = new List<object>(obj_stack);
                             obj_stack_rev.Reverse();
 
-                            // スタックの中からクラスを探します。
+                            // スタックの中からクラスを探す。
                             var vcls = from x in obj_stack_rev where x is TType select x as TType;
                             if (vcls.Any()) {
                                 cls = vcls.First();
@@ -1388,13 +1450,13 @@ namespace Miyu {
                             line.ClassLine = cls;
                             CurrentClass = cls;
 
-                            // スタックの中から関数を探します。
+                            // スタックの中から関数を探す。
                             var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
                             if (vfnc.Any()) {
                                 parent_fnc = vfnc.First();
                             }
 
-                            // スタックの中から最も内側の文を探します。
+                            // スタックの中から最も内側の文を探す。
                             var vstmt = from x in obj_stack_rev where x is TBlockStatement select x as TBlockStatement;
                             if (vstmt.Any()) {
                                 parent_stmt = vstmt.First();
@@ -1556,7 +1618,7 @@ namespace Miyu {
                     List<TVariable> vars;
                     GetVariablesClass(src, line_idx, out vars);
 
-                    // 名前解決のエラーをクリアします。
+                    // 名前解決のエラーをクリアする。
                     lock (src) {
                         var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
                         foreach (TToken name_err_tkn in name_err_tkns) {

@@ -182,7 +182,7 @@ namespace Miyu {
     partial class TParser {
 
         /*
-            字句解析の初期処理をします。
+            字句解析の初期処理をする。
         */
         public void InitializeLexicalAnalysis() {
             // C#のキーワードのリスト
@@ -401,7 +401,7 @@ namespace Miyu {
 
             KeywordMap = new Dictionary<string, EKind>();
 
-            // キーワードの文字列を辞書に登録します。
+            // キーワードの文字列を辞書に登録する。
             for(int i = 0; i < keyword_list.Length; i++) {
                 KeywordMap.Add(keyword_list[i], token_list[i]);
 
