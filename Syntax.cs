@@ -245,6 +245,39 @@ namespace Miyu {
 
             return false;
         }
+        public bool IsSubClass(TType tp) {
+            if (tp == TEnv.Project.ObjectClass) {
+                return !IsPrimitive();
+            }
+            if (SuperClasses.Contains(tp)) {
+                return true;
+            }
+            foreach (TType super_class in SuperClasses) {
+                if (super_class.IsSubClass(tp)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool IsSuperClass(TType tp) {
+            return tp.IsSubClass(this);
+        }
+
+        bool IsSubclassOf(TypeInfo t1, Type t2) {
+            if (t1.IsSubclassOf(t2)) {
+                return true;
+            }
+
+            if (t1.Name == "Int16" || t1.Name == "Int32") {
+                if (t2.Name == "Single" || t2.Name == "Double") {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public IEnumerable<TType> AncestorSuperClasses() {
             foreach (TType t1 in SuperClasses) {

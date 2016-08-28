@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace Miyu {
 
@@ -633,26 +631,6 @@ namespace Miyu {
     }
     
     partial class TType {
-        public bool IsSubClass(TType tp) {
-            if(tp == TEnv.Project.ObjectClass) {
-                return ! IsPrimitive();
-            }
-            if (SuperClasses.Contains(tp)) {
-                return true;
-            }
-            foreach(TType super_class in SuperClasses) {
-                if (super_class.IsSubClass(tp)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public bool IsSuperClass(TType tp) {
-            return tp.IsSubClass(this);
-        }
-
         public TField FindSysField(TypeInfo tp, string name) {
             var fields = from f in tp.DeclaredFields where f.Name == name select f;
             if (fields.Any()) {
@@ -716,20 +694,6 @@ namespace Miyu {
             }
 
             return null;
-        }
-
-        bool IsSubclassOf(TypeInfo t1, Type t2) {
-            if (t1.IsSubclassOf(t2)) {
-                return true;
-            }
-
-            if(t1.Name == "Int16" || t1.Name == "Int32") {
-                if(t2.Name == "Single" || t2.Name == "Double") {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /*

@@ -96,7 +96,7 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="CodeAnalysis.cs" />
-    <Compile Include="Compile.cs" />
+    <Compile Include="NameResolution.cs" />
     <Compile Include="CSharpParser.cs" />
     <Compile Include="Define.cs" />
     <Compile Include="IME.cs" />
