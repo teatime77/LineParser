@@ -10,7 +10,7 @@ namespace Miyu {
         public List<TToken> TokenListTW = new List<TToken>();
 
         public TTokenWriter(TParser parser) {
-            TEnv.Parser = parser;
+            TGlb.Parser = parser;
         }
 
         public void AddToken(EKind kind) {
@@ -115,7 +115,7 @@ namespace Miyu {
 
                 default:
                     string s = "";
-                    if(TEnv.Parser.KindString.TryGetValue(tk.Kind, out s)) {
+                    if(TGlb.Parser.KindString.TryGetValue(tk.Kind, out s)) {
 
                         sw.Write(s);
                     }
@@ -231,7 +231,7 @@ namespace Miyu {
 
                 default:
                     string s = "";
-                    if (TEnv.Parser.KindString.TryGetValue(tk.Kind, out s)) {
+                    if (TGlb.Parser.KindString.TryGetValue(tk.Kind, out s)) {
 
                         if (char.IsLetter(s[0])) {
 
@@ -889,19 +889,19 @@ namespace Miyu {
             }
 
             switch (cls.KindClass) {
-            case EClass.Class:
+            case EType.Class:
                 sw.Fmt(EKind.class_);
                 break;
-            case EClass.Enum:
+            case EType.Enum:
                 sw.Fmt(EKind.enum_);
                 break;
-            case EClass.Struct:
+            case EType.Struct:
                 sw.Fmt(EKind.struct_);
                 break;
-            case EClass.Interface:
+            case EType.Interface:
                 sw.Fmt(EKind.interface_);
                 break;
-            case EClass.Delegate:
+            case EType.Delegate:
                 sw.Fmt(EKind.delegate_);
                 break;
             }
@@ -944,7 +944,7 @@ namespace Miyu {
 
             sw.TAB(2);
 
-            if (cls.KindClass == EClass.Enum) {
+            if (cls.KindClass == EType.Enum) {
 
                 sw.Fmt(fld, EKind.Comma, EKind.NL);
             }
@@ -1061,7 +1061,7 @@ namespace Miyu {
                     Directory.CreateDirectory(class_dir);
                 }
 
-                if(cls.KindClass != EClass.Enum) {
+                if(cls.KindClass != EType.Enum) {
 
                     sw1.WriteLine("<li><a href=\"{0}//index.html\">{0}</a></li>", cls.ClassName);
 
@@ -1072,9 +1072,9 @@ namespace Miyu {
                     sw.WriteLine("<h2>フィールド</h2>");
                     sw.WriteLine("<ul>");
                     foreach (TField fld in cls.Fields) {
-                        TTokenWriter tw = new TTokenWriter(TEnv.Parser);
+                        TTokenWriter tw = new TTokenWriter(TGlb.Parser);
 
-                        TEnv.Parser.FieldText(cls, fld, tw);
+                        TGlb.Parser.FieldText(cls, fld, tw);
                         File.WriteAllText(class_dir + "\\" + fld.NameVar + ".html", tw.ToHTMLText(cls.ClassName + " - " + fld.NameVar), new UTF8Encoding(false));
 
                         sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fld.NameVar + ".html", fld.NameVar);
@@ -1084,9 +1084,9 @@ namespace Miyu {
                     sw.WriteLine("<h2>メソッド</h2>");
                     sw.WriteLine("<ul>");
                     foreach(TFunction fnc in cls.Functions) {
-                        TTokenWriter tw = new TTokenWriter(TEnv.Parser);
+                        TTokenWriter tw = new TTokenWriter(TGlb.Parser);
 
-                        TEnv.Parser.FunctionText(fnc, tw, 2);
+                        TGlb.Parser.FunctionText(fnc, tw, 2);
                         File.WriteAllText(class_dir + "\\" + fnc.UniqueName() + ".html", tw.ToHTMLText(cls.ClassName + " - " + fnc.NameVar), new UTF8Encoding(false));
 
                         sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fnc.UniqueName() + ".html", fnc.NameVar);

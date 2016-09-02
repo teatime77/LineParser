@@ -68,10 +68,10 @@ namespace Miyu {
         }
 
         public void Init() {
-            TEnv.Project = this;
+            TGlb.Project = this;
 
             TCSharpParser.CSharpParser = new TCSharpParser(this);
-            TEnv.Parser = TCSharpParser.CSharpParser;
+            TGlb.Parser = TCSharpParser.CSharpParser;
 
             SetAssemblyList();
 
@@ -114,8 +114,8 @@ namespace Miyu {
         public void Build() {
             DateTime tick;
 
-            TEnv.Project = this;
-            TEnv.Parser = TCSharpParser.CSharpParser;
+            TGlb.Project = this;
+            TGlb.Parser = TCSharpParser.CSharpParser;
 
             RegisterClassNames();
 
@@ -478,7 +478,7 @@ namespace Miyu {
             if (! ParameterizedClassTable.TryGetValue(class_text, out reg_class)) {
 
                 reg_class = new TGenericClass(class_name, param_classes);
-                reg_class.GenericType = EGeneric.ParameterizedClass;
+                reg_class.GenericType = EClass.ParameterizedClass;
 
                 ParameterizedClassTable.Add(class_text, reg_class);
 
@@ -495,7 +495,7 @@ namespace Miyu {
             if (!SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
 
                 reg_class = new TGenericClass(org_class, param_classes, dim_cnt);
-                reg_class.GenericType = EGeneric.SpecializedClass;
+                reg_class.GenericType = EClass.SpecializedClass;
 
                 if (ParseDone) {
                     SetMemberOfSpecializedClass(reg_class);

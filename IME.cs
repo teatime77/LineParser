@@ -146,7 +146,7 @@ namespace Miyu {
             // 再描画する。
             InvalidateCanvas();
 
-            TEnv.Project.Modified.Set();
+            TGlb.Project.Modified.Set();
         }
 
         /*

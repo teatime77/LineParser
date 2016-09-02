@@ -717,7 +717,7 @@ namespace Miyu {
 
             if (SourceFile.Parser.Dirty) {
 
-                TEnv.Project.Modified.Set();
+                TGlb.Project.Modified.Set();
                 Debug.WriteLine("CoreWindow KeyDown 終了");
             }
         }

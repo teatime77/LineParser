@@ -7,6 +7,9 @@ using System.Reflection;
 
 namespace Miyu {
 
+    /*
+     * プログラム言語
+     */
     public enum ELanguage {
         TypeScript,
         CSharp,
@@ -15,7 +18,10 @@ namespace Miyu {
         Basic,
     }
 
-    public enum EClass {
+    /*
+     * 型の種類
+     */
+    public enum EType {
         Class,
         Enum,
         Struct,
@@ -23,7 +29,10 @@ namespace Miyu {
         Delegate,
     }
 
-    public enum EGeneric {
+    /*
+     * クラスの種類
+     */
+    public enum EClass {
         UnknownClass,
         SimpleClass,
         ParameterizedClass,
@@ -31,17 +40,16 @@ namespace Miyu {
         SpecializedClass,
     }
 
-    public enum EAggregateFunction {
-        Sum,
-        Max,
-        Min,
-        Average,
-    }
-
+    /*
+     * 弱参照の属性
+     */
     public class _weak : Attribute {
     }
 
-    public class TEnv {
+    /*
+     * 大域変数
+     */
+    public class TGlb {
         [ThreadStatic]
         public static TProject Project;
 
@@ -121,8 +129,8 @@ namespace Miyu {
         public int IdxClass;
         public TToken[] CommentCls;
         public TModifier ModifierCls;
-        public EClass KindClass = EClass.Class;
-        public EGeneric GenericType = EGeneric.SimpleClass;
+        public EType KindClass = EType.Class;
+        public EClass GenericType = EClass.SimpleClass;
         public string ClassName;
         public string ClassText = null;
         public string DelegateText = null;
@@ -159,7 +167,7 @@ namespace Miyu {
 
         public TType(string name, TType ret_type, TType[] arg_types) {
             SetIdxClass();
-            KindClass = EClass.Delegate;
+            KindClass = EType.Delegate;
             ClassName = name;
             RetType = ret_type;
             ArgTypes = arg_types;
@@ -194,8 +202,8 @@ namespace Miyu {
         public TType ElementType() {
             TType tp;
 
-            if (this == TEnv.Project.StringClass) {
-                return TEnv.Project.CharClass;
+            if (this == TGlb.Project.StringClass) {
+                return TGlb.Project.CharClass;
             }
             if(this is TGenericClass) {
                 TGenericClass gen = this as TGenericClass;
@@ -217,14 +225,14 @@ namespace Miyu {
 
                     int k = Info.Name.IndexOf('[');
                     string name = Info.Name.Substring(0, k);
-                    tp = TEnv.Project.GetClassByName(name);
+                    tp = TGlb.Project.GetClassByName(name);
                     if (tp != null) {
                         return tp;
                     }
                 }
 
                 Type t = Info.GenericTypeArguments[0];
-                tp = TEnv.Project.GetClassByName(t.Name);
+                tp = TGlb.Project.GetClassByName(t.Name);
                 if (tp != null) {
                     return tp;
                 }
@@ -238,15 +246,15 @@ namespace Miyu {
 
             //    return true;
             //}
-            TProject p = TEnv.Project;
-            if(KindClass == EClass.Enum || this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
+            TProject p = TGlb.Project;
+            if(KindClass == EType.Enum || this == p.IntClass || this == p.FloatClass || this == p.DoubleClass || this == p.CharClass || this == p.BoolClass) {
                 return true;
             }
 
             return false;
         }
         public bool IsSubClass(TType tp) {
-            if (tp == TEnv.Project.ObjectClass) {
+            if (tp == TGlb.Project.ObjectClass) {
                 return !IsPrimitive();
             }
             if (SuperClasses.Contains(tp)) {
@@ -356,7 +364,7 @@ namespace Miyu {
         public override string GetClassText() {
             if(ClassText == null) {
 
-                ClassText = TEnv.Project.MakeClassText(ClassName, ArgClasses, DimCnt);
+                ClassText = TGlb.Project.MakeClassText(ClassName, ArgClasses, DimCnt);
             }
 
             return ClassText;
@@ -452,19 +460,19 @@ namespace Miyu {
         public TField(TType parent_class, FieldInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TEnv.Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
+            TypeVar = TGlb.Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
         }
 
         public TField(TType parent_class, PropertyInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TEnv.Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
+            TypeVar = TGlb.Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
         }
 
         public TField(TType parent_class, EventInfo fld_info) {
             ClassMember = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TEnv.Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
+            TypeVar = TGlb.Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
         }
     }
 
@@ -518,7 +526,7 @@ namespace Miyu {
         public TFunction(TType parent_class, MethodInfo method_info) : base() {
             KindFnc = EKind.Undefined;
             InfoFnc = method_info;
-            TypeVar = TEnv.Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
+            TypeVar = TGlb.Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
         }
 
         /*

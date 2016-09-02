@@ -290,7 +290,7 @@ namespace Miyu {
             sw.WriteLine("title <size:18>クラス図</size>");
 
             foreach(TType c in AppClasses) {
-                if(c.KindClass != EClass.Enum) {
+                if(c.KindClass != EType.Enum) {
 
                     sw.WriteLine("class {0} {{", c.ClassName);
                     sw.WriteLine("\t[[http://www.google.com]]");

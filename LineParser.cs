@@ -75,9 +75,9 @@ namespace Miyu {
             GetToken(EKind.enum_);
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
-            TType cls = TEnv.Project.GetClassByName(id.TextTkn);
+            TType cls = TGlb.Project.GetClassByName(id.TextTkn);
             cls.ModifierCls = mod1;
-            cls.KindClass = EClass.Enum;
+            cls.KindClass = EType.Enum;
             cls.SourceFileCls = src;
 
             LCopt();
@@ -107,7 +107,7 @@ namespace Miyu {
                     TToken param_name = GetToken(EKind.Identifier);
 
                     TType param_class = new TType(param_name.TextTkn);
-                    param_class.GenericType = EGeneric.ArgumentClass;
+                    param_class.GenericType = EClass.ArgumentClass;
 
                     param_classes.Add(param_class);
 
@@ -120,25 +120,25 @@ namespace Miyu {
                 }
                 GetToken(EKind.GT);
 
-                cls = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
+                cls = TGlb.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             else {
                 // 総称型でない場合
 
-                cls = TEnv.Project.GetClassByName(id.TextTkn);
+                cls = TGlb.Project.GetClassByName(id.TextTkn);
             }
 
             switch (kind) {
             case EKind.class_:
-                cls.KindClass = EClass.Class;
+                cls.KindClass = EType.Class;
                 break;
 
             case EKind.struct_:
-                cls.KindClass = EClass.Struct;
+                cls.KindClass = EType.Struct;
                 break;
 
             case EKind.interface_:
-                cls.KindClass = EClass.Interface;
+                cls.KindClass = EType.Interface;
                 break;
 
             default:
@@ -177,40 +177,40 @@ namespace Miyu {
             GetToken(EKind.EOT);
 
             if (cls.ClassName == "int") {
-                TEnv.Project.IntClass = cls;
+                TGlb.Project.IntClass = cls;
             }
             else if (cls.ClassName == "float") {
-                TEnv.Project.FloatClass = cls;
+                TGlb.Project.FloatClass = cls;
             }
             else if (cls.ClassName == "double") {
-                TEnv.Project.DoubleClass = cls;
+                TGlb.Project.DoubleClass = cls;
             }
             else if (cls.ClassName == "char") {
-                TEnv.Project.CharClass = cls;
+                TGlb.Project.CharClass = cls;
             }
             else if (cls.ClassName == "object") {
-                TEnv.Project.ObjectClass = cls;
+                TGlb.Project.ObjectClass = cls;
             }
             else if (cls.ClassName == "string") {
-                TEnv.Project.StringClass = cls;
+                TGlb.Project.StringClass = cls;
             }
             else if (cls.ClassName == "bool") {
-                TEnv.Project.BoolClass = cls;
+                TGlb.Project.BoolClass = cls;
             }
             else if (cls.ClassName == "void") {
-                TEnv.Project.VoidClass = cls;
+                TGlb.Project.VoidClass = cls;
             }
             else if (cls.ClassName == "Type") {
-                TEnv.Project.TypeClass = cls;
+                TGlb.Project.TypeClass = cls;
             }
             else if (cls.ClassName == "Action") {
-                TEnv.Project.ActionClass = cls;
+                TGlb.Project.ActionClass = cls;
             }
             else if (cls.ClassName == "Enumerable") {
-                TEnv.Project.EnumerableClass = cls as TGenericClass;
+                TGlb.Project.EnumerableClass = cls as TGenericClass;
             }
             else if (cls.ClassName == "Array") {
-                TEnv.Project.ArrayClass = cls as TGenericClass;
+                TGlb.Project.ArrayClass = cls as TGenericClass;
             }
 
             return cls;
@@ -238,7 +238,7 @@ namespace Miyu {
                     TToken param_name = GetToken(EKind.Identifier);
 
                     TType param_class = new TType(param_name.TextTkn);
-                    param_class.GenericType = EGeneric.ArgumentClass;
+                    param_class.GenericType = EClass.ArgumentClass;
 
                     param_classes.Add(param_class);
 
@@ -256,13 +256,13 @@ namespace Miyu {
 
             if (param_classes.Count == 0) {
 
-                dlg = TEnv.Project.GetClassByName(id.TextTkn);
+                dlg = TGlb.Project.GetClassByName(id.TextTkn);
             }
             else {
 
-                dlg = TEnv.Project.GetParameterizedClass(id.TextTkn, param_classes);
+                dlg = TGlb.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
-            dlg.KindClass = EClass.Delegate;
+            dlg.KindClass = EType.Delegate;
 
             // 引数のリストを読む。
             List<TVariable> vars = ReadArgs(dlg);
@@ -325,7 +325,7 @@ namespace Miyu {
          */
         public TType ReadType(TType parent_class, bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TType cls1 = TEnv.Project.GetParamClassByName(parent_class, id.TextTkn);
+            TType cls1 = TGlb.Project.GetParamClassByName(parent_class, id.TextTkn);
 
             List<TType> param_classes = null;
             bool contains_argument_class = false;
@@ -345,7 +345,7 @@ namespace Miyu {
                 while (true) {
                     TType param_class = ReadType(parent_class, false);
 
-                    if (param_class.GenericType == EGeneric.ArgumentClass || param_class is TGenericClass && (parent_class as TGenericClass).ContainsArgumentClass) {
+                    if (param_class.GenericType == EClass.ArgumentClass || param_class is TGenericClass && (parent_class as TGenericClass).ContainsArgumentClass) {
 
                         contains_argument_class = true;
                     }
@@ -400,7 +400,7 @@ namespace Miyu {
             else {
                 // 引数がある場合
 
-                cls2 = TEnv.Project.GetSpecializedClass(cls1 as TGenericClass, param_classes, 0);
+                cls2 = TGlb.Project.GetSpecializedClass(cls1 as TGenericClass, param_classes, 0);
             }
 
             if (dim_cnt == 0) {
@@ -411,15 +411,15 @@ namespace Miyu {
 
             List<TType> array_element_class_list = new List<TType> { cls2 };
 
-            if (cls2.GenericType == EGeneric.ArgumentClass) {
+            if (cls2.GenericType == EClass.ArgumentClass) {
 
-                TGenericClass tmp_class = new TGenericClass(TEnv.Project.ArrayClass, array_element_class_list, dim_cnt);
+                TGenericClass tmp_class = new TGenericClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
                 tmp_class.ContainsArgumentClass = true;
 
                 return tmp_class;
             }
 
-            return TEnv.Project.GetSpecializedClass(TEnv.Project.ArrayClass, array_element_class_list, dim_cnt);
+            return TGlb.Project.GetSpecializedClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
         }
 
         public virtual void LineEnd() {
@@ -954,7 +954,7 @@ namespace Miyu {
                     return t1;
                 }
 
-                if(TEnv.LambdaFunction != null) {
+                if(TGlb.LambdaFunction != null) {
 
                     GetToken(EKind.EOT);
                 }
@@ -1089,8 +1089,8 @@ namespace Miyu {
 
                     case EKind.RC:
                         GetToken(EKind.RC);
-                        if (CurrentToken.Kind == EKind.RP && TEnv.InLambdaFunction) {
-                            TEnv.InLambdaFunction = false;
+                        if (CurrentToken.Kind == EKind.RP && TGlb.InLambdaFunction) {
+                            TGlb.InLambdaFunction = false;
                             GetToken(EKind.RP);
                         }
 
@@ -1210,7 +1210,7 @@ namespace Miyu {
 
                 case EKind.Identifier:
                 case EKind.base_:
-                    if(cls != null && cls.KindClass == EClass.Enum) {
+                    if(cls != null && cls.KindClass == EType.Enum) {
 
                         return ReadEnumFieldLine(cls);
                     }
@@ -1467,7 +1467,7 @@ namespace Miyu {
                             }
 
                             //Debug.Write(string.Format("行解析 {0}", line.TextLine));
-                            TEnv.LambdaFunction = null;
+                            TGlb.LambdaFunction = null;
 
                             List<TToken> token_list = new List<TToken>(line.Tokens);
                             for (int cont_line_idx = line_idx + 1; cont_line_idx < src.Lines.Count && src.Lines[cont_line_idx].Continued ; cont_line_idx++) {
@@ -1482,14 +1482,14 @@ namespace Miyu {
                                     obj_stack.Add(null);
                                 }
 
-                                if (TEnv.LambdaFunction != null) {
-                                    obj_stack.Add(TEnv.LambdaFunction);
+                                if (TGlb.LambdaFunction != null) {
+                                    obj_stack.Add(TGlb.LambdaFunction);
 
-                                    TEnv.LambdaFunction.ClassMember = cls;
-                                    cls.Functions.Add(TEnv.LambdaFunction);
-                                    src.FunctionsSrc.Add(TEnv.LambdaFunction);
+                                    TGlb.LambdaFunction.ClassMember = cls;
+                                    cls.Functions.Add(TGlb.LambdaFunction);
+                                    src.FunctionsSrc.Add(TGlb.LambdaFunction);
 
-                                    TEnv.LambdaFunction = null;
+                                    TGlb.LambdaFunction = null;
                                 }
                                 else {
 
@@ -1796,10 +1796,10 @@ namespace Miyu {
                     TToken lambda = GetToken(EKind.Lambda);
                     GetToken(EKind.LC);
 
-                    TEnv.LambdaFunction = new TFunction(lambda);
-                    TEnv.InLambdaFunction = true;
+                    TGlb.LambdaFunction = new TFunction(lambda);
+                    TGlb.InLambdaFunction = true;
 
-                    return new TReference(TEnv.LambdaFunction);
+                    return new TReference(TGlb.LambdaFunction);
                 }
 
                 term = Expression();
@@ -1908,7 +1908,7 @@ namespace Miyu {
 
                         TTerm[] args = ExpressionList().ToArray();
 
-                        if(TEnv.LambdaFunction == null) {
+                        if(TGlb.LambdaFunction == null) {
 
                             GetToken(EKind.RP);
                         }

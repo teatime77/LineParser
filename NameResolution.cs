@@ -54,7 +54,7 @@ namespace Miyu {
                     return true;
                 }
 
-                if (arg_types[i] == TEnv.Project.NullClass) {
+                if (arg_types[i] == TGlb.Project.NullClass) {
 
                     if (var1.TypeVar.IsPrimitive()) {
                         return false;
@@ -62,9 +62,9 @@ namespace Miyu {
                 }
                 else {
 
-                    if(var1.TypeVar.KindClass == EClass.Delegate) {
+                    if(var1.TypeVar.KindClass == EType.Delegate) {
 
-                        if(arg_types[i].KindClass != EClass.Delegate) {
+                        if(arg_types[i].KindClass != EType.Delegate) {
                             return false;
                         }
 
@@ -107,27 +107,27 @@ namespace Miyu {
         public override void ResolveName(TType cls, List<TVariable> vars) {
             switch (TokenTrm.TokenType) {
             case ETokenType.Int:
-                TypeTrm = TEnv.Project.IntClass;
+                TypeTrm = TGlb.Project.IntClass;
                 break;
 
             case ETokenType.Float:
-                TypeTrm = TEnv.Project.FloatClass;
+                TypeTrm = TGlb.Project.FloatClass;
                 break;
 
             case ETokenType.Double:
-                TypeTrm = TEnv.Project.DoubleClass;
+                TypeTrm = TGlb.Project.DoubleClass;
                 break;
 
             case ETokenType.Char_:
-                TypeTrm = TEnv.Project.CharClass;
+                TypeTrm = TGlb.Project.CharClass;
                 break;
 
             case ETokenType.String_:
-                TypeTrm = TEnv.Project.StringClass;
+                TypeTrm = TGlb.Project.StringClass;
                 break;
 
             case ETokenType.VerbatimString:
-                TypeTrm = TEnv.Project.StringClass;
+                TypeTrm = TGlb.Project.StringClass;
                 break;
 
             default:
@@ -191,7 +191,7 @@ namespace Miyu {
                         else {
                             Debug.Assert(lambda.BlockFnc.StatementsBlc.Count != 0);
 
-                            TypeTrm = TEnv.Project.ActionClass;
+                            TypeTrm = TGlb.Project.ActionClass;
                             return;
                         }
                     }
@@ -206,11 +206,11 @@ namespace Miyu {
 
                 case EKind.true_:
                 case EKind.false_:
-                    TypeTrm = TEnv.Project.BoolClass;
+                    TypeTrm = TGlb.Project.BoolClass;
                     break;
 
                 case EKind.null_:
-                    TypeTrm = TEnv.Project.NullClass;
+                    TypeTrm = TGlb.Project.NullClass;
                     break;
 
                 case EKind.base_:
@@ -239,7 +239,7 @@ namespace Miyu {
                                 var fncs = from f in cls.Functions where f.NameVar == NameRef select f;
                                 if (fncs.Any()) {
                                     VarRef = fncs.First();
-                                    TypeTrm = TEnv.Project.HandlerClass;
+                                    TypeTrm = TGlb.Project.HandlerClass;
                                 }
                                 else {
 
@@ -335,7 +335,7 @@ namespace Miyu {
                 case EKind.NewArray:
                     TNewApply new_app = this as TNewApply;
                     List<TType> param_classes = new List<TType> { new_app.ClassApp };
-                    TypeTrm = TEnv.Project.GetSpecializedClass(TEnv.Project.ArrayClass, param_classes, new_app.Args.Length);
+                    TypeTrm = TGlb.Project.GetSpecializedClass(TGlb.Project.ArrayClass, param_classes, new_app.Args.Length);
                     break;
 
                 case EKind.base_:
@@ -366,16 +366,16 @@ namespace Miyu {
                 case EKind.GT:
                 case EKind.GE:
                 case EKind.is_:
-                    TypeTrm = TEnv.Project.BoolClass;
+                    TypeTrm = TGlb.Project.BoolClass;
                     break;
 
                 case EKind.Not_:
-                    TypeTrm = TEnv.Project.BoolClass;
+                    TypeTrm = TGlb.Project.BoolClass;
                     break;
 
                 case EKind.And_:
                 case EKind.Or_:
-                    TypeTrm = TEnv.Project.BoolClass;
+                    TypeTrm = TGlb.Project.BoolClass;
                     break;
 
                 case EKind.Assign:
@@ -383,7 +383,7 @@ namespace Miyu {
                 case EKind.SubEq:
                 case EKind.DivEq:
                 case EKind.ModEq:
-                    TypeTrm = TEnv.Project.VoidClass;
+                    TypeTrm = TGlb.Project.VoidClass;
                     break;
 
                 case EKind.await_:
@@ -399,11 +399,11 @@ namespace Miyu {
 
                         TypeInfo inf = tp0.Info.GenericTypeArguments[0].GetTypeInfo();
                         TType tp1;
-                        if (!TEnv.Project.SysClassTable.TryGetValue(inf.FullName, out tp1)) {
+                        if (!TGlb.Project.SysClassTable.TryGetValue(inf.FullName, out tp1)) {
 
-                            string name = TEnv.Project.FromSysClassName(inf.Name);
+                            string name = TGlb.Project.FromSysClassName(inf.Name);
 
-                            tp1 = TEnv.Project.GetClassByName(name);
+                            tp1 = TGlb.Project.GetClassByName(name);
                             if (tp1 == null || tp1 is TGenericClass) {
                                 throw new TResolveNameException();
                             }
@@ -421,7 +421,7 @@ namespace Miyu {
                     break;
 
                 case EKind.typeof_:
-                    TypeTrm = TEnv.Project.TypeClass;
+                    TypeTrm = TGlb.Project.TypeClass;
                     break;
 
                 default:
@@ -463,7 +463,7 @@ namespace Miyu {
             }
             else {
 
-                TypeTrm = TEnv.Project.GetSpecializedClass(TEnv.Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm }, 0);
+                TypeTrm = TGlb.Project.GetSpecializedClass(TGlb.Project.EnumerableClass, new List<TType>{ SelFrom.TypeTrm }, 0);
             }
 
             vars.RemoveAt(vars.Count - 1);
@@ -739,7 +739,7 @@ namespace Miyu {
                 ParameterInfo param = param_list[i];
                 TypeInfo param_type_info = param.ParameterType.GetTypeInfo();
 
-                if(arg_types[i] == TEnv.Project.NullClass) {
+                if(arg_types[i] == TGlb.Project.NullClass) {
 
                     if( !param_type_info.IsSubclassOf(typeof(object))) {
                         return false;
@@ -748,7 +748,7 @@ namespace Miyu {
                 else {
 
                     if (arg_types[i].Info == null) {
-                        TEnv.Project.SetTypeInfo(arg_types[i]);
+                        TGlb.Project.SetTypeInfo(arg_types[i]);
                         if (arg_types[i].Info == null) {
 
                             return false;
