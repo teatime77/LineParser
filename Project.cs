@@ -178,6 +178,25 @@ namespace Miyu {
 
                     ParseDone = true;
 
+                    foreach(TType c in ClassTable.Values) {
+                        if (c is TGenericClass) {
+
+                            if (ParameterizedClassTable.ContainsValue(c as TGenericClass)) {
+
+                                Debug.WriteLine("Parameterized Class:{0} {1}", c.ClassName, c.GenericType);
+                            }
+                            else {
+
+                                Debug.WriteLine("Generic Class:{0}", c.ClassName, "");
+                            }
+                        }
+                        else {
+                            
+                            Debug.WriteLine("class:{0} {1}", c.ClassName, c.GenericType);
+                            Debug.Assert(c.GenericType == EClass.SimpleClass);
+                        }
+                    }
+
                     // アプリのクラスのリスト
                     AppClasses = (from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x).ToList();
 

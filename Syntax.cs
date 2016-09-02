@@ -63,10 +63,16 @@ namespace Miyu {
         public static bool InLambdaFunction;
     }
 
+    /*
+     * using文
+     */
     public class TUsing {
         public List<string> Packages = new List<string>();
     }
 
+    /*
+     * namespace
+     */
     public class TNamespace {
         public TToken[] CommentNS;
         public string NamespaceName;
@@ -84,7 +90,9 @@ namespace Miyu {
         }
     }
 
-    //-------------------------------------------------------------------------------- TModifier
+    /*
+     * 修飾子
+     */
     public class TModifier {
         public bool ValidMod;
         public bool isPublic;
@@ -118,8 +126,9 @@ namespace Miyu {
         }
     }
 
-    //------------------------------------------------------------ TType
-
+    /*
+     * 型
+     */
     public partial class TType {
         public List<TField> Fields = new List<TField>();
         public List<TFunction> Functions = new List<TFunction>();
@@ -153,7 +162,6 @@ namespace Miyu {
 
         public TType(string name) {
             if(name == "Predicate" || name == "ThreadStatic" || name == "DoubleTappedRoutedEventArgs") {
-                Debug.WriteLine("");
             }
             SetIdxClass();
             ClassName = name;
@@ -177,7 +185,10 @@ namespace Miyu {
             return ClassName;
         }
 
-        public string GetDelegateText() {
+        /*
+         * デリゲートの文字列を得る。
+         */
+        public string DelegateString() {
             if(DelegateText == null) {
 
                 StringWriter sw = new StringWriter();
@@ -199,6 +210,9 @@ namespace Miyu {
             return DelegateText;
         }
 
+        /*
+         * 要素の型を得る。
+         */
         public TType ElementType() {
             TType tp;
 
@@ -241,6 +255,9 @@ namespace Miyu {
             return null;
         }
 
+        /*
+         * プリミティブ型ならtrue
+         */
         public bool IsPrimitive() {
             //if(Info != null && ! Info.IsSubclassOf(typeof(object))) {
 
@@ -253,6 +270,10 @@ namespace Miyu {
 
             return false;
         }
+
+        /*
+         * このクラスが引数の子孫クラスならtrue
+         */
         public bool IsSubClass(TType tp) {
             if (tp == TGlb.Project.ObjectClass) {
                 return !IsPrimitive();
@@ -269,10 +290,16 @@ namespace Miyu {
             return false;
         }
 
+        /*
+         * このクラスが引数の先祖クラスならtrue
+         */
         public bool IsSuperClass(TType tp) {
             return tp.IsSubClass(this);
         }
 
+        /*
+         * t1がt2の子孫クラスならtrue
+         */
         bool IsSubclassOf(TypeInfo t1, Type t2) {
             if (t1.IsSubclassOf(t2)) {
                 return true;
@@ -287,6 +314,9 @@ namespace Miyu {
             return false;
         }
 
+        /*
+         * 先祖クラスのリスト
+         */
         public IEnumerable<TType> AncestorSuperClasses() {
             foreach (TType t1 in SuperClasses) {
                 yield return t1;
@@ -297,6 +327,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * このクラスと先祖クラスのリスト
+         */
         public IEnumerable<TType> ThisAncestorSuperClasses() {
             yield return this;
 
@@ -305,7 +338,9 @@ namespace Miyu {
             }
         }
 
-
+        /*
+         * 子孫クラスのリスト
+         */
         public IEnumerable<TType> DescendantSubClasses() {
             foreach (TType t1 in SubClasses) {
                 yield return t1;
@@ -316,6 +351,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * このクラスと子孫クラスのリスト
+         */
         public IEnumerable<TType> ThisDescendantSubClasses() {
             yield return this;
 
@@ -324,6 +362,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * 呼ばれうる仮想関数のリストを得る。
+         */
         public IEnumerable<TFunction> GetVirtualFunctions(TFunction fnc) {
             if (fnc.InfoFnc != null) {
                 yield return fnc;
@@ -342,6 +383,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 総称型
+     */
     public class TGenericClass : TType {
         public bool ContainsArgumentClass;
         public int DimCnt;
@@ -371,8 +415,9 @@ namespace Miyu {
         }
     }
 
-    //------------------------------------------------------------ TVariable
-
+    /*
+     * 変数
+     */
     public partial class TVariable {
         public TModifier ModifierVar;
         public string NameVar;
@@ -432,11 +477,17 @@ namespace Miyu {
             TypeVar = type;
         }
 
+        /*
+         * 可変長引数ならtrue
+         */
         public bool isParams() {
             return ModifierVar != null && ModifierVar.isParams;
         }
     }
 
+    /*
+     * クラスのメンバー(フィールドか関数)
+     */
     public class TMember : TVariable {
         public TToken[] CommentVar;
 
@@ -450,6 +501,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * フィールド
+     */
     public class TField : TMember {
         public bool IsWeak;
 
@@ -476,11 +530,14 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 関数
+     */
     public partial class TFunction : TMember {
-        // メソッドの引数リスト
+        // 関数の引数リスト
         public TVariable[] ArgsFnc;
 
-        // メソッドの本体
+        // 関数の本体
         public TBlock BlockFnc = new TBlock();
 
         public static int LambdaCnt;
@@ -491,16 +548,16 @@ namespace Miyu {
 
         public TTerm LambdaFnc;
 
-        // メソッドを一意に識別する文字列(クラス名は含まない)
+        // 関数を一意に識別する文字列(クラス名は含まない)
         public string FunctionSignature = null;
 
         [_weak]
         public MethodInfo InfoFnc;
 
-        // メソッド内の参照のリスト
+        // 関数内の参照のリスト
         public List<TReference> ReferencesInFnc = new List<TReference>();
 
-        // メソッド内のメソッド呼び出しのリスト
+        // 関数内の関数呼び出しのリスト
         public List<TApply> AppsInFnc = new List<TApply>();
 
         public TFunction(TModifier mod1, TToken name, TVariable[]args, TType ret_type, TApply base_app, EKind kind) : base(mod1, name, ret_type, null) {
@@ -530,7 +587,7 @@ namespace Miyu {
         }
 
         /*
-         * メソッドを一意に識別する文字列(クラス名は含まない)を返す。
+         * 関数を一意に識別する文字列(クラス名は含まない)を得る。
         */
         public string GetFunctionSignature() {
             if(FunctionSignature == null) {
@@ -567,7 +624,7 @@ namespace Miyu {
         }
 
         /*
-         メソッドを一意に識別する文字列(クラス名は含む)を返す。
+         関数を一意に識別する文字列(クラス名は含む)を得る。
         */
         public string FullName() {
             if(ClassMember == null) {
@@ -591,7 +648,7 @@ namespace Miyu {
         }
 
         /*
-         * 戻り値の型と引数の数と型が同じならtrueを返す。
+         * 戻り値の型と引数の数と型が同じならtrue
         */
         public bool IsEqualType(TFunction fnc) {
             if(TypeVar != fnc.TypeVar) {
@@ -619,8 +676,9 @@ namespace Miyu {
         }
     }
 
-    //------------------------------------------------------------ TTerm
-
+    /*
+     * 項
+     */
     public abstract partial class TTerm {
         public bool WithParenthesis;
         public bool IsType;
@@ -633,6 +691,9 @@ namespace Miyu {
         public TType TypeTrm;
     }
 
+    /*
+     * リテラル
+     */
     public partial class TLiteral : TTerm {
         public TLiteral(TToken tkn) {
             TokenTrm = tkn;
@@ -775,8 +836,9 @@ namespace Miyu {
         public TFrom InnerFrom;
     }
 
-    //------------------------------------------------------------ TStatement
-
+    /*
+     * 文
+     */
     public abstract partial class TStatement {
         public TToken[] CommentStmt;
 
@@ -786,6 +848,9 @@ namespace Miyu {
         public TFunction ParentFunctionStmt;
     }
 
+    /*
+     * 代入文
+     */
     public partial class TAssignment : TStatement {
         public TApply RelAsn;
 
@@ -794,6 +859,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 関数呼び出し文
+     */
     public partial class TCall : TStatement {
         public TApply AppCall;
 
@@ -802,41 +870,61 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 変数宣言文
+     */
     public partial class TVariableDeclaration : TStatement {
         public bool IsVar;
         public List<TVariable> Variables = new List<TVariable>();
     }
 
+    /*
+     * 入れ子の文を持つ文の抽象型
+     */
     public abstract partial class TBlockStatement : TStatement {
         public List<TStatement> StatementsBlc = new List<TStatement>();
     }
 
+    /*
+     * ブロック文
+     */
     public partial class TBlock : TBlockStatement {
     }
 
+    /*
+     * if文
+     */
     public partial class TIfBlock : TBlockStatement {
         public TToken CommentIf;
         public bool IsElse;
         public TTerm ConditionIf;
     }
 
-    public partial class TIf : TStatement {
-        public List<TIfBlock> IfBlocks = new List<TIfBlock>();
-    }
-
+    /*
+     * case文
+     */
     public partial class TCase : TBlockStatement {
         public bool IsDefault;
         public List<TTerm> TermsCase = new List<TTerm>();
     }
 
+    /*
+     * switch文
+     */
     public partial class TSwitch : TStatement {
         public TTerm TermSwitch;
         public List<TCase> Cases = new List<TCase>();
     }
 
+    /*
+     * try文
+     */
     public partial class TTry : TBlockStatement {
     }
 
+    /*
+     * catch文
+     */
     public partial class TCatch : TBlockStatement {
         public TVariable CatchVariable;
 
@@ -845,28 +933,46 @@ namespace Miyu {
         }
     }
 
+    /*
+     * while文
+     */
     public partial class TWhile : TBlockStatement {
         public TTerm WhileCondition;
     }
 
+    /*
+     * lock文
+     */
     public partial class TLock : TBlockStatement {
         public TTerm LockObj;
     }
 
+    /*
+     * for文かforeach文
+     */
     public abstract class TAbsFor : TBlockStatement {
         public TVariable LoopVariable;
     }
 
+    /*
+     * foreach文
+     */
     public partial class TForEach : TAbsFor {
         public TTerm ListFor;
     }
 
+    /*
+     * for文
+     */
     public partial class TFor : TAbsFor {
         public TStatement InitStatement;
         public TTerm ConditionFor;
         public TStatement PostStatement;
     }
 
+    /*
+     * return, yield, throw, break, continue, goto
+     */
     public partial class TJump : TStatement {
         public EKind KindJmp;
         public TTerm RetVal;
@@ -877,6 +983,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * ラベル
+     */
     public class TLabelStatement : TStatement {
         public string LabelToken;
 
@@ -885,6 +994,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 属性
+     */
     public class TAttribute : TStatement {
         public TType Attr;
 

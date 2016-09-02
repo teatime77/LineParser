@@ -19,11 +19,11 @@ namespace Miyu {
             コールグラフを作る。
         */
         public void MakeCallGraph() {
-            // メソッド内の参照のリスト(ReferencesInFnc)をセットする。
+            // 関数内の参照のリスト(ReferencesInFnc)をセットする。
             TSetReferencesInFnc set_ref_fnc = new TSetReferencesInFnc();
             set_ref_fnc.ProjectNavi(this, null);
 
-            // メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットする。
+            // 関数内の関数呼び出しのリスト(AppsInFnc)をセットする。
             TSetAppsInFnc set_app_fnc = new TSetAppsInFnc();
             set_app_fnc.ProjectNavi(this, null);
 
@@ -102,7 +102,7 @@ namespace Miyu {
             }
             dic.Add(name, fnc_call);
 
-            // メソッド内のメソッド呼び出しに対し
+            // 関数内の関数呼び出しに対し
             foreach (TApply app in fnc.AppsInFnc) {
                 TType tp2 = tp;
 
@@ -133,7 +133,7 @@ namespace Miyu {
                 }
             }
 
-            // メソッド内のラムダ関数に対し
+            // 関数内のラムダ関数に対し
             var vlambda = from x in fnc.ReferencesInFnc where x.VarRef is TFunction && (x.VarRef as TFunction).KindFnc == EKind.Lambda select (x.VarRef as TFunction);
             foreach(TFunction lambda in vlambda) {
 
@@ -201,7 +201,7 @@ namespace Miyu {
             }
             stack.Push(fnc_call);
 
-            // メソッド内のfldの参照のリスト
+            // 関数内のfldの参照のリスト
             var v = from r in fnc_call.FncCall.ReferencesInFnc where r.VarRef == fld select r;
             if (v.Any()) {
                 // fldの参照がある場合

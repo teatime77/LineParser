@@ -40,7 +40,7 @@ namespace Miyu {
         }
 
         /*
-            行の先頭位置を返す。
+            行の先頭位置を得る。
         */
         public int GetLineTop(int current_pos) {
             int i;
@@ -50,7 +50,7 @@ namespace Miyu {
         }
 
         /*
-            次の行の先頭位置を返す。
+            次の行の先頭位置を得る。
         */
         public int GetNextLineTop(int current_pos) {
             for (int i = current_pos; i < Chars.Count; i++) {
@@ -63,7 +63,7 @@ namespace Miyu {
         }
 
         /*
-            次の行の先頭位置または文書の終わりを返す。
+            次の行の先頭位置または文書の終わりを得る。
         */
         public int GetNextLineTopOrEOT(int current_pos) {
             int i = GetNextLineTop(current_pos);
@@ -72,14 +72,14 @@ namespace Miyu {
         }
 
         /*
-            行のインデックスを返す。
+            行のインデックスを得る。
         */
         public int GetLineIndex(int pos) {
             return (from x in Chars.GetRange(0, pos) where x.Chr == LF select x).Count();
         }
 
         /*
-            行の最終位置を返す。
+            行の最終位置を得る。
             行の最終位置は改行文字の位置または文書の最後の位置。
         */
         public int GetLineEnd(int current_pos) {
@@ -89,14 +89,14 @@ namespace Miyu {
         }
 
         /*
-            指定した範囲にある改行文字の個数を返す。
+            指定した範囲にある改行文字の個数を得る。
         */
         public int GetLFCount(int start_pos, int end_pos) {
             return (from x in Chars.GetRange(start_pos, Math.Min(Chars.Count, end_pos) - start_pos) where x.Chr == LF select x).Count();
         }
 
         /*
-            指定した範囲のテキストを返す。
+            指定した範囲のテキストを得る。
         */
         public string StringFromRange(int start_pos, int end_pos) {
             return new string((from c in Chars.GetRange(start_pos, Math.Min(Chars.Count, end_pos) - start_pos) select c.Chr).ToArray());
@@ -220,7 +220,7 @@ namespace Miyu {
         }
 
         /*
-            指定した範囲をHTML文字列に変換して返す。
+            指定した範囲のHTML文字列を得る。
         */
         public string HTMLStringFromRange(int start_pos, int end_pos) {
             StringWriter sw = new StringWriter();

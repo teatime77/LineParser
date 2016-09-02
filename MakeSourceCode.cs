@@ -1081,7 +1081,7 @@ namespace Miyu {
                     }
                     sw.WriteLine("</ul>");
 
-                    sw.WriteLine("<h2>メソッド</h2>");
+                    sw.WriteLine("<h2>関数</h2>");
                     sw.WriteLine("<ul>");
                     foreach(TFunction fnc in cls.Functions) {
                         TTokenWriter tw = new TTokenWriter(TGlb.Parser);

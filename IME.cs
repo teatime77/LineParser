@@ -182,7 +182,7 @@ namespace Miyu {
 
         /*
             フォーカス喪失の通知が完了した。
-            アプリからNotifyFocusLeaveを呼んだら、このメソッドが呼ばれる。
+            アプリからNotifyFocusLeaveを呼んだら、この関数が呼ばれる。
         */
         private void EditContext_NotifyFocusLeaveCompleted(CoreTextEditContext sender, object ev) {
             MyEditor.WriteLine("<<--- NotifyFocusLeaveCompleted");

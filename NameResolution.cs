@@ -21,7 +21,7 @@ namespace Miyu {
 
     partial class TFunction {
         /*
-            関数名と引数の数と型が一致したらtrueを返す。
+            関数名と引数の数と型が同じならtrue
         */
         public bool Match(string name, List<TType> arg_types, bool exact) {
             if (NameVar != name || arg_types.Count < ArgsFnc.Length) {
@@ -68,8 +68,8 @@ namespace Miyu {
                             return false;
                         }
 
-                        string dlg_txt1 = var1.TypeVar.GetDelegateText();
-                        string dlg_txt2 = arg_types[i].GetDelegateText();
+                        string dlg_txt1 = var1.TypeVar.DelegateString();
+                        string dlg_txt2 = arg_types[i].DelegateString();
                         if(dlg_txt1 != dlg_txt2) {
                             return false;
                         }
@@ -532,14 +532,6 @@ namespace Miyu {
         }
     }
 
-    partial class TIf {
-        public override void ResolveName(TType cls, List<TVariable> vars) {
-            foreach(TIfBlock if_block in IfBlocks) {
-                if_block.ResolveName(cls, vars);
-            }
-        }
-    }
-
     partial class TCase {
         public override void ResolveName(TType cls, List<TVariable> vars) {
             foreach(TTerm t in TermsCase) {
@@ -697,7 +689,7 @@ namespace Miyu {
         }
 
         /*
-            関数名と引数の数と型が一致したらtrueを返す。
+            関数名と引数の数と型が同じならtrue
         */
         public bool MatchMethod(MethodInfo method, List<TType> arg_types, bool exact) {
             ParameterInfo[] param_list = method.GetParameters();

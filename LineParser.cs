@@ -814,7 +814,7 @@ namespace Miyu {
                 }
                 else {
 
-                    // 代入文かメソッド呼び出し文を読む。
+                    // 代入文か関数呼び出し文を読む。
                     for1.InitStatement = ReadAssignmentCallLine(true) as TStatement;
                 }
             }
@@ -830,7 +830,7 @@ namespace Miyu {
 
             if(CurrentToken.Kind != EKind.RP) {
 
-                // 代入文かメソッド呼び出し文を読む。
+                // 代入文か関数呼び出し文を読む。
                 for1.PostStatement = ReadAssignmentCallLine(true) as TStatement;
             }
 
@@ -920,7 +920,7 @@ namespace Miyu {
         }
 
         /*
-         * 代入文かメソッド呼び出し文を読む。
+         * 代入文か関数呼び出し文を読む。
          */
         public object ReadAssignmentCallLine(bool in_for) {
             TAssignment asn = null;
@@ -972,7 +972,7 @@ namespace Miyu {
                 throw new TParseException();
             }
 
-            // メソッド呼び出し文を返す。
+            // 関数呼び出し文を返す。
             return new TCall(t1 as TApply);
         }
 
@@ -1188,7 +1188,7 @@ namespace Miyu {
 
                         LookaheadClass = tp;
 
-                        // 代入文かメソッド呼び出し文を読む。
+                        // 代入文か関数呼び出し文を読む。
                         return ReadAssignmentCallLine(false);
                     }
 
@@ -1233,7 +1233,7 @@ namespace Miyu {
                     }
                     else {
 
-                        // 代入文かメソッド呼び出し文を読む。
+                        // 代入文か関数呼び出し文を読む。
                         return ReadAssignmentCallLine(false);
                     }
 
@@ -1242,7 +1242,7 @@ namespace Miyu {
                 case EKind.LP:
                 case EKind.StringLiteral:
                 case EKind.typeof_:
-                    // 代入文かメソッド呼び出し文を読む。
+                    // 代入文か関数呼び出し文を読む。
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:

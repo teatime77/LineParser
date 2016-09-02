@@ -150,9 +150,6 @@ namespace Miyu {
             else if (stmt is TJump) {
                 JumpNavi(stmt as TJump, args);
             }
-            else if(stmt is TIf) {
-                IfNavi(stmt as TIf, args);
-            }
             else if (stmt is TSwitch) {
                 SwitchNavi(stmt as TSwitch, args);
             }
@@ -242,16 +239,6 @@ namespace Miyu {
             }
 
             AfterAction(if_block, args);
-        }
-
-        public virtual void IfNavi(TIf if_stmt, List<object> args) {
-            BeforeAction(if_stmt, args);
-
-            foreach (TIfBlock if_block in if_stmt.IfBlocks) {
-                IfBlockNavi(if_block, args);
-            }
-
-            AfterAction(if_stmt, args);
         }
 
         public virtual void CaseNavi(TCase cas, List<object> args) {
@@ -496,7 +483,7 @@ namespace Miyu {
     }
 
     /*
-     * メソッド内の参照のリスト(ReferencesInFnc)をセットする。
+     * 関数内の参照のリスト(ReferencesInFnc)をセットする。
      */
     public class TSetReferencesInFnc : TNavigation {
         // 関数の入れ子のスタック
@@ -536,7 +523,7 @@ namespace Miyu {
     }
 
     /*
-     * メソッド内のメソッド呼び出しのリスト(AppsInFnc)をセットする。
+     * 関数内の関数呼び出しのリスト(AppsInFnc)をセットする。
      */
     public class TSetAppsInFnc : TNavigation {
         // 関数の入れ子のスタック
@@ -551,7 +538,7 @@ namespace Miyu {
                 if (Funcs.Count != 0) {
                     // 関数の入れ子のスタックが空でない場合
 
-                    // スタックのトップの関数内のメソッド呼び出しリストに追加する。
+                    // スタックのトップの関数内の関数呼び出しリストに追加する。
                     Funcs.Peek().AppsInFnc.Add(self as TApply);
                 }
             }
@@ -564,7 +551,7 @@ namespace Miyu {
                 if(fnc.BaseApp != null) {
                     // base呼び出しをする場合
 
-                    // base呼び出しをメソッド呼び出しリストに追加する。
+                    // base呼び出しを関数呼び出しリストに追加する。
                     fnc.AppsInFnc.Add(fnc.BaseApp);
                 }
             }

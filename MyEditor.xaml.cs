@@ -1046,8 +1046,7 @@ namespace Miyu {
             // 再描画する。
             InvalidateCanvas();
         }
-
-
+        
         /*
             ポインタが入ってきた。
         */

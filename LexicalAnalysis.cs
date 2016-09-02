@@ -60,7 +60,7 @@ namespace Miyu {
 
     partial class TParser {
         /*
-            16進数文字ならtrueを返す。
+            16進数文字ならtrue
         */
         public bool IsHexDigit(char ch) {
             return char.IsDigit(ch) || 'a' <= ch && ch <= 'f' || 'A' <= ch && ch <= 'F';
@@ -127,7 +127,7 @@ namespace Miyu {
         }
 
         /*
-            字句解析をして各文字の字句型の配列を返す。
+            字句解析をして各文字の字句型の配列を得る。
         */
         public TToken[] LexicalAnalysis(string text, ETokenType prev_token_type) {
             List<TToken> token_list = new List<TToken>();
