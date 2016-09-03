@@ -492,7 +492,7 @@ namespace Miyu {
         public TToken[] CommentVar;
 
         [_weak]
-        public TType ClassMember;
+        public TType DeclaringType;
 
         public TMember(TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
         }
@@ -508,23 +508,23 @@ namespace Miyu {
         public bool IsWeak;
 
         public TField(TType parent_class, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
-            ClassMember = parent_class;
+            DeclaringType = parent_class;
         }
 
         public TField(TType parent_class, FieldInfo fld_info) {
-            ClassMember = parent_class;
+            DeclaringType = parent_class;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
         }
 
         public TField(TType parent_class, PropertyInfo fld_info) {
-            ClassMember = parent_class;
+            DeclaringType = parent_class;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
         }
 
         public TField(TType parent_class, EventInfo fld_info) {
-            ClassMember = parent_class;
+            DeclaringType = parent_class;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
         }
@@ -627,18 +627,18 @@ namespace Miyu {
          関数を一意に識別する文字列(クラス名は含む)を得る。
         */
         public string FullName() {
-            if(ClassMember == null) {
+            if(DeclaringType == null) {
                 Debug.Assert(KindFnc == EKind.Lambda);
                 return GetFunctionSignature();
             }
             else {
 
-                return ClassMember.GetClassText() + "." + GetFunctionSignature();
+                return DeclaringType.GetClassText() + "." + GetFunctionSignature();
             }
         }
 
         public string UniqueName() {
-            var vfnc = from x in ClassMember.Functions where x.NameVar == NameVar select x;
+            var vfnc = from x in DeclaringType.Functions where x.NameVar == NameVar select x;
             Debug.Assert(vfnc.Any());
             if(vfnc.Count() == 1) {
                 return NameVar;

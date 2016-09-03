@@ -345,7 +345,7 @@ namespace Miyu {
                 while (true) {
                     TType param_class = ReadType(parent_class, false);
 
-                    if (param_class.GenericType == EClass.ArgumentClass || param_class is TGenericClass && (parent_class as TGenericClass).ContainsArgumentClass) {
+                    if (param_class.GenericType == EClass.ArgumentClass || param_class is TGenericClass && (param_class as TGenericClass).ContainsArgumentClass) {
 
                         contains_argument_class = true;
                     }
@@ -1485,7 +1485,7 @@ namespace Miyu {
                                 if (TGlb.LambdaFunction != null) {
                                     obj_stack.Add(TGlb.LambdaFunction);
 
-                                    TGlb.LambdaFunction.ClassMember = cls;
+                                    TGlb.LambdaFunction.DeclaringType = cls;
                                     cls.Functions.Add(TGlb.LambdaFunction);
                                     src.FunctionsSrc.Add(TGlb.LambdaFunction);
 
@@ -1524,7 +1524,7 @@ namespace Miyu {
                                             TField fld = obj as TField;
 
                                             fld.CommentVar = comments.ToArray();
-                                            fld.ClassMember = cls;
+                                            fld.DeclaringType = cls;
                                             cls.Fields.Add(fld);
                                             src.FieldsSrc.Add(fld);
                                         }
@@ -1532,7 +1532,7 @@ namespace Miyu {
                                             TFunction fnc = obj as TFunction;
 
                                             fnc.CommentVar = comments.ToArray();
-                                            fnc.ClassMember = cls;
+                                            fnc.DeclaringType = cls;
                                             cls.Functions.Add(fnc);
                                             src.FunctionsSrc.Add(fnc);
                                         }

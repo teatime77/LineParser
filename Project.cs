@@ -54,7 +54,7 @@ namespace Miyu {
         public ManualResetEvent Modified;
         public bool ParseDone;
 
-        public TFncCall MainCall;
+        public TCallNode MainCall;
 
         public TProject() {
         }
@@ -192,7 +192,7 @@ namespace Miyu {
                         }
                         else {
                             
-                            Debug.WriteLine("class:{0} {1}", c.ClassName, c.GenericType);
+                            //Debug.WriteLine("class:{0} {1}", c.ClassName, c.GenericType);
                             Debug.Assert(c.GenericType == EClass.SimpleClass);
                         }
                     }
@@ -580,7 +580,7 @@ namespace Miyu {
             TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
             TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
-            fnc.ClassMember = cla1;
+            fnc.DeclaringType = cla1;
 
             return fnc;
         }

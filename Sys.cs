@@ -107,6 +107,7 @@ class Dictionary<TKey, TValue> {
     void Add(TKey key, TValue value);
     void Clear();
     bool ContainsKey(TKey key);
+    public bool ContainsValue(TValue value);
     bool Remove(TKey key);
     bool TryGetValue(TKey key, out TValue value);
 }

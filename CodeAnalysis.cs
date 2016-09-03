@@ -13,6 +13,15 @@ using Windows.UI;
 using Windows.UI.Xaml;
 
 namespace Miyu {
+    public class TNode2<T> {
+        public static int NodeCnt;
+        public int IdxNode;
+        public string NameNode;
+        public T ObjNode;
+        public int RankNode;
+        public List<TNode2<T>> OutNodes;
+        public Color FontColor = Colors.Black;
+    }
 
     partial class TProject {
         /*
@@ -38,76 +47,109 @@ namespace Miyu {
 
             var vfnc = from c in vcls from f in c.Functions select f;
 
-            Dictionary<string, TFncCall> dic = new Dictionary<string, TFncCall>();
+            Dictionary<string, TCallNode> dic = new Dictionary<string, TCallNode>();
 
             TFunction main = (from f in vfnc where f.NameVar == "Main" select f).First();
-           
-            MainCall = CallGraphSub(dic, null, main.ClassMember, main);
+
+            // 再帰的にコールグラフのノードまたは矢印を追加する。
+            MainCall = AddCallNode(dic, null, main.DeclaringType, main);
 
             StringWriter sw = new StringWriter();
-            Stack<TFncCall> stack = new Stack<TFncCall>();
-            DmpFncCall(sw, stack, MainCall, 0);
+            Stack<TCallNode> stack = new Stack<TCallNode>();
 
-            File.WriteAllText(OutputDir + "\\DmpFncCall.txt", sw.ToString(), Encoding.UTF8);
+            // 再帰的にコールグラフのノードを文字列出力する。
+            DumpCallNode(sw, stack, MainCall, 0);
+
+            // コールグラフの文字列出力をファイルに書く。
+            File.WriteAllText(OutputDir + "\\DumpCallNode.txt", sw.ToString(), Encoding.UTF8);
 
             TNode.NodeCnt = 0;
-            var vnd = (from x in dic.Values select new TNode(x)).ToList();
-            foreach(TNode nd1 in vnd) {
-                TFncCall call = nd1.ObjNode as TFncCall;
-                foreach(TFncCall c in call.CallTo) {
-                    TNode nd2 = (from x in vnd where x.ObjNode == c select x).First();
-                    nd1.OutNodes.Add(nd2);
+
+            // コールグラフのノードのリストから、表示用のノードのリストを作る。
+            List<TNode> vnd = CallNodesToNodes(dic.Values);
+
+            // ノードのリストからdotファイルを作る。
+            WriteDotFile("コールグラフ", vnd, OutputDir + "\\FncCall.dot");
+
+            // ユーザー定義の総称型のテスト
+            TNode2<TCallNode> xx = new TNode2<TCallNode>();
+        }
+
+        /*
+         * コールグラフのノードのリストから、表示用のノードのリストを作る。
+         */
+        List<TNode> CallNodesToNodes(IEnumerable<TCallNode> call_nodes) {
+            // コールグラフのノードのリストから、表示用のノードのリストを作る。
+            var vnd = (from x in call_nodes select new TNode(x)).ToList();
+
+            // TCallNode -> TNode の辞書を作る。
+            Dictionary<TCallNode, TNode> dic = new Dictionary<TCallNode, TNode>();
+            foreach (TNode nd1 in vnd) {
+                dic.Add(nd1.ObjNode as TCallNode, nd1);
+            }
+
+            // TCallNodeのCallToからTNodeのOutNodesを作る。
+            foreach (TCallNode cn in call_nodes) {
+                TNode nd = dic[cn];
+                foreach(TCallNode c in cn.CallTo) {
+                    nd.OutNodes.Add(dic[c]);
                 }
             }
 
-            WriteDotFile("コールグラフ", vnd, OutputDir + "\\FncCall.dot");
+            return vnd;
         }
 
-        public void DmpFncCall(StringWriter sw, Stack<TFncCall> stack, TFncCall fnc_call, int nest) {
-            if (stack.Contains(fnc_call)) {
-                return;
-            }
-            stack.Push(fnc_call);
-            fnc_call.MaxNest = Math.Max(fnc_call.MaxNest, stack.Count);
+        /*
+         * 再帰的にコールグラフのノードまたは矢印を追加する。
+         */
+        public TCallNode AddCallNode(Dictionary<string, TCallNode> dic, TCallNode parent_call, TType tp, TFunction fnc) {
+            if(fnc.InfoFnc != null || SysSourceFile.FunctionsSrc.Contains(fnc) || fnc.DeclaringType is TGenericClass) {
+                // リフレクションで得た関数か、システムファイルの関数か、総称型の関数の場合
 
-            sw.WriteLine("{0}{1}", new string(' ', 4 * nest), fnc_call.Name());
-            foreach(TFncCall c in fnc_call.CallTo) {
-                DmpFncCall(sw, stack, c, nest + 1);
-            }
-            stack.Pop();
-        }
-
-        public TFncCall CallGraphSub(Dictionary<string, TFncCall> dic, TFncCall parent_call, TType tp, TFunction fnc) {
-            if(fnc.InfoFnc != null || SysSourceFile.FunctionsSrc.Contains(fnc) || fnc.ClassMember is TGenericClass) {
+                // nullを返す。
                 return null;
             }
 
             string name = tp.GetClassText() + "->" + fnc.GetFunctionSignature();
 
-            TFncCall fnc_call;
+            TCallNode fnc_call;
 
             if (dic.TryGetValue(name, out fnc_call)) {
                 // 処理済みの場合
 
                 if (parent_call != null && !parent_call.CallTo.Contains(fnc_call)) {
+                    // 親ノードがあり、親ノードからこのノードへの矢印がない場合
+
+                    // 親ノードからこのノードへの矢印を追加する。
                     parent_call.CallTo.Add(fnc_call);
                 }
 
+                // 処理済みのノードを返す。
                 return fnc_call;
             }
 
-            fnc_call = new TFncCall(tp, fnc);
+            fnc_call = new TCallNode(tp, fnc);
             if (parent_call != null) {
+                // 親ノードがある場合
+
+                // 親ノードからこのノードへの矢印を追加する。
                 parent_call.CallTo.Add(fnc_call);
             }
             dic.Add(name, fnc_call);
 
             // 関数内の関数呼び出しに対し
             foreach (TApply app in fnc.AppsInFnc) {
-                TType tp2 = tp;
+                TType tp2;
 
                 if(app is TDotApply) {
+                    // ドットつき関数呼び出しの場合
+
                     tp2 = (app as TDotApply).DotApp.TypeTrm;
+                }
+                else {
+                    // ドットつき関数呼び出しでない場合
+
+                    tp2 = tp;
                 }
 
                 switch (app.KindApp) {
@@ -116,11 +158,14 @@ namespace Miyu {
                         TReference ref1 = app.FunctionApp as TReference;
                         Debug.Assert(ref1.VarRef is TFunction);
 
+                        // 呼ばれうる仮想関数のリストを得る。
                         IEnumerable<TFunction> virtual_functions = tp2.GetVirtualFunctions(ref1.VarRef as TFunction);
                         Debug.Assert(virtual_functions.Any());
-                        foreach(TFunction f in virtual_functions) {
 
-                            CallGraphSub(dic, fnc_call, tp2, f);
+                        // 呼ばれうる仮想関数に対し
+                        foreach (TFunction f in virtual_functions) {
+
+                            AddCallNode(dic, fnc_call, tp2, f);
                         }
                     }
                     break;
@@ -137,20 +182,49 @@ namespace Miyu {
             var vlambda = from x in fnc.ReferencesInFnc where x.VarRef is TFunction && (x.VarRef as TFunction).KindFnc == EKind.Lambda select (x.VarRef as TFunction);
             foreach(TFunction lambda in vlambda) {
 
-                CallGraphSub(dic, fnc_call, tp, lambda);
+                AddCallNode(dic, fnc_call, tp, lambda);
             }
 
             return fnc_call;
         }
 
-        // dotファイルに書く。
-        public void WriteDotFile(string title, List<TNode> vnd, string path1) {
+        /*
+         * 再帰的にコールグラフのノードを文字列出力する。
+         */
+        public void DumpCallNode(StringWriter sw, Stack<TCallNode> stack, TCallNode fnc_call, int nest) {
+            if (stack.Contains(fnc_call)) {
+                // スタックにノードがある場合
+
+                return;
+            }
+
+            // スタックにノードをプッシュする。
+            stack.Push(fnc_call);
+
+            fnc_call.MaxNest = Math.Max(fnc_call.MaxNest, stack.Count);
+
+
+            sw.WriteLine("{0}{1}", new string(' ', 4 * nest), fnc_call.Name());
+
+            // このノードから出るすべてのノードに対し
+            foreach (TCallNode c in fnc_call.CallTo) {
+                DumpCallNode(sw, stack, c, nest + 1);
+            }
+
+            // スタックからノードをポップする。
+            stack.Pop();
+        }
+
+        /*
+         * ノードのリストからdotファイルを作る。
+         */
+        public void WriteDotFile(string title, IEnumerable<TNode> vnd, string path1) {
             StringWriter sw1 = new StringWriter();
 
             sw1.WriteLine("digraph " + title + " {");
             sw1.WriteLine("\tgraph [charset=\"UTF-8\", rankdir = LR];");
 
-            // ノードの集合からdotファイルを作る。
+            // ノードのリストからdotファイルの内容を作る。
             Node2Dot(sw1, vnd);
 
             sw1.WriteLine("}");
@@ -158,7 +232,10 @@ namespace Miyu {
             File.WriteAllText(path1, sw1.ToString(), new UTF8Encoding(false));
         }
 
-        public void Node2Dot(StringWriter sw, List<TNode> vnd) {
+        /*
+         * ノードのリストからdotファイルの内容を作る。
+         */
+        public void Node2Dot(StringWriter sw, IEnumerable<TNode> vnd) {
             foreach(TNode nd1 in vnd) {
                 //sw.WriteLine("\tn{0} [shape = ellipse, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
                 //sw.WriteLine("\tn{0} [shape = circle, label = \"{1}\"];", nd1.IdxNode, nd1.NameNode);
@@ -195,7 +272,7 @@ namespace Miyu {
             }
         }
 
-        public void MakeUseDefineChainSub(TField fld, List<TFncCall> defined_path, Stack<TFncCall> stack, TFncCall fnc_call) {
+        public void MakeUseDefineChainSub(TField fld, List<TCallNode> defined_path, Stack<TCallNode> stack, TCallNode fnc_call) {
             if (stack.Contains(fnc_call) || defined_path.Contains(fnc_call)) {
                 return;
             }
@@ -223,7 +300,7 @@ namespace Miyu {
                 fnc_call.FontColor = Colors.Black;
             }
 
-            foreach (TFncCall c in fnc_call.CallTo) {
+            foreach (TCallNode c in fnc_call.CallTo) {
                 MakeUseDefineChainSub(fld, defined_path,stack, c);
             }
 
@@ -252,16 +329,16 @@ namespace Miyu {
                     if (defined_refs.Any()) {
                         // フィールドに値を代入する変数参照がある場合
 
-                        List<TFncCall> defined_path = new List<TFncCall>();
+                        List<TCallNode> defined_path = new List<TCallNode>();
 
-                        Stack<TFncCall> stack = new Stack<TFncCall>();
+                        Stack<TCallNode> stack = new Stack<TCallNode>();
                         MakeUseDefineChainSub(fld, defined_path, stack, MainCall);
 
                         TNode.NodeCnt = 0;
                         var vnd = (from x in defined_path select new TNode(x)).ToList();
                         foreach (TNode nd1 in vnd) {
-                            TFncCall call = nd1.ObjNode as TFncCall;
-                            foreach (TFncCall c in call.CallTo) {
+                            TCallNode call = nd1.ObjNode as TCallNode;
+                            foreach (TCallNode c in call.CallTo) {
                                 var vnd2 = from x in vnd where x.ObjNode == c select x;
                                 if (vnd2.Any()) {
 
@@ -273,6 +350,8 @@ namespace Miyu {
                         if (vnd.Any()) {
 
                             string dot_path = string.Format("{0}\\{1}.{2}.dot", use_def_dir, cls.ClassName, fld.NameVar);
+
+                            // ノードのリストからdotファイルを作る。
                             WriteDotFile("使用・定義連鎖", vnd, dot_path);
                         }
                     }
@@ -321,7 +400,7 @@ namespace Miyu {
 
                 foreach (TType cls in src.ClassesSrc) {
                     var vfnc = from x in src.FunctionsSrc
-                               where x.ClassMember == cls && x.KindFnc != EKind.Lambda && x.CommentVar != null && x.CommentVar.Length != 0 select x;
+                               where x.DeclaringType == cls && x.KindFnc != EKind.Lambda && x.CommentVar != null && x.CommentVar.Length != 0 select x;
 
                     foreach (TFunction fnc in vfnc) {
                         var vc = from c in fnc.CommentVar where c.Kind == EKind.BlockCommentContinued && c.TextTkn.Trim() != "/*" select c;
@@ -335,14 +414,17 @@ namespace Miyu {
         }
     }
 
-    public class TFncCall {
+    /*
+     * コールグラフのノード
+     */
+    public class TCallNode {
         public TType TypeCall;
         public TFunction FncCall;
-        public List<TFncCall> CallTo = new List<TFncCall>();
+        public List<TCallNode> CallTo = new List<TCallNode>();
         public int MaxNest;
         public Color FontColor = Colors.Black;
 
-        public TFncCall(TType tp, TFunction fnc) {
+        public TCallNode(TType tp, TFunction fnc) {
             TypeCall = tp;
             FncCall = fnc;
         }
@@ -360,6 +442,9 @@ namespace Miyu {
         }
     }
 
+    /*
+     * 表示用ノード
+     */
     public class TNode {
         public static int NodeCnt;
         public int IdxNode;
@@ -369,7 +454,7 @@ namespace Miyu {
         public List<TNode> OutNodes = new List<TNode>();
         public Color FontColor = Colors.Black;
 
-        public TNode(TFncCall call) {
+        public TNode(TCallNode call) {
             IdxNode = NodeCnt;
             NodeCnt++;
 

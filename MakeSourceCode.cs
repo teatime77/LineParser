@@ -174,13 +174,13 @@ namespace Miyu {
                                     string url = "";
                                     if(ref1.VarRef is TField) {
                                         TField fld = ref1.VarRef as TField;
-                                        url = string.Format("../{0}/{1}.html", fld.ClassMember.ClassName, fld.NameVar);
+                                        url = string.Format("../{0}/{1}.html", fld.DeclaringType.ClassName, fld.NameVar);
                                     }
                                     else if(ref1.VarRef is TFunction) {
                                         TFunction fnc = ref1.VarRef as TFunction;
-                                        if(fnc.ClassMember != null) {
+                                        if(fnc.DeclaringType != null) {
 
-                                            url = string.Format("../{0}/{1}.html", fnc.ClassMember.ClassName, fnc.UniqueName());
+                                            url = string.Format("../{0}/{1}.html", fnc.DeclaringType.ClassName, fnc.UniqueName());
                                         }
                                     }
                                     sw.Write("<a href=\"{0}\" class=\"\">{1}</a>", url, ref1.VarRef.NameVar);
@@ -905,7 +905,8 @@ namespace Miyu {
                 sw.Fmt(EKind.delegate_);
                 break;
             }
-            sw.Fmt(' ', cls);
+            sw.Fmt(' ');
+            TypeText(cls, sw);
 
             if (cls.SourceFileCls == src) {
 
@@ -1021,12 +1022,12 @@ namespace Miyu {
                 sw.TAB(1);
                 ClassLineText(src, cls, sw);
 
-                var vfld = from x in src.FieldsSrc where x.ClassMember == cls select x;
+                var vfld = from x in src.FieldsSrc where x.DeclaringType == cls select x;
                 foreach (TField fld in vfld) {
                     FieldText(cls, fld, sw);
                 }
 
-                var vfnc = from x in src.FunctionsSrc where x.ClassMember == cls && x.KindFnc != EKind.Lambda select x;
+                var vfnc = from x in src.FunctionsSrc where x.DeclaringType == cls && x.KindFnc != EKind.Lambda select x;
                 foreach (TFunction fnc in vfnc) {
                     FunctionText(fnc, sw, 2);
                 }
