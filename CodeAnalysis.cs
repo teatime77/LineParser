@@ -161,7 +161,7 @@ namespace Miyu {
          * 再帰的にコールグラフのノードまたは矢印を追加する。
          */
         public TCallNode AddCallNode(Dictionary<string, TCallNode> dic, TCallNode parent_call, TType tp, TFunction fnc) {
-            if(fnc.InfoFnc != null || SysSourceFile.FunctionsSrc.Contains(fnc) || fnc.DeclaringType is TGenericClass) {
+            if(fnc.InfoFnc != null || SystemSourceFile.FunctionsSrc.Contains(fnc) || fnc.DeclaringType is TGenericClass) {
                 // リフレクションで得た関数か、システムファイルの関数か、総称型の関数の場合
 
                 // nullを返す。

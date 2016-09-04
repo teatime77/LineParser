@@ -399,14 +399,9 @@ namespace Miyu {
 
                         TypeInfo inf = tp0.Info.GenericTypeArguments[0].GetTypeInfo();
                         TType tp1;
-                        if (!TGlb.Project.SysClassTable.TryGetValue(inf.FullName, out tp1)) {
+                        if (!TGlb.Project.TypeInfoTable.TryGetValue(inf.FullName, out tp1)) {
 
-                            string name = TGlb.Project.FromSysClassName(inf.Name);
-
-                            tp1 = TGlb.Project.GetClassByName(name);
-                            if (tp1 == null || tp1 is TGenericClass) {
-                                throw new TResolveNameException();
-                            }
+                            throw new TResolveNameException();
                         }
                         TypeTrm = tp1;
                     }
@@ -623,7 +618,7 @@ namespace Miyu {
     }
     
     partial class TType {
-        public TField FindSysField(TypeInfo tp, string name) {
+        public TField FindFieldFromTypeInfo(TypeInfo tp, string name) {
             var fields = from f in tp.DeclaredFields where f.Name == name select f;
             if (fields.Any()) {
                 return new TField(this, fields.First());
@@ -640,7 +635,7 @@ namespace Miyu {
             }
 
             if (tp.BaseType != null) {
-                TField fld = FindSysField(tp.BaseType.GetTypeInfo(), name);
+                TField fld = FindFieldFromTypeInfo(tp.BaseType.GetTypeInfo(), name);
                 if (fld != null) {
                     return fld;
                 }
@@ -649,7 +644,7 @@ namespace Miyu {
             if (tp.ImplementedInterfaces != null) {
                 foreach (Type tp2 in tp.ImplementedInterfaces) {
 
-                    TField fld = FindSysField(tp2.GetTypeInfo(), name);
+                    TField fld = FindFieldFromTypeInfo(tp2.GetTypeInfo(), name);
                     if (fld != null) {
                         return fld;
                     }
@@ -673,7 +668,7 @@ namespace Miyu {
             }
 
             if(Info != null) {
-                return FindSysField(Info, name);
+                return FindFieldFromTypeInfo(Info, name);
             }
 
             if(this is TGenericClass) {

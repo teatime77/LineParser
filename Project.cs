@@ -45,11 +45,10 @@ namespace Miyu {
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public List<Assembly> AssemblyList = new List<Assembly>();
-        public Dictionary<string, TType> SysClassTable = new Dictionary<string, TType>();
+        public Dictionary<string, TType> TypeInfoTable = new Dictionary<string, TType>();
 
-        Dictionary<string, string> ToSysClassNameTable = new Dictionary<string, string>();
-        Dictionary<string, string> FromSysClassNameTable = new Dictionary<string, string>();
-        public TSourceFile SysSourceFile;
+        Dictionary<string, string> ReflectionNameTable = new Dictionary<string, string>();
+        public TSourceFile SystemSourceFile;
 
         public ManualResetEvent Modified;
         public bool ParseDone;
@@ -121,15 +120,19 @@ namespace Miyu {
 
             tick = DateTime.Now;
 
-            SysSourceFile.Parser.ParseFile(SysSourceFile);
+            SystemSourceFile.Parser.ParseFile(SystemSourceFile);
 
-            RegisterSysClass();
+            // 型の別名の辞書をセットする。
+            SetTypeAliasTable();
+
+            // System.csのクラスのTypeInfoをセットする。
+            SetSystemSourceFileTypeInfo();
 
             Dictionary<string, TType> class_table_save = new Dictionary<string, TType>(ClassTable);
             Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
             Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
 
-            Debug.WriteLine("Sys.cs 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+            Debug.WriteLine("System.cs 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
             tick = DateTime.Now;
 
             while (true) {
@@ -147,7 +150,7 @@ namespace Miyu {
                     ParseDone = false;
 
                     foreach (TSourceFile src in SourceFiles) {
-                        if(src != SysSourceFile) {
+                        if(src != SystemSourceFile) {
 
                             lock (src) {
                                 src.Parser.ParseFile(src);
@@ -288,39 +291,21 @@ namespace Miyu {
             SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
                            select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
 
-            SysSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "Sys.cs" select src).First();
+            SystemSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "System.cs" select src).First();
         }
 
-        public TType GetSysClass(TypeInfo inf) {
+        public TType RegisterTypeInfoTable(TypeInfo inf) {
             TType tp2;
 
-            if(SysClassTable.TryGetValue(inf.FullName, out tp2)) {
+            if(TypeInfoTable.TryGetValue(inf.FullName, out tp2)) {
 
                 return tp2;
             }
 
             tp2 = new TType(inf);
-            SysClassTable.Add(inf.FullName, tp2);
+            TypeInfoTable.Add(inf.FullName, tp2);
 
             return tp2;
-        }
-
-        public string FromSysClassName(string name) {
-            string name2;
-
-            if(FromSysClassNameTable.TryGetValue(name, out name2)) {
-                return name2;
-            }
-            return name;
-        }
-
-        public string ToSysClassName(string name) {
-            string name2;
-
-            if (ToSysClassNameTable.TryGetValue(name, out name2)) {
-                return name2;
-            }
-            return name;
         }
 
         public void SetTypeInfo(TType tp) {
@@ -329,10 +314,15 @@ namespace Miyu {
             }
             tp.TypeInfoSearched = true;
 
-            string sys_name = ToSysClassName(tp.ClassName);
+            string sys_name;
+
+            if (! ReflectionNameTable.TryGetValue(tp.ClassName, out sys_name)) {
+
+                sys_name = tp.ClassName;
+            }
+
             var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == sys_name select tp2;
             if (v.Any()) {
-
 
                 if (v.Count() == 1) {
                     tp.Info = v.First().GetTypeInfo();
@@ -350,37 +340,42 @@ namespace Miyu {
                         tp.Info = v.First().GetTypeInfo();
                     }
                 }
-                SysClassTable.Add(tp.Info.FullName, tp);
+                TypeInfoTable.Add(tp.Info.FullName, tp);
             }
         }
 
-        public void RegisterSysClass() {
-            ToSysClassNameTable.Add("bool", "Boolean");
-            ToSysClassNameTable.Add("byte", "Byte");
-            ToSysClassNameTable.Add("char", "Char");
-            ToSysClassNameTable.Add("Dictionary", "Dictionary`2");
-            ToSysClassNameTable.Add("double", "Double");
-            ToSysClassNameTable.Add("float", "Single");
-            ToSysClassNameTable.Add("IEnumerable", "IEnumerable`1");
-            ToSysClassNameTable.Add("int", "Int32");
-            ToSysClassNameTable.Add("List", "List`1");
-            ToSysClassNameTable.Add("object", "Object");
-            ToSysClassNameTable.Add("short", "Int16");
-            ToSysClassNameTable.Add("string", "String");
-            ToSysClassNameTable.Add("void", "Void");
+        /*
+         * 型の別名の辞書をセットする。
+         */
+        public void SetTypeAliasTable() {
+            ReflectionNameTable.Add("bool", "Boolean");
+            ReflectionNameTable.Add("byte", "Byte");
+            ReflectionNameTable.Add("char", "Char");
+            ReflectionNameTable.Add("Dictionary", "Dictionary`2");
+            ReflectionNameTable.Add("double", "Double");
+            ReflectionNameTable.Add("float", "Single");
+            ReflectionNameTable.Add("IEnumerable", "IEnumerable`1");
+            ReflectionNameTable.Add("int", "Int32");
+            ReflectionNameTable.Add("List", "List`1");
+            ReflectionNameTable.Add("object", "Object");
+            ReflectionNameTable.Add("short", "Int16");
+            ReflectionNameTable.Add("string", "String");
+            ReflectionNameTable.Add("void", "Void");
+        }
 
-            foreach(string s in ToSysClassNameTable.Keys) {
-                FromSysClassNameTable.Add(ToSysClassNameTable[s], s);
-            }
+        /*
+         * System.csのクラスのTypeInfoをセットする。
+         */
+        public void SetSystemSourceFileTypeInfo() {
             
             foreach (TType tp in ClassTable.Values) {
                 if (tp is TGenericClass) {
-                    Debug.WriteLine("sys 総称型 {0}", tp.ClassName, "");
+                    Debug.WriteLine("system 総称型 {0}", tp.ClassName, "");
                 }
                 else {
                     SetTypeInfo(tp);
                     if (tp.Info == null) {
-                        Debug.WriteLine("ERR sys class {0}", tp.ClassName, "");
+                        Debug.WriteLine("ERR system class {0}", tp.ClassName, "");
                     }
                 }
             }

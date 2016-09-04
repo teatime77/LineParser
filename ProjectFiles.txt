@@ -1,4 +1,4 @@
-﻿Sys.cs
+﻿System.cs
 CodeAnalysis.cs
 MakeSourceCode.cs
 MyEditor.xaml.cs
@@ -6,7 +6,7 @@ MyEditor.Ext.cs
 LineParser.cs
 LexicalAnalysis.cs
 IME.cs
-Compile.cs
+NameResolution.cs
 CSharpParser.cs
 Define.cs
 MainPage.xaml.cs

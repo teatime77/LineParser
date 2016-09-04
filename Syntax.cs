@@ -514,19 +514,19 @@ namespace Miyu {
         public TField(TType parent_class, FieldInfo fld_info) {
             DeclaringType = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TGlb.Project.GetSysClass(fld_info.FieldType.GetTypeInfo());
+            TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.FieldType.GetTypeInfo());
         }
 
         public TField(TType parent_class, PropertyInfo fld_info) {
             DeclaringType = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TGlb.Project.GetSysClass(fld_info.PropertyType.GetTypeInfo());
+            TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.PropertyType.GetTypeInfo());
         }
 
         public TField(TType parent_class, EventInfo fld_info) {
             DeclaringType = parent_class;
             NameVar = fld_info.Name;
-            TypeVar = TGlb.Project.GetSysClass(fld_info.EventHandlerType.GetTypeInfo());
+            TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.EventHandlerType.GetTypeInfo());
         }
     }
 
@@ -583,7 +583,7 @@ namespace Miyu {
         public TFunction(TType parent_class, MethodInfo method_info) : base() {
             KindFnc = EKind.Undefined;
             InfoFnc = method_info;
-            TypeVar = TGlb.Project.GetSysClass(method_info.ReturnType.GetTypeInfo());
+            TypeVar = TGlb.Project.RegisterTypeInfoTable(method_info.ReturnType.GetTypeInfo());
         }
 
         /*
