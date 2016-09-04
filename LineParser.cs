@@ -1599,7 +1599,7 @@ namespace Miyu {
             Running = false;
         }
 
-        public void ResolveName(TSourceFile src) {
+        public void SourceFileResolveName(TSourceFile src) {
             //Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);

@@ -13,6 +13,9 @@ using Windows.UI;
 using Windows.UI.Xaml;
 
 namespace Miyu {
+    /*
+     * ユーザー定義の総称型のテスト
+     */
     public class TNode2<T> {
         public static int NodeCnt;
         public int IdxNode;
@@ -27,7 +30,7 @@ namespace Miyu {
         /*
             コールグラフを作る。
         */
-        public void MakeCallGraph() {
+        public List<TCallNode> MakeCallGraph() {
             // 関数内の参照のリスト(ReferencesInFnc)をセットする。
             TSetReferencesInFnc set_ref_fnc = new TSetReferencesInFnc();
             set_ref_fnc.ProjectNavi(this, null);
@@ -73,6 +76,61 @@ namespace Miyu {
 
             // ユーザー定義の総称型のテスト
             TNode2<TCallNode> xx = new TNode2<TCallNode>();
+
+            return dic.Values.ToList();
+        }
+
+        /*
+            指定された関数を呼ぶまでの経路と、関数から呼ばれる経路のコールグラフを作る。
+        */
+        public void SpecificFunctionCallGraph(List<TCallNode> nodes_all, TFunction fnc, string fnc_dir) {
+            for(int idx = 0; idx < 2; idx++) {
+
+                List<TCallNode> v1 = (from x in nodes_all where x.FncCall == fnc select x).ToList();
+                while (true) {
+                    List<TCallNode> v2;
+                    if(idx == 0) {
+                        // fncを呼ぶまでの経路
+
+                        v2 = (from x in nodes_all where x.CallTo.Intersect(v1).Any() select x).ToList();
+                    }
+                    else {
+                        // fncから呼ばれる経路
+
+                        v2 = (from x in nodes_all where x.CallFrom.Intersect(v1).Any() select x).ToList();
+                    }
+
+                    v2.AddRange(v1);
+                    List<TCallNode> v3 = v2.Distinct().ToList();
+
+                    if (v1.Count == v3.Count) {
+                        // 変化しなくなった場合
+
+                        break;
+                    }
+
+                    v1 = v3;
+                }
+
+                TNode.NodeCnt = 0;
+
+                // コールグラフのノードのリストから、表示用のノードのリストを作る。
+                List<TNode> vnd = CallNodesToNodes(TCallNode.CopyCallNodes(v1));
+
+                // ノードのリストからdotファイルを作る。
+                string file_name;
+                if(idx == 0) {
+                    // fncを呼ぶまでの経路
+
+                    file_name = "CallTo.dot";
+                }
+                else {
+
+                    // fncから呼ばれる経路
+                    file_name = "CallFrom.dot";
+                }
+                WriteDotFile("コールグラフ", vnd, fnc_dir + "\\" + file_name);
+            }
         }
 
         /*
@@ -121,7 +179,7 @@ namespace Miyu {
                     // 親ノードがあり、親ノードからこのノードへの矢印がない場合
 
                     // 親ノードからこのノードへの矢印を追加する。
-                    parent_call.CallTo.Add(fnc_call);
+                    parent_call.AddCallToFrom(fnc_call);
                 }
 
                 // 処理済みのノードを返す。
@@ -133,7 +191,7 @@ namespace Miyu {
                 // 親ノードがある場合
 
                 // 親ノードからこのノードへの矢印を追加する。
-                parent_call.CallTo.Add(fnc_call);
+                parent_call.AddCallToFrom(fnc_call);
             }
             dic.Add(name, fnc_call);
 
@@ -164,8 +222,7 @@ namespace Miyu {
 
                         // 呼ばれうる仮想関数に対し
                         foreach (TFunction f in virtual_functions) {
-
-                            AddCallNode(dic, fnc_call, tp2, f);
+                            AddCallNode(dic, fnc_call, f.DeclaringType, f);
                         }
                     }
                     break;
@@ -421,24 +478,80 @@ namespace Miyu {
         public TType TypeCall;
         public TFunction FncCall;
         public List<TCallNode> CallTo = new List<TCallNode>();
+        public List<TCallNode> CallFrom = new List<TCallNode>();
         public int MaxNest;
         public Color FontColor = Colors.Black;
+
+        public TCallNode(TCallNode nd) {
+            TypeCall = nd.TypeCall;
+            FncCall = nd.FncCall;
+            MaxNest = nd.MaxNest;
+            FontColor = nd.FontColor;
+        }
 
         public TCallNode(TType tp, TFunction fnc) {
             TypeCall = tp;
             FncCall = fnc;
         }
 
+        public void AddCallToFrom(TCallNode call_to) {
+            CallTo.Add(call_to);
+            Debug.Assert(!call_to.CallFrom.Contains(this));
+            call_to.CallFrom.Add(this);
+        }
+
         public string Name() {
-            //return TypeCall.GetClassText() + "->" + FncCall.FullName();
             if (FncCall.NameVar == null) {
 
                 return "λ";
             }
             else {
 
-                return FncCall.NameVar;
+                //return FncCall.NameVar;
+                return TypeCall.GetClassText() + "->" + FncCall.FullName();
             }
+        }
+
+        /*
+         * TCallNodeのリストのコピーを得る。
+         */
+        public static List<TCallNode> CopyCallNodes(IEnumerable<TCallNode> vsrc) {
+            // コピー先のリスト
+            List<TCallNode> vdst = new List<TCallNode>();
+
+            // 変換辞書
+            Dictionary<TCallNode, TCallNode> dic = new Dictionary<TCallNode, TCallNode>();
+
+            // コピー元のノードに対し
+            foreach (TCallNode src in vsrc) {
+                // ノードをコピーする。
+                TCallNode dst = new TCallNode(src);
+
+                // コピー先のリストに追加する。
+                vdst.Add(dst);
+
+                // 変換辞書に登録する。
+                dic.Add(src, dst);
+            }
+
+            // コピー元のノードに対し
+            foreach (TCallNode src in vsrc) {
+                // コピー先のノードを得る。
+                TCallNode dst = dic[src];
+
+                // 呼び出し先のリストのノードに対し
+                foreach(TCallNode nd in src.CallTo) {
+                    if (dic.ContainsKey(nd)) {
+
+                        TCallNode call_to = dic[nd];
+
+                        // 対応するノードを呼び出し先のリストに追加する。
+                        dst.AddCallToFrom(call_to);
+                    }
+                }
+            }
+
+            return vdst;
         }
     }
 

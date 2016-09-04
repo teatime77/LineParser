@@ -213,7 +213,7 @@ namespace Miyu {
                     SetWeakField();
 
                     foreach (TSourceFile src in SourceFiles) {
-                        src.Parser.ResolveName(src);
+                        src.Parser.SourceFileResolveName(src);
                     }
                     Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
@@ -251,9 +251,6 @@ namespace Miyu {
 
                     Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
-
-                    // コールグラフを作る。
-                    MakeCallGraph();
 
                     // 使用・定義連鎖を作る。
                     MakeUseDefineChain();

@@ -1051,6 +1051,9 @@ namespace Miyu {
          * HTMLのソースコードを作る。
          */
         public void MakeHTMLSourceCode() {
+            // コールグラフを作る。
+            List<TCallNode> call_nodes_all = MakeCallGraph();
+
             StringWriter sw1 = new StringWriter();
 
             sw1.WriteLine("<h1>クラス リファレンス</h1>");
@@ -1072,25 +1075,49 @@ namespace Miyu {
 
                     sw.WriteLine("<h2>フィールド</h2>");
                     sw.WriteLine("<ul>");
+
+                    // クラスに属するフィールドに対し
                     foreach (TField fld in cls.Fields) {
+                        string fld_dir = class_dir + "\\" + fld.NameVar;
+
+                        if (!Directory.Exists(fld_dir)) {
+                            // ディレクトリが無い場合
+
+                            Directory.CreateDirectory(fld_dir);
+                        }
+
                         TTokenWriter tw = new TTokenWriter(TGlb.Parser);
 
                         TGlb.Parser.FieldText(cls, fld, tw);
-                        File.WriteAllText(class_dir + "\\" + fld.NameVar + ".html", tw.ToHTMLText(cls.ClassName + " - " + fld.NameVar), new UTF8Encoding(false));
+                        File.WriteAllText(fld_dir + "\\index.html", tw.ToHTMLText(cls.ClassName + " - " + fld.NameVar), new UTF8Encoding(false));
 
-                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fld.NameVar + ".html", fld.NameVar);
+                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fld.NameVar + "\\index.html", fld.NameVar);
                     }
                     sw.WriteLine("</ul>");
 
                     sw.WriteLine("<h2>関数</h2>");
                     sw.WriteLine("<ul>");
+
+                    // クラスに属する関数に対し
                     foreach(TFunction fnc in cls.Functions) {
+                        string fnc_dir = class_dir + "\\" + fnc.UniqueName();
+
+                        if (! Directory.Exists(fnc_dir)) {
+                            // ディレクトリが無い場合
+
+                            Directory.CreateDirectory(fnc_dir);
+                        }
+
                         TTokenWriter tw = new TTokenWriter(TGlb.Parser);
 
                         TGlb.Parser.FunctionText(fnc, tw, 2);
-                        File.WriteAllText(class_dir + "\\" + fnc.UniqueName() + ".html", tw.ToHTMLText(cls.ClassName + " - " + fnc.NameVar), new UTF8Encoding(false));
+                        File.WriteAllText(fnc_dir + "\\source.html", tw.ToHTMLText(cls.ClassName + " - " + fnc.NameVar), new UTF8Encoding(false));
 
-                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fnc.UniqueName() + ".html", fnc.NameVar);
+                        sw.WriteLine("<li><a href=\"{0}\">{1}</a></li>", fnc.UniqueName() + "\\source.html", fnc.NameVar);
+
+                        if(fnc.NameVar == "GetClassByName" || fnc.NameVar == "MakeCallGraph") {
+                            SpecificFunctionCallGraph(call_nodes_all, fnc, fnc_dir);
+                        }
                     }
                     sw.WriteLine("</ul>");
 
