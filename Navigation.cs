@@ -11,7 +11,7 @@ namespace Miyu {
         public virtual void ProjectNavi(TProject prj, List<object> args) {
             BeforeAction(prj, args);
 
-            foreach (TType tp in prj.ClassTable.Values) {
+            foreach (TType tp in prj.SimpleClassTable.Values) {
                 ClassNavi(tp, args);
             }
 

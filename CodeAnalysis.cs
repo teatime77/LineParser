@@ -39,12 +39,12 @@ namespace Miyu {
             TSetAppsInFnc set_app_fnc = new TSetAppsInFnc();
             set_app_fnc.ProjectNavi(this, null);
 
-            var vcls2 = from x in ClassTable.Values where x.Info == null && x.SourceFileCls == null select x;
+            var vcls2 = from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls == null select x;
             foreach(TType t in vcls2) {
                 Debug.WriteLine("??? {0}", t.ClassName, "");
             }
 
-            var vcls = from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x;
+            var vcls = from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls != null select x;
 
             TType main_class = (from x in vcls where x.ClassName == "TProject" select x).First();
 

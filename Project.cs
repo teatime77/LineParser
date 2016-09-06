@@ -41,7 +41,7 @@ namespace Miyu {
         public TType HandlerClass = new TType("handler class");
 
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
-        public Dictionary<string, TType> ClassTable = new Dictionary<string, TType>();
+        public Dictionary<string, TType> SimpleClassTable = new Dictionary<string, TType>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
         public List<Assembly> AssemblyList = new List<Assembly>();
@@ -128,7 +128,7 @@ namespace Miyu {
             // System.csのクラスのTypeInfoをセットする。
             SetSystemSourceFileTypeInfo();
 
-            Dictionary<string, TType> class_table_save = new Dictionary<string, TType>(ClassTable);
+            Dictionary<string, TType> simple_class_table_save = new Dictionary<string, TType>(SimpleClassTable);
             Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
             Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
 
@@ -144,7 +144,7 @@ namespace Miyu {
 
                     tick = DateTime.Now;
 
-                    ClassTable = new Dictionary<string, TType>(class_table_save);
+                    SimpleClassTable = new Dictionary<string, TType>(simple_class_table_save);
                     ParameterizedClassTable = new Dictionary<string, TGenericClass>(parameterized_class_table_save);
                     SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
                     ParseDone = false;
@@ -181,36 +181,16 @@ namespace Miyu {
 
                     ParseDone = true;
 
-                    foreach(TType c in ClassTable.Values) {
-                        if (c is TGenericClass) {
-
-                            if (ParameterizedClassTable.ContainsValue(c as TGenericClass)) {
-
-                                Debug.WriteLine("Parameterized Class:{0} {1}", c.ClassName, c.GenericType);
-                            }
-                            else {
-
-                                Debug.WriteLine("Generic Class:{0}", c.ClassName, "");
-                            }
-                        }
-                        else {
-                            
-                            //Debug.WriteLine("class:{0} {1}", c.ClassName, c.GenericType);
-                            Debug.Assert(c.GenericType == EClass.SimpleClass);
-                        }
-                    }
-
                     // アプリのクラスのリスト
-                    AppClasses = (from x in ClassTable.Values where x.Info == null && !(x is TGenericClass) && x.SourceFileCls != null select x).ToList();
+                    AppClasses = (from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls != null select x).ToList();
 
-                    foreach(TType cls in AppClasses) {
+                    foreach (TType cls in AppClasses) {
                         foreach(TType spr in cls.SuperClasses) {
                             if (!spr.SubClasses.Contains(cls)) {
                                 spr.SubClasses.Add(cls);
                             }
                         }
                     }
-
 
                     // フィールドの弱参照(IsWeak)を設定する。
                     SetWeakField();
@@ -219,6 +199,17 @@ namespace Miyu {
                         src.Parser.SourceFileResolveName(src);
                     }
                     Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+
+                    // クラスの辞書のチェック
+                    foreach(TType c in SimpleClassTable.Values) {
+                        Debug.Assert(c.GenericType == EClass.SimpleClass && !(c is TGenericClass));
+                    }
+                    foreach(TType c in ParameterizedClassTable.Values) {
+                        Debug.Assert(c.GenericType == EClass.ParameterizedClass);
+                    }
+                    foreach (TType c in SpecializedClassTable.Values) {
+                        Debug.Assert(c.GenericType == EClass.SpecializedClass);
+                    }
 
                     tick = DateTime.Now;
 
@@ -388,16 +379,10 @@ namespace Miyu {
          * System.csのクラスのTypeInfoをセットする。
          */
         public void SetSystemSourceFileTypeInfo() {
-            
-            foreach (TType tp in ClassTable.Values) {
-                if (tp is TGenericClass) {
-                    Debug.WriteLine("system 総称型 {0}", tp.ClassName, "");
-                }
-                else {
-                    SetTypeInfo(tp);
-                    if (tp.Info == null) {
-                        Debug.WriteLine("ERR system class {0}", tp.ClassName, "");
-                    }
+            foreach (TType tp in SimpleClassTable.Values) {
+                SetTypeInfo(tp);
+                if (tp.Info == null) {
+                    Debug.WriteLine("ERR system class {0}", tp.ClassName, "");
                 }
             }
         }
@@ -456,9 +441,13 @@ namespace Miyu {
 
         public TType GetClassByName(string name) {
             TType cls;
+            TGenericClass gen_class;
 
-            if (ClassTable.TryGetValue(name, out cls)) {
+            if (SimpleClassTable.TryGetValue(name, out cls)) {
                 return cls;
+            }
+            else if (ParameterizedClassTable.TryGetValue(name, out gen_class)) {
+                return gen_class;
             }
             else {
                 if(TParser.CurrentClass is TGenericClass) {
@@ -470,10 +459,9 @@ namespace Miyu {
                         return v.First();
                     }
                 }
-                cls = new TType(name);
 
-                //Debug.WriteLine("class : {0}", cls.GetClassText(), "");
-                ClassTable.Add(name, cls);
+                cls = new TType(name);
+                SimpleClassTable.Add(name, cls);
 
                 return cls;
             }
@@ -515,17 +503,14 @@ namespace Miyu {
         }
 
         public TGenericClass GetParameterizedClass(string class_name, List<TType> param_classes) {
-            string class_text = MakeClassText(class_name, param_classes, 0);
-
             TGenericClass reg_class;
-            if (! ParameterizedClassTable.TryGetValue(class_text, out reg_class)) {
+
+            if (! ParameterizedClassTable.TryGetValue(class_name, out reg_class)) {
 
                 reg_class = new TGenericClass(class_name, param_classes);
                 reg_class.GenericType = EClass.ParameterizedClass;
 
-                ParameterizedClassTable.Add(class_text, reg_class);
-
-                ClassTable.Add(reg_class.ClassName, reg_class);
+                ParameterizedClassTable.Add(class_name, reg_class);
             }
 
             return reg_class;
@@ -587,26 +572,26 @@ namespace Miyu {
 
         public TVariable CopyVariable(TVariable var_src, Dictionary<string, TType> dic) {
             TType tp = SubstituteArgumentClass(var_src.TypeVar, dic);
-            TVariable var1 = new TVariable(var_src.ModifierVar, var_src.TokenVar, tp, null);
+            TVariable var_dst = new TVariable(var_src.ModifierVar, var_src.TokenVar, tp, null);
 
-            return var1;
+            return var_dst;
         }
 
-        public TField CopyField(TType cla1, TField fld_src, Dictionary<string, TType> dic) {
+        public TField MakeSpecializedField(TType cla1, TField fld_src, Dictionary<string, TType> dic) {
             TType tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
-            TField fld1 = new TField(cla1, fld_src.ModifierVar, fld_src.TokenVar, tp, null);
+            TField fld_dst = new TField(cla1, fld_src.ModifierVar, fld_src.TokenVar, tp, null);
 
-            return fld1;
+            return fld_dst;
         }
 
-        public TFunction CopyFunctionDeclaration(TType cla1, TFunction fnc_src, Dictionary<string, TType> dic) {
+        public TFunction MakeSpecializedFunctionDeclaration(TType cla1, TFunction fnc_src, Dictionary<string, TType> dic) {
             TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
             TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
 
-            TFunction fnc = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
-            fnc.DeclaringType = cla1;
+            TFunction fnc_dst = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
+            fnc_dst.DeclaringType = cla1;
 
-            return fnc;
+            return fnc_dst;
         }
 
         public void SetMemberOfSpecializedClass(TGenericClass cls) {
@@ -647,8 +632,8 @@ namespace Miyu {
                 cls.ArgTypes = (from c in cls.OrgCla.ArgTypes select SubstituteArgumentClass(c, dic)).ToArray();
             }
 
-            cls.Fields = (from x in cls.OrgCla.Fields select CopyField(cls, x, dic)).ToList();
-            cls.Functions = (from x in cls.OrgCla.Functions select CopyFunctionDeclaration(cls, x, dic)).ToList();
+            cls.Fields = (from x in cls.OrgCla.Fields select MakeSpecializedField(cls, x, dic)).ToList();
+            cls.Functions = (from x in cls.OrgCla.Functions select MakeSpecializedFunctionDeclaration(cls, x, dic)).ToList();
         }
     }
 }
