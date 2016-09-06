@@ -152,13 +152,15 @@ namespace Miyu {
                 cls.SourceFileCls = src;
             }
 
+            Debug.Assert(CurrentClass == null);
+            CurrentClass = cls;
             if (CurrentToken.Kind == EKind.Colon) {
                 // 親クラスがある場合
 
                 GetToken(EKind.Colon);
                 while (true) {
 
-                    TType super_class = ReadType(cls, false);
+                    TType super_class = ReadType(false);
 
                     cls.SuperClasses.Add(super_class);
 
@@ -175,6 +177,7 @@ namespace Miyu {
 
             LCopt();
             GetToken(EKind.EOT);
+            CurrentClass = null;
 
             if (cls.ClassName == "int") {
                 TGlb.Project.IntClass = cls;
@@ -220,10 +223,12 @@ namespace Miyu {
          * デリゲートの行を読む。
          */
         public TType ReadDelegateLine(TModifier mod1) {
+            Debug.Assert(CurrentClass == null);
+
             GetToken(EKind.delegate_);
 
             // 戻り値の型を読む。
-            TType ret_type = ReadType(null, false);
+            TType ret_type = ReadType(false);
 
             // デリケートの名前を読む。
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
@@ -265,7 +270,9 @@ namespace Miyu {
             dlg.KindClass = EType.Delegate;
 
             // 引数のリストを読む。
-            List<TVariable> vars = ReadArgs(dlg);
+            CurrentClass = dlg;
+            List<TVariable> vars = ReadArgs();
+            CurrentClass = null;
 
             // 戻り値の型
             dlg.RetType = ret_type;
@@ -279,7 +286,7 @@ namespace Miyu {
         /*
          * フィールドの行を読む。
          */
-        public TField ReadFieldLine(TType parent_class, TModifier mod1, TType type_prepend) {
+        public TField ReadFieldLine(TModifier mod1, TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
             TType tp;
@@ -291,7 +298,7 @@ namespace Miyu {
             else {
 
                 GetToken(EKind.Colon);
-                tp = ReadType(parent_class, false);
+                tp = ReadType(false);
             }
 
             TTerm init = null;
@@ -305,27 +312,27 @@ namespace Miyu {
 
             LineEnd();
 
-            return new TField(parent_class, mod1, id, tp, init);
+            return new TField(CurrentClass, mod1, id, tp, init);
         }
 
         /*
          * enumのフィールドの行を読む。
          */
-        public TField ReadEnumFieldLine(TType parent_class) {
+        public TField ReadEnumFieldLine() {
             TToken id = GetToken(EKind.Identifier);
 
             OptGetToken(EKind.Comma);
             GetToken(EKind.EOT);
 
-            return new TField(parent_class, null, id, parent_class, null);
+            return new TField(CurrentClass, null, id, CurrentClass, null);
         }
 
         /*
          * 型を読む。
          */
-        public TType ReadType(TType parent_class, bool new_class) {
+        public TType ReadType(bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TType cls1 = TGlb.Project.GetParamClassByName(parent_class, id.TextTkn);
+            TType cls1 = TGlb.Project.GetParamClassByName(id.TextTkn);
 
             List<TType> param_classes = null;
             bool contains_argument_class = false;
@@ -343,7 +350,7 @@ namespace Miyu {
 
                 GetToken(EKind.LT);
                 while (true) {
-                    TType param_class = ReadType(parent_class, false);
+                    TType param_class = ReadType(false);
 
                     if (param_class.GenericType == EClass.ArgumentClass || param_class is TGenericClass && (param_class as TGenericClass).ContainsArgumentClass) {
 
@@ -465,7 +472,7 @@ namespace Miyu {
         /*
          * 引数のリストを読む。
          */
-        public List<TVariable> ReadArgs(TType parent_class) {
+        public List<TVariable> ReadArgs() {
             List<TVariable> vars = new List<TVariable>();
 
             GetToken(EKind.LP);
@@ -473,7 +480,7 @@ namespace Miyu {
             while (CurrentToken.Kind != EKind.RP) {
 
                 // 引数の変数を読む。
-                TVariable var1 = ReadArgVariable(parent_class);
+                TVariable var1 = ReadArgVariable();
                 vars.Add(var1);
 
                 if (CurrentToken.Kind != EKind.Comma) {
@@ -492,7 +499,7 @@ namespace Miyu {
         /*
          * 関数定義の開始行を読む。
          */
-        public TFunction ReadFunctionLine(TType parent_class, TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
+        public TFunction ReadFunctionLine(TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
             TToken fnc_name;
             EKind kind_fnc = EKind.function_;
             
@@ -517,7 +524,7 @@ namespace Miyu {
             }
 
             // 引数のリストを読む。
-            List<TVariable> vars = ReadArgs(parent_class);
+            List<TVariable> vars = ReadArgs();
 
             TType ret_type = ret_type_prepend;
             TApply base_app = null;
@@ -528,7 +535,7 @@ namespace Miyu {
 
                 if(ret_type_prepend == null) {
 
-                    ret_type = ReadType(parent_class, false);
+                    ret_type = ReadType(false);
                 }
                 else if(constructor_class != null) {
 
@@ -559,7 +566,7 @@ namespace Miyu {
         /*
          * 引数の変数を読む。
          */
-        public virtual TVariable ReadArgVariable(TType parent_class) {
+        public virtual TVariable ReadArgVariable() {
             EKind kind = EKind.Undefined;
 
             switch (CurrentToken.Kind) {
@@ -586,12 +593,15 @@ namespace Miyu {
 
                 GetToken(EKind.Colon);
 
-                type = ReadType(parent_class, false);
+                type = ReadType(false);
             }
 
             return new TVariable(id, type, kind);
         }
 
+        /*
+         * 変数を読む。
+         */
         public TVariable ReadVariable(TType type_prepend) {
             TToken id = GetToken(EKind.Identifier);
 
@@ -606,7 +616,7 @@ namespace Miyu {
 
                     GetToken(EKind.Colon);
 
-                    type = ReadType(null, false);
+                    type = ReadType(false);
                 }
             }
 
@@ -636,6 +646,7 @@ namespace Miyu {
             }
 
             while (true) {
+                // 変数を読む。
                 TVariable var1 = ReadVariable(type_prepend);
 
                 var_decl.Variables.Add(var1);
@@ -776,7 +787,7 @@ namespace Miyu {
 
             if(CurrentToken.Kind == EKind.ClassName) {
 
-                for1.LoopVariable = ReadArgVariable(null);
+                for1.LoopVariable = ReadArgVariable();
             }
             else {
 
@@ -807,7 +818,7 @@ namespace Miyu {
             if (CurrentToken.Kind != EKind.SemiColon) {
 
                 if (CurrentToken.Kind == EKind.ClassName) {
-                    TType tp = ReadType(null, false);
+                    TType tp = ReadType(false);
 
                     for1.InitStatement = ReadVariableDeclarationLine(tp, true);
                     for1.LoopVariable = (for1.InitStatement as TVariableDeclaration).Variables[0];
@@ -858,7 +869,7 @@ namespace Miyu {
             GetToken(EKind.catch_);
             LPopt();
 
-            TType tp = ReadType(null, false);
+            TType tp = ReadType(false);
 
             string name = "";
             if(CurrentToken.Kind == EKind.Identifier) {
@@ -996,7 +1007,7 @@ namespace Miyu {
         /*
          * 1行の構文解析をする。
          */
-        public object ParseLine(TSourceFile src, TType cls, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx) {
+        public object ParseLine(TSourceFile src, TFunction parent_fnc, TStatement parent_stmt, int line_top_idx) {
             TokenPos = line_top_idx;
 
             if (TokenPos < TokenList.Length) {
@@ -1177,11 +1188,11 @@ namespace Miyu {
 
                 case EKind.ClassName:
                     TToken class_token = CurrentToken;
-                    TType tp = ReadType(null, false);
+                    TType tp = ReadType(false);
 
                     if (CurrentToken.Kind == EKind.LP) {
 
-                        return ReadFunctionLine(cls, class_token, tp, mod1, tp);
+                        return ReadFunctionLine(class_token, tp, mod1, tp);
                     }
 
                     if (CurrentToken.Kind != EKind.Identifier) {
@@ -1194,13 +1205,13 @@ namespace Miyu {
 
                     if (NextToken.Kind == EKind.LP) {
 
-                        return ReadFunctionLine(cls, null, null, mod1, tp);
+                        return ReadFunctionLine(null, null, mod1, tp);
                     }
                     else {
 
                         if (parent_fnc == null) {
 
-                            return ReadFieldLine(cls, mod1, tp);
+                            return ReadFieldLine(mod1, tp);
                         }
                         else {
 
@@ -1210,15 +1221,15 @@ namespace Miyu {
 
                 case EKind.Identifier:
                 case EKind.base_:
-                    if(cls != null && cls.KindClass == EType.Enum) {
+                    if(CurrentClass != null && CurrentClass.KindClass == EType.Enum) {
 
-                        return ReadEnumFieldLine(cls);
+                        return ReadEnumFieldLine();
                     }
 
                     if (NextToken.Kind == EKind.Colon) {
                         if(TokenPos + 2 < TokenList.Length) {
 
-                            return ReadFieldLine(cls, mod1, null);
+                            return ReadFieldLine(mod1, null);
                         }
                         else {
 
@@ -1229,7 +1240,7 @@ namespace Miyu {
                     }
                     else if (parent_fnc == null) {
 
-                        return ReadFunctionLine(cls, null, null, mod1, null);
+                        return ReadFunctionLine(null, null, mod1, null);
                     }
                     else {
 
@@ -1246,11 +1257,11 @@ namespace Miyu {
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
-                    return ReadFunctionLine(cls, null, null, mod1, null);
+                    return ReadFunctionLine(null, null, mod1, null);
 
                 case EKind.LB:
                     GetToken(EKind.LB);
-                    TType attr = ReadType(null, false);
+                    TType attr = ReadType(false);
                     GetToken(EKind.RB);
                     return new TAttribute(attr);
 
@@ -1367,6 +1378,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * ソースファイルの構文解析をする。
+         */
         public async void ParseFile(TSourceFile src) {
             while (Running) {
                 await Task.Delay(1);
@@ -1475,7 +1489,7 @@ namespace Miyu {
                             }
 
                             TokenList = token_list.ToArray();
-                            object obj = ParseLine(src, cls, parent_fnc, parent_stmt, line_top_idx);
+                            object obj = ParseLine(src, parent_fnc, parent_stmt, line_top_idx);
                             if (obj != null) {
 
                                 while (obj_stack.Count < line.Indent) {
@@ -1599,6 +1613,9 @@ namespace Miyu {
             Running = false;
         }
 
+        /*
+         * ソースファイルの名前解決をする。
+         */
         public void SourceFileResolveName(TSourceFile src) {
             //Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
@@ -1635,6 +1652,9 @@ namespace Miyu {
             }
         }
 
+        /*
+         * 指定された種類の字句を読む。
+         */
         public TToken GetToken(EKind type) {
 
             if(type != EKind.Undefined && type != CurrentToken.Kind) {
@@ -1681,6 +1701,9 @@ namespace Miyu {
             return tkn;
         }
 
+        /*
+         * いずれかの2種類の字句を読む。
+         */
         public TToken GetToken2(EKind kind1, EKind kind2) {
             if (CurrentToken.Kind != kind1 && CurrentToken.Kind != kind2) {
 
@@ -1689,6 +1712,9 @@ namespace Miyu {
             return GetToken(EKind.Undefined);
         }
 
+        /*
+         * 指定された種類なら字句を読む。
+         */
         public void OptGetToken(EKind kind) {
             if (CurrentToken.Kind == kind) {
 
@@ -1777,7 +1803,7 @@ namespace Miyu {
                 GetToken(EKind.LP);
                 if(CurrentToken.Kind == EKind.ClassName) {
 
-                    cls = ReadType(null, false);
+                    cls = ReadType(false);
                     if(CurrentToken.Kind == EKind.RP) {
 
                         GetToken(EKind.RP);
@@ -1820,7 +1846,7 @@ namespace Miyu {
             case EKind.new_:
                 TToken new_tkn = GetToken(EKind.new_);
 
-                cls = ReadType(null, true);
+                cls = ReadType(true);
                 if(CurrentToken.Kind == EKind.LP) {
 
                     GetToken(EKind.LP);
@@ -1869,7 +1895,7 @@ namespace Miyu {
 
             case EKind.ClassName:
                 id = CurrentToken;
-                cls = ReadType(null, false);
+                cls = ReadType(false);
 
                 //!!!!!!!!!! idとclsは違う !!!!!!!!!!
                 return new TReference(cls);
@@ -1885,7 +1911,7 @@ namespace Miyu {
             case EKind.typeof_:
                 opr = GetToken(EKind.typeof_);
                 GetToken(EKind.LP);
-                cls = ReadType(null, false);
+                cls = ReadType(false);
                 GetToken(EKind.RP);
                 return new TApply(opr, new TReference(cls));
             }
@@ -2025,7 +2051,7 @@ namespace Miyu {
 
                 case EKind.as_:
                     GetToken(EKind.as_);
-                    t1.CastType = ReadType(null, false);
+                    t1.CastType = ReadType(false);
                     break;
 
                 default:

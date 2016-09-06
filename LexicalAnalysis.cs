@@ -71,6 +71,8 @@ namespace Miyu {
         */
         public char ReadEscapeChar(string text, ref int pos) {
             if (text.Length <= pos + 1) {
+                // エスケープ文字が文字列の末尾の場合
+
                 return '\0';
             }
 
@@ -96,7 +98,7 @@ namespace Miyu {
 
                 pos = Math.Min(pos + 6, text.Length);
 
-                // エスケープ文字の計算は未実装です。
+                // エスケープ文字の計算は未実装。
                 return '\0';
 
             case 'U':
@@ -104,7 +106,7 @@ namespace Miyu {
 
                 pos = Math.Min(pos + 10, text.Length);
 
-                // エスケープ文字の計算は未実装です。
+                // エスケープ文字の計算は未実装。
                 return '\0';
 
             case 'x':
@@ -113,7 +115,7 @@ namespace Miyu {
                 // 16進数字の終わりを探す。
                 for (pos++; pos < text.Length && IsHexDigit(text[pos]); pos++) ;
 
-                // エスケープ文字の計算は未実装です。
+                // エスケープ文字の計算は未実装。
                 return '\0';
 
             default:
@@ -293,11 +295,13 @@ namespace Miyu {
                             for (; pos < text_len && char.IsDigit(text[pos]); pos++) ;
 
                             if (pos < text_len && text[pos] == 'f') {
+                                // floatの場合
 
                                 pos++;
                                 token_type = ETokenType.Float;
                             }
                             else {
+                                // doubleの場合
 
                                 token_type = ETokenType.Double;
                             }
@@ -371,6 +375,7 @@ namespace Miyu {
                 else if (ch1 == '/' && ch2 == '/') {
                     // 行コメントの場合
 
+                    // 空白か行の先頭までstart_posを戻す。
                     while (0 < start_pos && char.IsWhiteSpace(text[start_pos - 1])) {
                         start_pos--;
                     }
@@ -395,6 +400,7 @@ namespace Miyu {
                 else if (ch1 == '/' && ch2 == '*') {
                     // ブロックコメントの場合
 
+                    // 空白か行の先頭までstart_posを戻す。
                     while (0 < start_pos && char.IsWhiteSpace(text[start_pos - 1])) {
                         start_pos--;
                     }
@@ -417,31 +423,34 @@ namespace Miyu {
                         pos = text_len;
                     }
                 }
+                else if (ch1 < 256 && ch2 < 256 && SymbolTable2[ch1, ch2] != EKind.Undefined) {
+                    // 2文字の記号の表にある場合
+
+                    token_type = ETokenType.Symbol;
+                    token_kind = SymbolTable2[ch1, ch2];
+                    pos += 2;
+                }
+                else if (ch1 < 256 && SymbolTable1[ch1] != EKind.Undefined) {
+                    // 1文字の記号の表にある場合
+
+                    token_type = ETokenType.Symbol;
+                    token_kind = SymbolTable1[ch1];
+                    pos++;
+                }
                 else {
-                    // 上記以外は1文字の記号とする。
+                    // 不明の文字の場合
 
-                    if (ch1 < 256 && ch2 < 256 && SymbolTable2[ch1, ch2] != EKind.Undefined) {
-
-                        token_type = ETokenType.Symbol;
-                        token_kind = SymbolTable2[ch1, ch2];
-                        pos += 2;
-                    }
-                    else if (ch1 < 256 && SymbolTable1[ch1] != EKind.Undefined) {
-
-                        token_type = ETokenType.Symbol;
-                        token_kind = SymbolTable1[ch1];
-                        pos++;
-                    }
-                    else {
-
-                        token_type = ETokenType.Error;
-                        pos++;
-                    }
+                    token_type = ETokenType.Error;
+                    pos++;
                 }
 
                 if (!is_white) {
+                    // 空白でない場合
 
+                    // 字句の文字列を得る。
                     string s = text.Substring(start_pos, pos - start_pos);
+
+                    // トークンを作り、トークンのリストに追加する。
                     token_list.Add(new TToken(token_type, token_kind, s, start_pos, pos));
                 }
             }

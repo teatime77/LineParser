@@ -162,6 +162,7 @@ namespace Miyu {
 
         public TType(string name) {
             if(name == "Predicate" || name == "ThreadStatic" || name == "DoubleTappedRoutedEventArgs") {
+                Debug.Write("");
             }
             SetIdxClass();
             ClassName = name;
@@ -235,7 +236,10 @@ namespace Miyu {
                 }
             }
             if(Info != null) {
+                // TypeInfoがある場合
+
                 if (Info.IsArray) {
+                    // 配列の場合
 
                     int k = Info.Name.IndexOf('[');
                     string name = Info.Name.Substring(0, k);
@@ -367,6 +371,8 @@ namespace Miyu {
          */
         public IEnumerable<TFunction> GetVirtualFunctions(TFunction fnc) {
             if (fnc.InfoFnc != null) {
+                // MethodInfoがある場合
+
                 yield return fnc;
                 yield break;
             }
@@ -421,7 +427,11 @@ namespace Miyu {
     public partial class TVariable {
         public TModifier ModifierVar;
         public string NameVar;
+
+        // 初期値
         public TTerm InitValue;
+
+        // 属性のリスト
         public List<TAttribute> Attributes;
 
         [_weak]
@@ -680,7 +690,9 @@ namespace Miyu {
      * 項
      */
     public abstract partial class TTerm {
+        // カッコ()で囲まれていればtrue
         public bool WithParenthesis;
+
         public bool IsType;
 
         [_weak]

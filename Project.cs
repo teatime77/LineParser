@@ -294,22 +294,37 @@ namespace Miyu {
             SystemSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "System.cs" select src).First();
         }
 
+        /*
+         * TypeInfoに対応する型を得る。無ければ新たに型を作る。
+         */
         public TType RegisterTypeInfoTable(TypeInfo inf) {
             TType tp2;
 
             if(TypeInfoTable.TryGetValue(inf.FullName, out tp2)) {
+                // 辞書にある場合
 
                 return tp2;
             }
+            else {
+                // 辞書にない場合
 
-            tp2 = new TType(inf);
-            TypeInfoTable.Add(inf.FullName, tp2);
+                // 新たに型を作る。
+                tp2 = new TType(inf);
 
-            return tp2;
+                // 辞書に登録する。
+                TypeInfoTable.Add(inf.FullName, tp2);
+
+                return tp2;
+            }
         }
 
+        /*
+         * 型のTypeInfoをセットする。
+         */
         public void SetTypeInfo(TType tp) {
             if (tp.TypeInfoSearched) {
+                // 処理済みの場合
+
                 return;
             }
             tp.TypeInfoSearched = true;
@@ -321,14 +336,20 @@ namespace Miyu {
                 sys_name = tp.ClassName;
             }
 
+            // アセンブリのリストの中で同じ名前のTypeを探す。
             var v = from a in AssemblyList from tp2 in a.GetTypes() where tp2.Name == sys_name select tp2;
             if (v.Any()) {
+                // 同じ名前のTypeがある場合
 
                 if (v.Count() == 1) {
+                    // 同じ名前のTypeが1個の場合
+
                     tp.Info = v.First().GetTypeInfo();
                 }
-                else { 
-                    foreach(Type t in v) {
+                else {
+                    // 同じ名前のTypeが複数ある場合
+
+                    foreach (Type t in v) {
                         Debug.WriteLine("あいまいな型 : {0}", t.FullName, "");
                     }
                     if(sys_name == "TimeSpan" || sys_name == "Path" || sys_name== "DateTime") {
@@ -387,19 +408,30 @@ namespace Miyu {
             //        from idx in TSys.Indexes(line.Tokens.Length) where line.Tokens[idx].Kind
 
 
-            List<string> class_names = new List<string>();
+            List<string> type_names = new List<string>();
 
+            // すべてのソースファイルに対し
             foreach(TSourceFile src in SourceFiles) {
-                foreach(TLine line in src.Lines) {
+
+                // ソースファイル内のすべての行に対し
+                foreach (TLine line in src.Lines) {
+
+                    // 型宣言の字句(class, struct, enum, interface, delegate)の位置を得る。
                     int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
                     if (idx != -1) {
-                        if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+                        // 型宣言の字句がある場合
 
+                        if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+                            // 型宣言の字句の直後が識別子か型名の場合
+
+                            // 型名を得る。
                             string name = line.Tokens[idx + 1].TextTkn;
-                            if (!class_names.Contains(name)) {
+                            if (!type_names.Contains(name)) {
+                                // 型名のリストに含まれない場合
 
                                 //Debug.WriteLine("typeof({0}),", name, "");
-                                class_names.Add(name);
+                                // 型名のリストに追加する。
+                                type_names.Add(name);
                             }
                         }
                         else {
@@ -410,14 +442,14 @@ namespace Miyu {
                 }
             }
 
-            // クラス名のトークンのリスト
+            // 名前が型名のリストに含まれる識別子のリスト
             var vtkn = from src in SourceFiles
                     from line in src.Lines
                     from tkn in line.Tokens
-                    where tkn.Kind == EKind.Identifier && class_names.Contains(tkn.TextTkn) select tkn;
+                    where tkn.Kind == EKind.Identifier && type_names.Contains(tkn.TextTkn) select tkn;
 
             foreach (TToken tkn in vtkn) {
-                // 種類はClassNameにする。
+                // 字句の種類はClassNameにする。
                 tkn.Kind = EKind.ClassName;
             }
         }
@@ -447,9 +479,9 @@ namespace Miyu {
             }
         }
 
-        public TType GetParamClassByName(TType cls, string name) {
-            if (cls is TGenericClass) {
-                TGenericClass gen = cls as TGenericClass;
+        public TType GetParamClassByName(string name) {
+            if (TParser.CurrentClass is TGenericClass) {
+                TGenericClass gen = TParser.CurrentClass as TGenericClass;
 
                 var v = from c in gen.ArgClasses where c.ClassName == name select c;
                 if (v.Any()) {
@@ -581,6 +613,8 @@ namespace Miyu {
             string class_text = cls.GetClassText();
 
             if (cls.SetMember) {
+                // 処理済みの場合
+
                 return;
             }
 

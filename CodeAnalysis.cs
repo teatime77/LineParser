@@ -66,8 +66,6 @@ namespace Miyu {
             // コールグラフの文字列出力をファイルに書く。
             File.WriteAllText(OutputDir + "\\DumpCallNode.txt", sw.ToString(), Encoding.UTF8);
 
-            TNode.NodeCnt = 0;
-
             // コールグラフのノードのリストから、表示用のノードのリストを作る。
             List<TNode> vnd = CallNodesToNodes(dic.Values);
 
@@ -137,6 +135,8 @@ namespace Miyu {
          * コールグラフのノードのリストから、表示用のノードのリストを作る。
          */
         List<TNode> CallNodesToNodes(IEnumerable<TCallNode> call_nodes) {
+            TNode.NodeCnt = 0;
+
             // コールグラフのノードのリストから、表示用のノードのリストを作る。
             var vnd = (from x in call_nodes select new TNode(x)).ToList();
 
@@ -341,10 +341,12 @@ namespace Miyu {
                 // fldの参照がある場合
 
                 if ( (from x in v where x.Defined select x).Any() ) {
+                    // 定義の場合
 
                     fnc_call.FontColor = Colors.Red;
                 }
                 else {
+                    // 使用の場合
 
                     fnc_call.FontColor = Colors.Blue;
                 }
@@ -371,6 +373,8 @@ namespace Miyu {
             string use_def_dir = OutputDir + "\\UseDef";
 
             if (! Directory.Exists(use_def_dir)) {
+                // ディレクトリが無い場合
+
                 Directory.CreateDirectory(use_def_dir);
             }
 
@@ -391,20 +395,10 @@ namespace Miyu {
                         Stack<TCallNode> stack = new Stack<TCallNode>();
                         MakeUseDefineChainSub(fld, defined_path, stack, MainCall);
 
-                        TNode.NodeCnt = 0;
-                        var vnd = (from x in defined_path select new TNode(x)).ToList();
-                        foreach (TNode nd1 in vnd) {
-                            TCallNode call = nd1.ObjNode as TCallNode;
-                            foreach (TCallNode c in call.CallTo) {
-                                var vnd2 = from x in vnd where x.ObjNode == c select x;
-                                if (vnd2.Any()) {
+                        if (defined_path.Any()) {
 
-                                    nd1.OutNodes.AddRange(vnd2);
-                                }
-                            }
-                        }
-
-                        if (vnd.Any()) {
+                            // コールグラフのノードのリストから、表示用のノードのリストを作る。
+                            List<TNode> vnd = CallNodesToNodes(TCallNode.CopyCallNodes(defined_path));
 
                             string dot_path = string.Format("{0}\\{1}.{2}.dot", use_def_dir, cls.ClassName, fld.NameVar);
 
@@ -508,7 +502,7 @@ namespace Miyu {
             else {
 
                 //return FncCall.NameVar;
-                return TypeCall.GetClassText() + "->" + FncCall.FullName();
+                return TypeCall.GetClassText() + "->" + FncCall.NameVar;
             }
         }
 
