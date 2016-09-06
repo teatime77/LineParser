@@ -161,9 +161,6 @@ namespace Miyu {
         }
 
         public TType(string name) {
-            if(name == "Predicate" || name == "ThreadStatic" || name == "DoubleTappedRoutedEventArgs") {
-                Debug.Write("");
-            }
             SetIdxClass();
             ClassName = name;
         }

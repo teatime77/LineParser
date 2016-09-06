@@ -117,6 +117,8 @@ class DispatcherTimer {
 }
 class double {
 }
+class DoubleTappedRoutedEventArgs {
+}
 class Encoding {
 }
 class Enumerable<T> : IEnumerable<T> {
@@ -228,6 +230,8 @@ class string {
 class StringWriter {
 }
 class Task {
+}
+class ThreadStatic {
 }
 class TimeSpan {
 }

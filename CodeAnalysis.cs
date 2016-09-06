@@ -39,10 +39,9 @@ namespace Miyu {
             TSetAppsInFnc set_app_fnc = new TSetAppsInFnc();
             set_app_fnc.ProjectNavi(this, null);
 
+            // 単純クラスはTypeInfoがあるかソースファイルで宣言されているはず。
             var vcls2 = from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls == null select x;
-            foreach(TType t in vcls2) {
-                Debug.WriteLine("??? {0}", t.ClassName, "");
-            }
+            Debug.Assert(!vcls2.Any());
 
             var vcls = from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls != null select x;
 

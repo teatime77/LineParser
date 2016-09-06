@@ -41,14 +41,16 @@ namespace Miyu {
         public TType HandlerClass = new TType("handler class");
 
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
+        public TSourceFile SystemSourceFile;
+
         public Dictionary<string, TType> SimpleClassTable = new Dictionary<string, TType>();
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
+
         public List<Assembly> AssemblyList = new List<Assembly>();
         public Dictionary<string, TType> TypeInfoTable = new Dictionary<string, TType>();
 
-        Dictionary<string, string> ReflectionNameTable = new Dictionary<string, string>();
-        public TSourceFile SystemSourceFile;
+        public Dictionary<string, string> ReflectionNameTable = new Dictionary<string, string>();
 
         public ManualResetEvent Modified;
         public bool ParseDone;
@@ -120,6 +122,7 @@ namespace Miyu {
 
             tick = DateTime.Now;
 
+            // System.csの構文解析をする。
             SystemSourceFile.Parser.ParseFile(SystemSourceFile);
 
             // 型の別名の辞書をセットする。
@@ -151,8 +154,12 @@ namespace Miyu {
 
                     foreach (TSourceFile src in SourceFiles) {
                         if(src != SystemSourceFile) {
+                            // System.csでない場合
 
                             lock (src) {
+                                // ソースファイルをロックする。
+
+                                // ソースファイルの構文解析をする。
                                 src.Parser.ParseFile(src);
                             }
                         }
