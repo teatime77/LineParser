@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.UI;
-using Windows.UI.Xaml;
 
 namespace Miyu {
 
@@ -43,8 +42,13 @@ namespace Miyu {
         public List<TSourceFile> SourceFiles = new List<TSourceFile>();
         public TSourceFile SystemSourceFile;
 
+        // 単純クラスの辞書
         public Dictionary<string, TType> SimpleClassTable = new Dictionary<string, TType>();
+
+        // パラメータ化クラスの辞書
         public Dictionary<string, TGenericClass> ParameterizedClassTable = new Dictionary<string, TGenericClass>();
+
+        // 特定化クラスの辞書
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
 
         public List<Assembly> AssemblyList = new List<Assembly>();
@@ -131,6 +135,7 @@ namespace Miyu {
             // System.csのクラスのTypeInfoをセットする。
             SetSystemSourceFileTypeInfo();
 
+            // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を保存する。
             Dictionary<string, TType> simple_class_table_save = new Dictionary<string, TType>(SimpleClassTable);
             Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
             Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
@@ -147,6 +152,7 @@ namespace Miyu {
 
                     tick = DateTime.Now;
 
+                    // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を復元する。
                     SimpleClassTable = new Dictionary<string, TType>(simple_class_table_save);
                     ParameterizedClassTable = new Dictionary<string, TGenericClass>(parameterized_class_table_save);
                     SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
@@ -172,27 +178,32 @@ namespace Miyu {
                     args.Add(null);
                     set_parent.ProjectNavi(this, args);
 
-                    while (true) {
+                    ParseDone = true;
 
-                        var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
-                        if (vc.Any()) {
+                    // 特定化がまだの特定化クラスのリスト
+                    var vc = (from c in SpecializedClassTable.Values where !c.SetMember select c).ToList();
+                    if (vc.Any()) {
 
-                            foreach (TGenericClass gen in vc) {
-                                SetMemberOfSpecializedClass(gen);
-                            }
-                        }
-                        else {
-                            break;
+                        foreach (TGenericClass gen in vc) {
+                            // 特定化クラスの中の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+                            AssignParameterInSpecializedClass(gen);
                         }
                     }
 
-                    ParseDone = true;
+                    // 特定化がまだの特定化クラスはないはず。
+                    Debug.Assert(!(from c in SpecializedClassTable.Values where !c.SetMember select c).Any());
 
                     // アプリのクラスのリスト
-                    AppClasses = (from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls != null select x).ToList();
+                    AppClasses = (from x in SimpleClassTable.Values where x.Info == null select x).ToList();
 
+                    // アプリのクラスはSystem.cs以外のソースファイルで定義されているはず。
+                    Debug.Assert( ! (from x in AppClasses where x.SourceFileCls == null || x.SourceFileCls == SystemSourceFile select x).Any());
+
+                    // アプリのクラスの親クラスに対し
                     foreach (TType cls in AppClasses) {
-                        foreach(TType spr in cls.SuperClasses) {
+                        foreach (TType spr in cls.SuperClasses) {
+
+                            // 子クラスのリストをセットする。
                             if (!spr.SubClasses.Contains(cls)) {
                                 spr.SubClasses.Add(cls);
                             }
@@ -207,13 +218,17 @@ namespace Miyu {
                     }
                     Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
-                    // クラスの辞書のチェック
-                    foreach(TType c in SimpleClassTable.Values) {
+                    // 単純クラスの辞書のチェック
+                    foreach (TType c in SimpleClassTable.Values) {
                         Debug.Assert(c.GenericType == EClass.SimpleClass && !(c is TGenericClass));
                     }
-                    foreach(TType c in ParameterizedClassTable.Values) {
+
+                    // パラメータ化クラスの辞書のチェック
+                    foreach (TType c in ParameterizedClassTable.Values) {
                         Debug.Assert(c.GenericType == EClass.ParameterizedClass);
                     }
+
+                    // 特定化クラスの辞書のチェック
                     foreach (TType c in SpecializedClassTable.Values) {
                         Debug.Assert(c.GenericType == EClass.SpecializedClass);
                     }
@@ -380,16 +395,21 @@ namespace Miyu {
             ReflectionNameTable.Add("short", "Int16");
             ReflectionNameTable.Add("string", "String");
             ReflectionNameTable.Add("void", "Void");
+            ReflectionNameTable.Add("ThreadStatic", "ThreadStaticAttribute");
         }
 
         /*
          * System.csのクラスのTypeInfoをセットする。
          */
         public void SetSystemSourceFileTypeInfo() {
+            // すべての単純クラスに対し
             foreach (TType tp in SimpleClassTable.Values) {
+                // 型のTypeInfoをセットする。
                 SetTypeInfo(tp);
                 if (tp.Info == null) {
-                    Debug.WriteLine("ERR system class {0}", tp.ClassName, "");
+                    // TypeInfoがない場合
+
+                    throw new TParseException("Unknown system class : " + tp.ClassName);
                 }
             }
         }
@@ -446,45 +466,46 @@ namespace Miyu {
             }
         }
 
+        /*
+         * 名前からクラスを得る。登録済みのクラスが無ければ新たに作る。
+         */
         public TType GetClassByName(string name) {
             TType cls;
             TGenericClass gen_class;
 
             if (SimpleClassTable.TryGetValue(name, out cls)) {
+                // 単純クラスの辞書にある場合
+
                 return cls;
             }
             else if (ParameterizedClassTable.TryGetValue(name, out gen_class)) {
+                // パラメータ化クラスの辞書にある場合
+
                 return gen_class;
             }
             else {
-                if(TParser.CurrentClass is TGenericClass) {
+                if (TParser.CurrentClass is TGenericClass) {
+                    // 総称型のクラス定義の中の場合
+
                     TGenericClass gen = TParser.CurrentClass as TGenericClass;
 
-                    var v = from t in gen.ArgClasses where t.ClassName == name select t;
+                    // 名前が一致する仮引数クラスを得る。
+                    var v = from c in gen.ArgClasses where c.ClassName == name select c;
                     if (v.Any()) {
+                        // 名前が一致する仮引数クラスがある場合
 
                         return v.First();
                     }
                 }
 
+                // 登録済みのクラスが無ければ単純クラスを新たに作る。
                 cls = new TType(name);
+
+                // 単純クラスの辞書に追加する。
                 SimpleClassTable.Add(name, cls);
 
                 return cls;
             }
-        }
-
-        public TType GetParamClassByName(string name) {
-            if (TParser.CurrentClass is TGenericClass) {
-                TGenericClass gen = TParser.CurrentClass as TGenericClass;
-
-                var v = from c in gen.ArgClasses where c.ClassName == name select c;
-                if (v.Any()) {
-                    return v.First();
-                }
-            }
-
-            return GetClassByName(name);
         }
 
         public string MakeClassText(string class_name, List<TType> param_classes, int dim_cnt) {
@@ -509,34 +530,50 @@ namespace Miyu {
             return sw.ToString();
         }
 
+        /*
+         * パラメータ化クラスを得る。無ければ新たに作る。
+         */
         public TGenericClass GetParameterizedClass(string class_name, List<TType> param_classes) {
             TGenericClass reg_class;
 
             if (! ParameterizedClassTable.TryGetValue(class_name, out reg_class)) {
+                // パラメータ化クラスの辞書にない場合
 
+                // パラメータ化クラスを新たに作る。
                 reg_class = new TGenericClass(class_name, param_classes);
                 reg_class.GenericType = EClass.ParameterizedClass;
 
+                // パラメータ化クラスの辞書に追加する。
                 ParameterizedClassTable.Add(class_name, reg_class);
             }
 
             return reg_class;
         }
 
+        /*
+         * 特定化クラスを得る。無ければ新たに作る。
+         */
         public TGenericClass GetSpecializedClass(TGenericClass org_class, List<TType> param_classes, int dim_cnt) {
             string class_text = MakeClassText(org_class.ClassName, param_classes, dim_cnt);
 
             TGenericClass reg_class;
             if (!SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
+                // 特定化クラスの辞書にない場合
 
+                // 特定化クラスを新たに作る。
                 reg_class = new TGenericClass(org_class, param_classes, dim_cnt);
                 reg_class.GenericType = EClass.SpecializedClass;
 
                 if (ParseDone) {
-                    SetMemberOfSpecializedClass(reg_class);
+                    // 構文解析が終わった場合
+
+                    // 特定化クラスの中の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+                    AssignParameterInSpecializedClass(reg_class);
                 }
                 else {
+                    // 構文解析の途中の場合
 
+                    // 特定化クラスの辞書に追加する。構文解析の後で型の中に仮引数クラスがあれば実引数の型を割り当てる。
                     SpecializedClassTable.Add(class_text, reg_class);
                 }
             }
@@ -544,64 +581,94 @@ namespace Miyu {
             return reg_class;
         }
 
-        public TType SubstituteArgumentClass(TType tp, Dictionary<string, TType> dic) {
+        /*
+         * 型の中に仮引数クラスがあれば実引数の型を割り当てる。
+         */
+        public TType AssignParameterClass(TType tp, Dictionary<string, TType> dic) {
             if(!(tp is TGenericClass)) {
 
                 TType tp2;
 
-                if(! dic.TryGetValue(tp.ClassName, out tp2)) {
+                if(dic.TryGetValue(tp.ClassName, out tp2)) {
 
-                    tp2 = tp;
+                    Debug.Assert(tp.GenericType == EClass.ParameterClass);
+                    return tp2;
                 }
+                else {
 
-                return tp2;
+                    Debug.Assert(tp.GenericType == EClass.SimpleClass);
+                    return tp;
+                }
             }
 
             TGenericClass gen = tp as TGenericClass;
+            Debug.Assert(gen.GenericType == EClass.SpecializedClass || gen.GenericType == EClass.UnspecializedClass);
             bool changed = false;
 
             List<TType> vtp = new List<TType>();
             foreach(TType tp2 in gen.ArgClasses) {
-                TType tp3 = SubstituteArgumentClass(tp2, dic);
+                // 型の中に仮引数クラスがあれば実引数の型を割り当てる。
+                TType tp3 = AssignParameterClass(tp2, dic);
                 if(tp3 != tp2) {
                     changed = true;
                 }
                 vtp.Add(tp3);
             }
 
-            if(!changed) {
+            if(changed) {
 
+                Debug.Assert(gen.GenericType == EClass.UnspecializedClass);
+                return GetSpecializedClass(gen.OrgCla, vtp, gen.DimCnt);
+            }
+            else {
+
+                Debug.Assert(gen.GenericType == EClass.SpecializedClass);
                 return tp;
             }
-
-            return GetSpecializedClass(gen.OrgCla, vtp, gen.DimCnt);
         }
 
-        public TVariable CopyVariable(TVariable var_src, Dictionary<string, TType> dic) {
-            TType tp = SubstituteArgumentClass(var_src.TypeVar, dic);
+        /*
+         * 特定化クラスの変数を作る。
+         */
+        public TVariable MakeSpecializedClassVariable(TVariable var_src, Dictionary<string, TType> dic) {
+            // 変数の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+            TType tp = AssignParameterClass(var_src.TypeVar, dic);
             TVariable var_dst = new TVariable(var_src.ModifierVar, var_src.TokenVar, tp, null);
 
             return var_dst;
         }
 
-        public TField MakeSpecializedField(TType cla1, TField fld_src, Dictionary<string, TType> dic) {
-            TType tp = SubstituteArgumentClass(fld_src.TypeVar, dic);
-            TField fld_dst = new TField(cla1, fld_src.ModifierVar, fld_src.TokenVar, tp, null);
+        /*
+         * 特定化クラスのフィールドを作る。
+         */
+        public TField MakeSpecializedClassField(TType declaring_type, TField fld_src, Dictionary<string, TType> dic) {
+            // フィールドの型の中に仮引数クラスがあれば実引数の型を割り当てる。
+            TType tp = AssignParameterClass(fld_src.TypeVar, dic);
+            TField fld_dst = new TField(declaring_type, fld_src.ModifierVar, fld_src.TokenVar, tp, null);
 
             return fld_dst;
         }
 
-        public TFunction MakeSpecializedFunctionDeclaration(TType cla1, TFunction fnc_src, Dictionary<string, TType> dic) {
-            TVariable[] args = (from x in fnc_src.ArgsFnc select CopyVariable(x, dic)).ToArray();
-            TType ret_type = SubstituteArgumentClass(fnc_src.TypeVar, dic);
+        /*
+         * 特定化クラスの関数宣言を作る。
+         */
+        public TFunction MakeSpecializedClassFunctionDeclaration(TType declaring_type, TFunction fnc_src, Dictionary<string, TType> dic) {
+            // 特定化クラスの変数を作る。
+            TVariable[] args = (from x in fnc_src.ArgsFnc select MakeSpecializedClassVariable(x, dic)).ToArray();
+
+            // 戻り値の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+            TType ret_type = AssignParameterClass(fnc_src.TypeVar, dic);
 
             TFunction fnc_dst = new TFunction(fnc_src.ModifierVar, fnc_src.TokenVar, args, ret_type, null, fnc_src.KindFnc);
-            fnc_dst.DeclaringType = cla1;
+            fnc_dst.DeclaringType = declaring_type;
 
             return fnc_dst;
         }
 
-        public void SetMemberOfSpecializedClass(TGenericClass cls) {
+        /*
+         * 特定化クラスの中の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+         */
+        public void AssignParameterInSpecializedClass(TGenericClass cls) {
             string class_text = cls.GetClassText();
 
             if (cls.SetMember) {
@@ -609,38 +676,51 @@ namespace Miyu {
 
                 return;
             }
-
-            if (! SpecializedClassTable.ContainsKey(class_text)) {
-                SpecializedClassTable.Add(class_text, cls);
-            }
-
             cls.SetMember = true;
 
-            Dictionary<string, TType> dic = new Dictionary<string, TType>();
+            if (! SpecializedClassTable.ContainsKey(class_text)) {
+                // 特定化クラスの辞書にない場合
+
+                // 特定化クラスの辞書に追加する
+                SpecializedClassTable.Add(class_text, cls);
+            }
 
             if(cls.ArgClasses == null || cls.ArgClasses.Count != cls.OrgCla.ArgClasses.Count) {
                 throw new TParseException();
             }
 
-            for(int i = 0; i < cls.OrgCla.ArgClasses.Count; i++) {
+            // 仮引数クラスから実引数の型への変換辞書を作る。
+            Dictionary<string, TType> dic = new Dictionary<string, TType>();
+            for (int i = 0; i < cls.OrgCla.ArgClasses.Count; i++) {
                 dic.Add(cls.OrgCla.ArgClasses[i].ClassName, cls.ArgClasses[i]);
             }
 
             for (int i = 0; i < cls.ArgClasses.Count; i++) {
-                cls.ArgClasses[i] = SubstituteArgumentClass(cls.ArgClasses[i], dic);
+                // 型の中に仮引数クラスがあれば実引数の型を割り当てる。
+                cls.ArgClasses[i] = AssignParameterClass(cls.ArgClasses[i], dic);
             }
 
             cls.KindClass = cls.OrgCla.KindClass;
 
-            cls.SuperClasses = (from c in cls.OrgCla.SuperClasses select SubstituteArgumentClass(c, dic)).ToList();
+            // 親クラスのリストの中に仮引数クラスがあれば実引数の型を割り当てる。
+            cls.SuperClasses = (from c in cls.OrgCla.SuperClasses select AssignParameterClass(c, dic)).ToList();
 
-            if(cls.OrgCla.RetType != null) {
-                cls.RetType = SubstituteArgumentClass(cls.OrgCla.RetType, dic);
-                cls.ArgTypes = (from c in cls.OrgCla.ArgTypes select SubstituteArgumentClass(c, dic)).ToArray();
+            Debug.Assert((cls.OrgCla.RetType != null) == (cls.OrgCla.KindClass == EType.Delegate));
+            if (cls.OrgCla.RetType != null) {
+                // デリゲートの場合
+
+                // デリゲートの戻り値の型の中に仮引数クラスがあれば実引数の型を割り当てる。
+                cls.RetType = AssignParameterClass(cls.OrgCla.RetType, dic);
+
+                // デリゲートの引数の型のリストの中に仮引数クラスがあれば実引数の型を割り当てる。
+                cls.ArgTypes = (from c in cls.OrgCla.ArgTypes select AssignParameterClass(c, dic)).ToArray();
             }
 
-            cls.Fields = (from x in cls.OrgCla.Fields select MakeSpecializedField(cls, x, dic)).ToList();
-            cls.Functions = (from x in cls.OrgCla.Functions select MakeSpecializedFunctionDeclaration(cls, x, dic)).ToList();
+            // 特定化クラスのフィールドを作る。
+            cls.Fields = (from x in cls.OrgCla.Fields select MakeSpecializedClassField(cls, x, dic)).ToList();
+
+            // 特定化クラスの関数宣言を作る。
+            cls.Functions = (from x in cls.OrgCla.Functions select MakeSpecializedClassFunctionDeclaration(cls, x, dic)).ToList();
         }
     }
 }

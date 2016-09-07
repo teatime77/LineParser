@@ -107,7 +107,7 @@ namespace Miyu {
                     TToken param_name = GetToken(EKind.Identifier);
 
                     TType param_class = new TType(param_name.TextTkn);
-                    param_class.GenericType = EClass.ArgumentClass;
+                    param_class.GenericType = EClass.ParameterClass;
 
                     param_classes.Add(param_class);
 
@@ -120,6 +120,7 @@ namespace Miyu {
                 }
                 GetToken(EKind.GT);
 
+                // パラメータ化クラスを得る。無ければ新たに作る。
                 cls = TGlb.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             else {
@@ -243,7 +244,7 @@ namespace Miyu {
                     TToken param_name = GetToken(EKind.Identifier);
 
                     TType param_class = new TType(param_name.TextTkn);
-                    param_class.GenericType = EClass.ArgumentClass;
+                    param_class.GenericType = EClass.ParameterClass;
 
                     param_classes.Add(param_class);
 
@@ -265,6 +266,7 @@ namespace Miyu {
             }
             else {
 
+                // パラメータ化クラスを得る。無ければ新たに作る。
                 dlg = TGlb.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
             dlg.KindClass = EType.Delegate;
@@ -332,7 +334,7 @@ namespace Miyu {
          */
         public TType ReadType(bool new_class) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TType cls1 = TGlb.Project.GetParamClassByName(id.TextTkn);
+            TType cls1 = TGlb.Project.GetClassByName(id.TextTkn);
 
             List<TType> param_classes = null;
             bool contains_argument_class = false;
@@ -352,7 +354,8 @@ namespace Miyu {
                 while (true) {
                     TType param_class = ReadType(false);
 
-                    if (param_class.GenericType == EClass.ArgumentClass || param_class is TGenericClass && (param_class as TGenericClass).ContainsArgumentClass) {
+                    if (param_class.GenericType == EClass.ParameterClass || param_class.GenericType == EClass.UnspecializedClass) {
+                        // 仮引数クラスか非特定化クラスを含むクラスの場合
 
                         contains_argument_class = true;
                     }
@@ -369,6 +372,7 @@ namespace Miyu {
                 GetToken(EKind.GT);
 
                 if(org_cla.ArgClasses.Count != param_classes.Count) {
+                    // 仮引数クラスの数が一致しない場合
 
                     throw new TParseException("総称型の引数の数が一致しません。");
                 }
@@ -380,6 +384,7 @@ namespace Miyu {
 
                 GetToken(EKind.LB);
 
+                // 配列の次元を得る。1次元配列のdim_cntは1。
                 dim_cnt = 1;
                 while (CurrentToken.Kind == EKind.Comma) {
                     GetToken(EKind.Comma);
@@ -390,10 +395,10 @@ namespace Miyu {
             }
 
             if (contains_argument_class) {
-                // 引数にArgumentClassを含む場合
+                // 仮引数クラスか非特定化クラスを含む場合
 
                 TGenericClass tmp_class = new TGenericClass(cls1 as TGenericClass, param_classes, dim_cnt);
-                tmp_class.ContainsArgumentClass = true;
+                tmp_class.GenericType = EClass.UnspecializedClass;
 
                 return tmp_class;
             }
@@ -415,18 +420,22 @@ namespace Miyu {
 
                 return cls2;
             }
+            else {
+                // 配列の場合
 
-            List<TType> array_element_class_list = new List<TType> { cls2 };
+                List<TType> array_element_class_list = new List<TType> { cls2 };
 
-            if (cls2.GenericType == EClass.ArgumentClass) {
+                if (cls2.GenericType == EClass.ParameterClass || cls2.GenericType == EClass.UnspecializedClass) {
+                    // 仮引数クラスか非特定化クラスの場合
 
-                TGenericClass tmp_class = new TGenericClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
-                tmp_class.ContainsArgumentClass = true;
+                    TGenericClass tmp_class = new TGenericClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
+                    tmp_class.GenericType = EClass.UnspecializedClass;
 
-                return tmp_class;
+                    return tmp_class;
+                }
+
+                return TGlb.Project.GetSpecializedClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
             }
-
-            return TGlb.Project.GetSpecializedClass(TGlb.Project.ArrayClass, array_element_class_list, dim_cnt);
         }
 
         public virtual void LineEnd() {

@@ -33,11 +33,11 @@ namespace Miyu {
      * クラスの種類
      */
     public enum EClass {
-        UnknownClass,
         SimpleClass,
         ParameterizedClass,
-        ArgumentClass,
+        ParameterClass,
         SpecializedClass,
+        UnspecializedClass,
     }
 
     /*
@@ -151,8 +151,10 @@ namespace Miyu {
         public TType RetType;
         public TType[] ArgTypes;
 
+        // 親クラスのリスト
         public List<TType> SuperClasses = new List<TType>();
 
+        // 子クラスのリスト
         public List<TType> SubClasses = new List<TType>();
 
         void SetIdxClass() {
@@ -390,7 +392,6 @@ namespace Miyu {
      * 総称型
      */
     public class TGenericClass : TType {
-        public bool ContainsArgumentClass;
         public int DimCnt;
         public bool SetMember;
 
@@ -514,24 +515,24 @@ namespace Miyu {
     public class TField : TMember {
         public bool IsWeak;
 
-        public TField(TType parent_class, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
-            DeclaringType = parent_class;
+        public TField(TType declaring_type, TModifier mod1, TToken name, TType tp, TTerm init) : base(mod1, name, tp, init) {
+            DeclaringType = declaring_type;
         }
 
-        public TField(TType parent_class, FieldInfo fld_info) {
-            DeclaringType = parent_class;
+        public TField(TType declaring_type, FieldInfo fld_info) {
+            DeclaringType = declaring_type;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.FieldType.GetTypeInfo());
         }
 
-        public TField(TType parent_class, PropertyInfo fld_info) {
-            DeclaringType = parent_class;
+        public TField(TType declaring_type, PropertyInfo fld_info) {
+            DeclaringType = declaring_type;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.PropertyType.GetTypeInfo());
         }
 
-        public TField(TType parent_class, EventInfo fld_info) {
-            DeclaringType = parent_class;
+        public TField(TType declaring_type, EventInfo fld_info) {
+            DeclaringType = declaring_type;
             NameVar = fld_info.Name;
             TypeVar = TGlb.Project.RegisterTypeInfoTable(fld_info.EventHandlerType.GetTypeInfo());
         }
