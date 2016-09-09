@@ -28,6 +28,8 @@ namespace Miyu {
         public List<TField> FieldsSrc = new List<TField>();
         public List<TFunction> FunctionsSrc = new List<TFunction>();
 
+        public bool LinesTokensChanged;
+
         public TSourceFile(string path, TParser parser) {
             PathSrc = path;
             Parser = parser;
@@ -138,6 +140,7 @@ namespace Miyu {
                 TToken[] tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
                 lock (this) {
                     line.Tokens = tokens;
+                    LinesTokensChanged = true;
                 }
                 foreach (TToken tkn in line.Tokens) {
 

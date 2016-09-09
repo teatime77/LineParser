@@ -445,8 +445,10 @@ namespace Miyu {
         要約を作る。
         */
         public void MakeSummary() {
+            StringWriter sw = new StringWriter();
+
             foreach (TSourceFile src in SourceFiles) {
-                Debug.WriteLine("{0} ------------------------------", src.PathSrc, "");
+                sw.WriteLine("{0} ------------------------------", src.PathSrc, "");
 
                 foreach (TType cls in src.ClassesSrc) {
                     var vfnc = from x in src.FunctionsSrc
@@ -456,7 +458,7 @@ namespace Miyu {
                         var vc = from c in fnc.CommentVar where c.Kind == EKind.BlockCommentContinued && c.TextTkn.Trim() != "/*" select c;
                         if (vc.Any()) {
 
-                            Debug.WriteLine("{0} {1}", fnc.NameVar, vc.First().TextTkn.Trim());
+                            sw.WriteLine("{0} {1}", fnc.NameVar, vc.First().TextTkn.Trim());
                         }
                     }
                 }

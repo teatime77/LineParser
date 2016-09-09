@@ -656,6 +656,16 @@ namespace Miyu {
                 ReplaceText(SelStart(), SelEnd(), "\n");
                 break;
 
+            case VirtualKey.Space:
+                // 選択した範囲のテキストを別のテキストに置換する。
+                ReplaceText(SelStart(), SelEnd(), " ");
+                break;
+
+            case VirtualKey.Tab:
+                // 選択した範囲のテキストを別のテキストに置換する。
+                ReplaceText(SelStart(), SelEnd(), "    ");
+                break;
+
             case VirtualKey.C:
                 if (control_down && SelOrigin != -1) {
                     // Ctrl+Cで選択中の場合

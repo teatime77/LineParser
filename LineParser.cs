@@ -18,10 +18,13 @@ namespace Miyu {
         public static TToken EOTToken = new TToken(ETokenType.EOT, EKind.EOT,"", 0, 0);
 
         [ThreadStatic]
-        public TType LookaheadClass;
+        public static TType LookaheadClass;
 
         [ThreadStatic]
         public static TType CurrentClass;
+
+        [ThreadStatic]
+        public static TLine CurrentLine;
 
         public TToken[] TokenList;
         public int TokenPos;
@@ -1417,6 +1420,7 @@ namespace Miyu {
                 }
 
                 TLine line = src.Lines[line_idx];
+                CurrentLine = line;
                 if (line.Continued) {
                     // 継続行の場合
 
@@ -2272,10 +2276,11 @@ namespace Miyu {
 
     public class TParseException : Exception {
         public TParseException() {
+            Debug.WriteLine("Parse Exception : {0}", TParser.CurrentLine.TextLine, "");
         }
 
         public TParseException(string msg) {
-            Debug.WriteLine(msg);
+            Debug.WriteLine("Parse Exception : {0}\r\n\t{1}", TParser.CurrentLine.TextLine, msg);
         }
     }
 

@@ -83,6 +83,9 @@ namespace Miyu {
     }
 
     public class TSys {
+        /*
+         * 添え字の列挙を得る。現在は未使用。
+         */
         public static IEnumerable<int> Indexes(int cnt) {
             for(int i = 0; i < cnt; i++) {
                 yield return i;

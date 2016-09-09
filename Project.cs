@@ -54,7 +54,7 @@ namespace Miyu {
         public List<Assembly> AssemblyList = new List<Assembly>();
         public Dictionary<string, TType> TypeInfoTable = new Dictionary<string, TType>();
 
-        public Dictionary<string, string> ReflectionNameTable = new Dictionary<string, string>();
+        public Dictionary<string, string> TypeAliasTable = new Dictionary<string, string>();
 
         public ManualResetEvent Modified;
         public bool ParseDone;
@@ -121,7 +121,9 @@ namespace Miyu {
 
             TGlb.Project = this;
             TGlb.Parser = TCSharpParser.CSharpParser;
+            ParseDone = false;
 
+            // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
             RegisterClassNames();
 
             tick = DateTime.Now;
@@ -143,14 +145,15 @@ namespace Miyu {
             Debug.WriteLine("System.cs 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
             tick = DateTime.Now;
 
+            bool is_first = true;
             while (true) {
                 Modified.WaitOne();
                 Modified.Reset();
 
                 try {
-                    Debug.WriteLine("解析開始");
+                    do_again:
 
-                    tick = DateTime.Now;
+                    Debug.WriteLine("解析開始");
 
                     // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を復元する。
                     SimpleClassTable = new Dictionary<string, TType>(simple_class_table_save);
@@ -158,12 +161,32 @@ namespace Miyu {
                     SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
                     ParseDone = false;
 
+                    // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
+                    bool ok = RegisterClassNames();
+                    if (!ok) {
+                        // トークン列が変化した場合
+
+                        goto do_again;
+                    }
+
+                    tick = DateTime.Now;
+                    Debug.WriteLine("型名登録 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    tick = DateTime.Now;
+
                     foreach (TSourceFile src in SourceFiles) {
                         if(src != SystemSourceFile) {
                             // System.csでない場合
 
                             lock (src) {
                                 // ソースファイルをロックする。
+
+                                if (src.LinesTokensChanged) {
+                                    // トークン列が変化した場合
+
+                                    Debug.WriteLine("トークン列が変化した。");
+                                    src.LinesTokensChanged = false;
+                                    goto do_again;
+                                }
 
                                 // ソースファイルの構文解析をする。
                                 src.Parser.ParseFile(src);
@@ -197,6 +220,10 @@ namespace Miyu {
                     AppClasses = (from x in SimpleClassTable.Values where x.Info == null select x).ToList();
 
                     // アプリのクラスはSystem.cs以外のソースファイルで定義されているはず。
+                    var apps = from x in AppClasses where x.SourceFileCls == null || x.SourceFileCls == SystemSourceFile select x;
+                    if (apps.Any()) {
+                        Debug.WriteLine("");
+                    }
                     Debug.Assert( ! (from x in AppClasses where x.SourceFileCls == null || x.SourceFileCls == SystemSourceFile select x).Any());
 
                     // アプリのクラスの親クラスに対し
@@ -233,51 +260,63 @@ namespace Miyu {
                         Debug.Assert(c.GenericType == EClass.SpecializedClass);
                     }
 
-                    tick = DateTime.Now;
+                    if (is_first) {
+                        // 最初の場合
 
-                    // HTMLを出力するディレクトリを作る。
-                    string html_dir = OutputDir + "\\html";
-                    if (!Directory.Exists(OutputDir)) {
-                        Directory.CreateDirectory(OutputDir);
+                        is_first = false;
+
+                        tick = DateTime.Now;
+
+                        // HTMLを出力するディレクトリを作る。
+                        string html_dir = OutputDir + "\\html";
+                        if (!Directory.Exists(OutputDir)) {
+                            Directory.CreateDirectory(OutputDir);
+                        }
+                        if (!Directory.Exists(WebDir)) {
+                            Directory.CreateDirectory(WebDir);
+                        }
+                        if (!Directory.Exists(html_dir)) {
+                            Directory.CreateDirectory(html_dir);
+                        }
+
+                        // 値を代入している変数参照のDefinedをtrueにする。
+                        TSetDefined set_defined = new TSetDefined();
+                        set_defined.ProjectNavi(this, null);
+
+                        // すべてのソースファイルに対し
+                        foreach (TSourceFile src in SourceFiles) {
+                            TTokenWriter tw = new TTokenWriter(src.Parser);
+                            src.Parser.SourceFileText(src, tw);
+
+                            string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
+
+                            File.WriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
+                            File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
+                        }
+
+                        // HTMLのソースコードを作る。
+                        MakeHTMLSourceCode();
+
+                        Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        tick = DateTime.Now;
+
+                        // 使用・定義連鎖を作る。
+                        MakeUseDefineChain();
+
+                        Debug.WriteLine("使用・定義連鎖 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        tick = DateTime.Now;
+
+                        // クラス図を作る。
+                        MakeClassDiagram();
+
+                        Debug.WriteLine("クラス図 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        tick = DateTime.Now;
+
+                        // 要約を作る。
+                        MakeSummary();
+
+                        Debug.WriteLine("要約 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     }
-                    if (!Directory.Exists(WebDir)) {
-                        Directory.CreateDirectory(WebDir);
-                    }
-                    if (!Directory.Exists(html_dir)) {
-                        Directory.CreateDirectory(html_dir);
-                    }
-
-                    // 値を代入している変数参照のDefinedをtrueにする。
-                    TSetDefined set_defined = new TSetDefined();
-                    set_defined.ProjectNavi(this, null);
-
-                    // すべてのソースファイルに対し
-                    foreach (TSourceFile src in SourceFiles) {
-                        TTokenWriter tw = new TTokenWriter(src.Parser);
-                        src.Parser.SourceFileText(src, tw);
-
-                        string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
-
-                        File.WriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
-                        File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
-                    }
-
-                    // HTMLのソースコードを作る。
-                    MakeHTMLSourceCode();
-
-                    Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
-                    tick = DateTime.Now;
-
-                    // 使用・定義連鎖を作る。
-                    MakeUseDefineChain();
-
-                    // クラス図を作る。
-                    MakeClassDiagram();
-
-                    // 要約を作る。
-                    MakeSummary();
-
-                    Debug.WriteLine("静的解析 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                 }
                 catch (TBuildCancel) {
                 }
@@ -303,6 +342,11 @@ namespace Miyu {
             StorageFolder localFolder = ApplicationData.Current.LocalFolder;
             SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
                            select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
+
+            // コンストラクタの中でセットされたフラグをリセットする。
+            foreach (TSourceFile src in SourceFiles) {
+                src.LinesTokensChanged = false;
+            }
 
             SystemSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "System.cs" select src).First();
         }
@@ -344,7 +388,7 @@ namespace Miyu {
 
             string sys_name;
 
-            if (! ReflectionNameTable.TryGetValue(tp.ClassName, out sys_name)) {
+            if (! TypeAliasTable.TryGetValue(tp.ClassName, out sys_name)) {
 
                 sys_name = tp.ClassName;
             }
@@ -382,20 +426,20 @@ namespace Miyu {
          * 型の別名の辞書をセットする。
          */
         public void SetTypeAliasTable() {
-            ReflectionNameTable.Add("bool", "Boolean");
-            ReflectionNameTable.Add("byte", "Byte");
-            ReflectionNameTable.Add("char", "Char");
-            ReflectionNameTable.Add("Dictionary", "Dictionary`2");
-            ReflectionNameTable.Add("double", "Double");
-            ReflectionNameTable.Add("float", "Single");
-            ReflectionNameTable.Add("IEnumerable", "IEnumerable`1");
-            ReflectionNameTable.Add("int", "Int32");
-            ReflectionNameTable.Add("List", "List`1");
-            ReflectionNameTable.Add("object", "Object");
-            ReflectionNameTable.Add("short", "Int16");
-            ReflectionNameTable.Add("string", "String");
-            ReflectionNameTable.Add("void", "Void");
-            ReflectionNameTable.Add("ThreadStatic", "ThreadStaticAttribute");
+            TypeAliasTable.Add("bool", "Boolean");
+            TypeAliasTable.Add("byte", "Byte");
+            TypeAliasTable.Add("char", "Char");
+            TypeAliasTable.Add("Dictionary", "Dictionary`2");
+            TypeAliasTable.Add("double", "Double");
+            TypeAliasTable.Add("float", "Single");
+            TypeAliasTable.Add("IEnumerable", "IEnumerable`1");
+            TypeAliasTable.Add("int", "Int32");
+            TypeAliasTable.Add("List", "List`1");
+            TypeAliasTable.Add("object", "Object");
+            TypeAliasTable.Add("short", "Int16");
+            TypeAliasTable.Add("string", "String");
+            TypeAliasTable.Add("void", "Void");
+            TypeAliasTable.Add("ThreadStatic", "ThreadStaticAttribute");
         }
 
         /*
@@ -414,56 +458,77 @@ namespace Miyu {
             }
         }
 
-        public void RegisterClassNames() {
-            //var v = from src in SourceFiles
-            //        from line in src.Lines where line.Tokens != null
-            //        from idx in TSys.Indexes(line.Tokens.Length) where line.Tokens[idx].Kind
-
-
+        /*
+         * 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
+         */
+        public bool RegisterClassNames() {
             List<string> type_names = new List<string>();
 
             // すべてのソースファイルに対し
             foreach(TSourceFile src in SourceFiles) {
+                lock (src) {
+                    if (src.LinesTokensChanged) {
+                        // トークン列が変化した場合
 
-                // ソースファイル内のすべての行に対し
-                foreach (TLine line in src.Lines) {
+                        src.LinesTokensChanged = false;
+                        Debug.WriteLine("トークン列が変化した。");
+                        return false;
+                    }
 
-                    // 型宣言の字句(class, struct, enum, interface, delegate)の位置を得る。
-                    int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
-                    if (idx != -1) {
-                        // 型宣言の字句がある場合
+                    // ソースファイル内のすべての行に対し
+                    foreach (TLine line in src.Lines) {
 
-                        if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
-                            // 型宣言の字句の直後が識別子か型名の場合
+                        // 型宣言の字句(class, struct, enum, interface, delegate)の位置を得る。
+                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
+                        if (idx != -1) {
+                            // 型宣言の字句がある場合
 
-                            // 型名を得る。
-                            string name = line.Tokens[idx + 1].TextTkn;
-                            if (!type_names.Contains(name)) {
-                                // 型名のリストに含まれない場合
+                            if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+                                // 型宣言の字句の直後が識別子か型名の場合
 
-                                //Debug.WriteLine("typeof({0}),", name, "");
-                                // 型名のリストに追加する。
-                                type_names.Add(name);
+                                // 型名を得る。
+                                string name = line.Tokens[idx + 1].TextTkn;
+                                if (!type_names.Contains(name)) {
+                                    // 型名のリストに含まれない場合
+
+                                    //Debug.WriteLine("typeof({0}),", name, "");
+                                    // 型名のリストに追加する。
+                                    type_names.Add(name);
+                                }
                             }
-                        }
-                        else {
+                            else {
 
-                            Debug.WriteLine("class syntax error");
+                                Debug.WriteLine("class syntax error");
+                            }
                         }
                     }
                 }
             }
 
-            // 名前が型名のリストに含まれる識別子のリスト
-            var vtkn = from src in SourceFiles
-                    from line in src.Lines
-                    from tkn in line.Tokens
-                    where tkn.Kind == EKind.Identifier && type_names.Contains(tkn.TextTkn) select tkn;
+            foreach (TSourceFile src in SourceFiles) {
+                lock (src) {
+                    if (src.LinesTokensChanged) {
+                        // トークン列が変化した場合
 
-            foreach (TToken tkn in vtkn) {
-                // 字句の種類はClassNameにする。
-                tkn.Kind = EKind.ClassName;
+                        src.LinesTokensChanged = false;
+                        Debug.WriteLine("トークン列が変化した。");
+                        return false;
+                    }
+
+                    // 名前が型名のリストに含まれる識別子のリスト
+                    var vtkn = from line in src.Lines
+                               from tkn in line.Tokens
+                               where tkn.Kind == EKind.Identifier && type_names.Contains(tkn.TextTkn)
+                               select tkn;
+
+                    foreach (TToken tkn in vtkn) {
+                        // 字句の種類はClassNameにする。
+                        tkn.Kind = EKind.ClassName;
+                    }
+                }
             }
+
+            return true;
         }
 
         /*
@@ -523,7 +588,9 @@ namespace Miyu {
             sw.Write(">");
 
             if (dim_cnt != 0) {
+                // 配列の場合
 
+                // 配列の次元-1個のカンマを[]で囲む。
                 sw.Write("[{0}]", new string(',', dim_cnt - 1));
             }
 
@@ -553,15 +620,15 @@ namespace Miyu {
         /*
          * 特定化クラスを得る。無ければ新たに作る。
          */
-        public TGenericClass GetSpecializedClass(TGenericClass org_class, List<TType> param_classes, int dim_cnt) {
-            string class_text = MakeClassText(org_class.ClassName, param_classes, dim_cnt);
+        public TGenericClass GetSpecializedClass(TGenericClass org_class, List<TType> arg_classes, int dim_cnt) {
+            string class_text = MakeClassText(org_class.ClassName, arg_classes, dim_cnt);
 
             TGenericClass reg_class;
             if (!SpecializedClassTable.TryGetValue(class_text, out reg_class)) {
                 // 特定化クラスの辞書にない場合
 
                 // 特定化クラスを新たに作る。
-                reg_class = new TGenericClass(org_class, param_classes, dim_cnt);
+                reg_class = new TGenericClass(org_class, arg_classes, dim_cnt);
                 reg_class.GenericType = EClass.SpecializedClass;
 
                 if (ParseDone) {
