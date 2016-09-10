@@ -21,14 +21,13 @@ namespace Miyu {
         public List<TUsing> Usings = new List<TUsing>();
         public List<TType> ClassesSrc = new List<TType>();
         public List<TLine> Lines = new List<TLine>();
+        public List<TLine> EditLines = new List<TLine>();
         public List<MyEditor> Editors = new List<MyEditor>();
 
         public TParser Parser;
 
         public List<TField> FieldsSrc = new List<TField>();
         public List<TFunction> FunctionsSrc = new List<TFunction>();
-
-        public bool LinesTokensChanged;
 
         public TSourceFile(string path, TParser parser) {
             PathSrc = path;
@@ -38,6 +37,7 @@ namespace Miyu {
             Chars.AddRange(from c in text select new TChar(c));
 
             Lines.Clear();
+            EditLines.Clear();
             UpdateTokenType(0, 0, Chars.Count);
         }
 
@@ -117,14 +117,14 @@ namespace Miyu {
             for (int line_idx = start_line_idx; ; line_idx++) {
                 TLine line;
 
-                if (line_idx < Lines.Count) {
+                if (line_idx < EditLines.Count) {
 
-                    line = Lines[line_idx];
+                    line = EditLines[line_idx];
                 }
                 else {
 
                     line = new TLine();
-                    Lines.Add(line);
+                    EditLines.Add(line);
                 }
 
                 // 次の行の先頭位置または文書の終わり。
@@ -137,11 +137,8 @@ namespace Miyu {
                 ETokenType last_token_type_before = (next_line_top == 0 ? ETokenType.Undefined : Chars[next_line_top - 1].CharType);
 
                 // 現在行の字句解析をして字句タイプのリストを得る。
-                TToken[] tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
-                lock (this) {
-                    line.Tokens = tokens;
-                    LinesTokensChanged = true;
-                }
+                line.Tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
+
                 foreach (TToken tkn in line.Tokens) {
 
                     // 字句型をテキストにセットする。

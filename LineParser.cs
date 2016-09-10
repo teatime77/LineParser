@@ -30,7 +30,6 @@ namespace Miyu {
         public int TokenPos;
         public TToken CurrentToken;
         public TToken NextToken;
-        public bool Dirty;
         public bool Running;
         public ELanguage LanguageSP;
 
@@ -1398,7 +1397,6 @@ namespace Miyu {
                 await Task.Delay(1);
             }
             Running = true;
-            Dirty = false;
             //Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             src.ClassesSrc.Clear();
@@ -1412,8 +1410,9 @@ namespace Miyu {
             for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
 
-                //Debug.WriteLine("parse file : {0} {1}", line_idx, Dirty);
-                if (Dirty) {
+                if (TGlb.Project.Modified.WaitOne(0)) {
+                    // ソースが変更された場合
+
                     Debug.WriteLine("parse file : 中断");
                     Running = false;
                     return;
@@ -1633,7 +1632,9 @@ namespace Miyu {
             //Debug.WriteLine("名前解決 : {0} -------------------------------------------------------", Path.GetFileName(src.PathSrc), "");
             for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
-                if (Dirty) {
+                if (TGlb.Project.Modified.WaitOne(0)) {
+                    // ソースが変更された場合
+
                     Debug.WriteLine("名前解決 : 中断");
                     Running = false;
                     return;
@@ -1649,11 +1650,9 @@ namespace Miyu {
                     GetVariablesClass(src, line_idx, out vars);
 
                     // 名前解決のエラーをクリアする。
-                    lock (src) {
-                        var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
-                        foreach (TToken name_err_tkn in name_err_tkns) {
-                            name_err_tkn.ErrorTkn = null;
-                        }
+                    var name_err_tkns = from x in line.Tokens where x.ErrorTkn is TResolveNameException select x;
+                    foreach (TToken name_err_tkn in name_err_tkns) {
+                        name_err_tkn.ErrorTkn = null;
                     }
 
                     try {
@@ -2226,11 +2225,21 @@ namespace Miyu {
         public int StartPos;
         public int EndPos;
         public Exception ErrorTkn;
-
         public int TabTkn;
         public object ObjTkn;
 
         public TToken() {
+        }
+
+        public TToken(TToken token) {
+            TokenType   = token.TokenType;
+            Kind        = token.Kind;
+            TextTkn     = token.TextTkn;
+            StartPos    = token.StartPos;
+            EndPos      = token.EndPos;
+            ErrorTkn    = token.ErrorTkn;
+            TabTkn      = token.TabTkn;
+            ObjTkn      = token.ObjTkn;
         }
 
         public TToken(object obj) {
@@ -2267,6 +2276,18 @@ namespace Miyu {
         public TToken[] Tokens;
         public object ObjLine;
         public TType ClassLine;
+
+        public TLine() {
+        }
+
+        public TLine(TLine line) {
+            Indent = line.Indent;
+            Continued = line.Continued;
+            TextLine = line.TextLine;
+            Tokens = (from x in line.Tokens select new TToken(x)).ToArray();
+            ObjLine = line.ObjLine;
+            ClassLine = line.ClassLine;
+        }
 
         public void Invariant() {
             // newの後でUpdateTokenTypeが呼ばれるから。

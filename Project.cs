@@ -81,8 +81,6 @@ namespace Miyu {
             SetAssemblyList();
 
             OpenProject();
-
-            Modified = new ManualResetEvent(true);
         }
 
         /*
@@ -123,56 +121,57 @@ namespace Miyu {
             TGlb.Parser = TCSharpParser.CSharpParser;
             ParseDone = false;
 
-            // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
-            RegisterClassNames();
+            // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書。
+            Dictionary<string, TType> simple_class_table_save = null;
+            Dictionary<string, TGenericClass> parameterized_class_table_save = null;
+            Dictionary<string, TGenericClass> specialized_class_table_save = null;
 
-            tick = DateTime.Now;
-
-            // System.csの構文解析をする。
-            SystemSourceFile.Parser.ParseFile(SystemSourceFile);
-
-            // 型の別名の辞書をセットする。
-            SetTypeAliasTable();
-
-            // System.csのクラスのTypeInfoをセットする。
-            SetSystemSourceFileTypeInfo();
-
-            // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を保存する。
-            Dictionary<string, TType> simple_class_table_save = new Dictionary<string, TType>(SimpleClassTable);
-            Dictionary<string, TGenericClass> parameterized_class_table_save = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
-            Dictionary<string, TGenericClass> specialized_class_table_save = new Dictionary<string, TGenericClass>(SpecializedClassTable);
-
-            Debug.WriteLine("System.cs 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
             tick = DateTime.Now;
 
             bool is_first = true;
+            bool output_result = true;
             while (true) {
+                do_again:
+
+                // ソースの変更を待つ。
                 Modified.WaitOne();
                 Modified.Reset();
 
-                try {
-                    do_again:
+                if (is_first) {
+                    is_first = false;
 
+                    // System.csの行のリストを得る。
+                    SystemSourceFile.Lines = (from x in SystemSourceFile.EditLines select new TLine(x)).ToList();
+
+                    // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
+                    RegisterClassNames();
+
+                    // System.csの構文解析をする。
+                    SystemSourceFile.Parser.ParseFile(SystemSourceFile);
+
+                    // 型の別名の辞書をセットする。
+                    SetTypeAliasTable();
+
+                    // System.csのクラスのTypeInfoをセットする。
+                    SetSystemSourceFileTypeInfo();
+
+                    // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を保存する。
+                    simple_class_table_save         = new Dictionary<string, TType>(SimpleClassTable);
+                    parameterized_class_table_save  = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
+                    specialized_class_table_save    = new Dictionary<string, TGenericClass>(SpecializedClassTable);
+                }
+
+                try {
                     Debug.WriteLine("解析開始");
 
                     // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を復元する。
                     SimpleClassTable = new Dictionary<string, TType>(simple_class_table_save);
                     ParameterizedClassTable = new Dictionary<string, TGenericClass>(parameterized_class_table_save);
                     SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
+
                     ParseDone = false;
 
-                    // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
-                    bool ok = RegisterClassNames();
-                    if (!ok) {
-                        // トークン列が変化した場合
-
-                        goto do_again;
-                    }
-
-                    tick = DateTime.Now;
-                    Debug.WriteLine("型名登録 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
-                    tick = DateTime.Now;
-
+                    // すべてのソースファイルに対し
                     foreach (TSourceFile src in SourceFiles) {
                         if(src != SystemSourceFile) {
                             // System.csでない場合
@@ -180,19 +179,34 @@ namespace Miyu {
                             lock (src) {
                                 // ソースファイルをロックする。
 
-                                if (src.LinesTokensChanged) {
-                                    // トークン列が変化した場合
-
-                                    Debug.WriteLine("トークン列が変化した。");
-                                    src.LinesTokensChanged = false;
-                                    goto do_again;
-                                }
-
-                                // ソースファイルの構文解析をする。
-                                src.Parser.ParseFile(src);
+                                // 行のリストを得る。
+                                src.Lines = (from x in src.EditLines select new TLine(x)).ToList();
                             }
                         }
                     }
+
+                    // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
+                    RegisterClassNames();
+
+                    tick = DateTime.Now;
+                    Debug.WriteLine("型名登録 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    tick = DateTime.Now;
+
+                    foreach (TSourceFile src in SourceFiles) {
+                        if (src != SystemSourceFile) {
+                            // System.csでない場合
+
+                            if (Modified.WaitOne(0)) {
+                                // ソースが変更された場合
+
+                                goto do_again;
+                            }
+
+                            // ソースファイルの構文解析をする。
+                            src.Parser.ParseFile(src);
+                        }
+                    }
+
                     Debug.WriteLine("解析終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
@@ -260,10 +274,10 @@ namespace Miyu {
                         Debug.Assert(c.GenericType == EClass.SpecializedClass);
                     }
 
-                    if (is_first) {
+                    if (output_result) {
                         // 最初の場合
 
-                        is_first = false;
+                        output_result = false;
 
                         tick = DateTime.Now;
 
@@ -343,12 +357,10 @@ namespace Miyu {
             SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
                            select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
 
-            // コンストラクタの中でセットされたフラグをリセットする。
-            foreach (TSourceFile src in SourceFiles) {
-                src.LinesTokensChanged = false;
-            }
-
             SystemSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "System.cs" select src).First();
+
+            Debug.WriteLine("ソースの変更信号");
+            Modified = new ManualResetEvent(true);
         }
 
         /*
@@ -461,74 +473,52 @@ namespace Miyu {
         /*
          * 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
          */
-        public bool RegisterClassNames() {
+        public void RegisterClassNames() {
             List<string> type_names = new List<string>();
 
             // すべてのソースファイルに対し
             foreach(TSourceFile src in SourceFiles) {
-                lock (src) {
-                    if (src.LinesTokensChanged) {
-                        // トークン列が変化した場合
+                // ソースファイル内のすべての行に対し
+                foreach (TLine line in src.Lines) {
 
-                        src.LinesTokensChanged = false;
-                        Debug.WriteLine("トークン列が変化した。");
-                        return false;
-                    }
+                    // 型宣言の字句(class, struct, enum, interface, delegate)の位置を得る。
+                    int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
+                    if (idx != -1) {
+                        // 型宣言の字句がある場合
 
-                    // ソースファイル内のすべての行に対し
-                    foreach (TLine line in src.Lines) {
+                        if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
+                            // 型宣言の字句の直後が識別子か型名の場合
 
-                        // 型宣言の字句(class, struct, enum, interface, delegate)の位置を得る。
-                        int idx = new List<TToken>(line.Tokens).FindIndex(x => x.Kind == EKind.class_ || x.Kind == EKind.struct_ || x.Kind == EKind.enum_ || x.Kind == EKind.interface_ || x.Kind == EKind.delegate_);
-                        if (idx != -1) {
-                            // 型宣言の字句がある場合
+                            // 型名を得る。
+                            string name = line.Tokens[idx + 1].TextTkn;
+                            if (!type_names.Contains(name)) {
+                                // 型名のリストに含まれない場合
 
-                            if (idx + 1 < line.Tokens.Length && (line.Tokens[idx + 1].Kind == EKind.Identifier || line.Tokens[idx + 1].Kind == EKind.ClassName)) {
-                                // 型宣言の字句の直後が識別子か型名の場合
-
-                                // 型名を得る。
-                                string name = line.Tokens[idx + 1].TextTkn;
-                                if (!type_names.Contains(name)) {
-                                    // 型名のリストに含まれない場合
-
-                                    //Debug.WriteLine("typeof({0}),", name, "");
-                                    // 型名のリストに追加する。
-                                    type_names.Add(name);
-                                }
+                                //Debug.WriteLine("typeof({0}),", name, "");
+                                // 型名のリストに追加する。
+                                type_names.Add(name);
                             }
-                            else {
+                        }
+                        else {
 
-                                Debug.WriteLine("class syntax error");
-                            }
+                            Debug.WriteLine("class syntax error");
                         }
                     }
                 }
             }
 
             foreach (TSourceFile src in SourceFiles) {
-                lock (src) {
-                    if (src.LinesTokensChanged) {
-                        // トークン列が変化した場合
+                // 名前が型名のリストに含まれる識別子のリスト
+                var vtkn = from line in src.Lines
+                            from tkn in line.Tokens
+                            where tkn.Kind == EKind.Identifier && type_names.Contains(tkn.TextTkn)
+                            select tkn;
 
-                        src.LinesTokensChanged = false;
-                        Debug.WriteLine("トークン列が変化した。");
-                        return false;
-                    }
-
-                    // 名前が型名のリストに含まれる識別子のリスト
-                    var vtkn = from line in src.Lines
-                               from tkn in line.Tokens
-                               where tkn.Kind == EKind.Identifier && type_names.Contains(tkn.TextTkn)
-                               select tkn;
-
-                    foreach (TToken tkn in vtkn) {
-                        // 字句の種類はClassNameにする。
-                        tkn.Kind = EKind.ClassName;
-                    }
+                foreach (TToken tkn in vtkn) {
+                    // 字句の種類はClassNameにする。
+                    tkn.Kind = EKind.ClassName;
                 }
             }
-
-            return true;
         }
 
         /*

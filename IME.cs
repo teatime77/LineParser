@@ -145,8 +145,6 @@ namespace Miyu {
 
             // 再描画する。
             InvalidateCanvas();
-
-            TGlb.Project.Modified.Set();
         }
 
         /*

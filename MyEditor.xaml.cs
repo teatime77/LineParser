@@ -220,8 +220,8 @@ namespace Miyu {
                     float yb = (float)(y + sz.Height);
 
                     TToken tkn = null;
-                    if (line_idx < SourceFile.Lines.Count) {
-                        TLine line = SourceFile.Lines[line_idx];
+                    if (line_idx < SourceFile.EditLines.Count) {
+                        TLine line = SourceFile.EditLines[line_idx];
 
                         int k = phrase_start_pos - start_pos;
                         var v = from t in line.Tokens where t.StartPos <= k && k < t.EndPos select t;
@@ -377,56 +377,58 @@ namespace Miyu {
             テキストを変更して、変更情報をアンドゥ/リドゥのスタックにプッシュする。
         */
         void PushUndoRedoStack(int sel_start, int sel_end, string new_text, Stack<TDiff> dst_stack) {
-            // 開始行のインデックスを得る。
-            int start_line_idx = SourceFile.GetLineIndex(sel_start);
+            lock (SourceFile) {
+                // 開始行のインデックスを得る。
+                int start_line_idx = SourceFile.GetLineIndex(sel_start);
 
-            // 変更範囲にある改行文字の個数を得る。
-            int old_LF_cnt = SourceFile.GetLFCount(sel_start, sel_end);
+                // 変更範囲にある改行文字の個数を得る。
+                int old_LF_cnt = SourceFile.GetLFCount(sel_start, sel_end);
 
-            // 変更情報を作る。
-            TDiff diff = new TDiff(sel_start, sel_end - sel_start, new_text.Length);
+                // 変更情報を作る。
+                TDiff diff = new TDiff(sel_start, sel_end - sel_start, new_text.Length);
 
-            // 変更情報をアンドゥのスタックにプッシュする。
-            dst_stack.Push(diff);
+                // 変更情報をアンドゥのスタックにプッシュする。
+                dst_stack.Push(diff);
 
-            // 削除する文字列をコピーする。
-            Chars.CopyTo(sel_start, diff.RemovedChars, 0, diff.RemovedChars.Length);
+                // 削除する文字列をコピーする。
+                Chars.CopyTo(sel_start, diff.RemovedChars, 0, diff.RemovedChars.Length);
 
-            // 文字列を削除する。
-            Chars.RemoveRange(sel_start, sel_end - sel_start);
+                // 文字列を削除する。
+                Chars.RemoveRange(sel_start, sel_end - sel_start);
 
-            // 新しい文字列を挿入する。
-            Chars.InsertRange(sel_start, (from x in new_text select new TChar(x)));
+                // 新しい文字列を挿入する。
+                Chars.InsertRange(sel_start, (from x in new_text select new TChar(x)));
 
-            // アプリ内で持っているテキストの選択位置を更新する。
-            SelOrigin = sel_start + new_text.Length;
-            SelCurrent = SelOrigin;
+                // アプリ内で持っているテキストの選択位置を更新する。
+                SelOrigin = sel_start + new_text.Length;
+                SelCurrent = SelOrigin;
 
-            // 新しく挿入した文字列に含まれる改行文字の個数  GetLFCount(sel_start, sel_start + new_text.Length);
-            int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();
+                // 新しく挿入した文字列に含まれる改行文字の個数  GetLFCount(sel_start, sel_start + new_text.Length);
+                int new_LF_cnt = (from x in new_text where x == TSourceFile.LF select x).Count();
 
-            if (new_LF_cnt < old_LF_cnt) {
-                // 行が減った場合
+                if (new_LF_cnt < old_LF_cnt) {
+                    // 行が減った場合
 
-                // 行を削除する。
-                for (int i = 0; i < old_LF_cnt - new_LF_cnt; i++) {
-                    SourceFile.Lines.RemoveAt(start_line_idx);
+                    // 行を削除する。
+                    for (int i = 0; i < old_LF_cnt - new_LF_cnt; i++) {
+                        SourceFile.EditLines.RemoveAt(start_line_idx);
+                    }
                 }
-            }
-            else if (old_LF_cnt < new_LF_cnt) {
-                // 行が増えた場合
+                else if (old_LF_cnt < new_LF_cnt) {
+                    // 行が増えた場合
 
-                // 行を挿入する。
-                for (int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
-                    SourceFile.Lines.Insert(start_line_idx, new TLine());
+                    // 行を挿入する。
+                    for (int i = 0; i < new_LF_cnt - old_LF_cnt; i++) {
+                        SourceFile.EditLines.Insert(start_line_idx, new TLine());
+                    }
                 }
+
+                // 字句型を更新する。
+                SourceFile.UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
+
+                Debug.WriteLine("ソースの変更信号");
+                TGlb.Project.Modified.Set();
             }
-
-            // 字句型を更新する。
-            SourceFile.UpdateTokenType(start_line_idx, sel_start, sel_start + new_text.Length);
-
-            Debug.WriteLine("Dirty ON --------------------------------------------------");
-            SourceFile.Parser.Dirty = true;
         }
 
         /*
@@ -723,12 +725,6 @@ namespace Miyu {
                     UndoRedo(e.VirtualKey == VirtualKey.Z);
                 }
                 break;
-            }
-
-            if (SourceFile.Parser.Dirty) {
-
-                TGlb.Project.Modified.Set();
-                Debug.WriteLine("CoreWindow KeyDown 終了");
             }
         }
 
@@ -1155,7 +1151,7 @@ namespace Miyu {
          */
         void UpdateEditCanvasSize() {
             if (!double.IsNaN(LineHeight)) {
-                double document_height = SourceFile.Lines.Count * LineHeight;
+                double document_height = SourceFile.EditLines.Count * LineHeight;
 
                 if (EditCanvas.Height != document_height) {
 
