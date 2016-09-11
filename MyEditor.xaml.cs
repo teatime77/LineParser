@@ -655,7 +655,40 @@ namespace Miyu {
 
             case VirtualKey.Enter:
                 // 選択した範囲のテキストを別のテキストに置換する。
-                ReplaceText(SelStart(), SelEnd(), "\n");
+
+                // 現在の行の先頭位置を得る。
+                int current_line_top = SourceFile.GetLineTop(SelCurrent);
+
+                // 文字単位のインデントを計算する。
+                int indent = 0;
+                for(int i = current_line_top; i < Chars.Count && Chars[i].Chr != '\n'; i++) {
+                    if(Chars[i].Chr == ' ') {
+                        // 空白の場合
+
+                        // インデントを+1する。
+                        indent++;
+                    }
+                    else if (Chars[i].Chr == '\t') {
+                        // タブの場合
+
+                        // インデントを+4する。
+                        indent += 4;
+                    }
+                    else {
+
+                        break;
+                    }
+                }
+
+                if (0 <= SelCurrent - 1 && Chars[SelCurrent - 1].Chr == '{') {
+                    // '{'の直後の改行の場合
+
+                    // インデントを+4する。
+                    indent += 4;
+                }
+
+                // 改行してからインデントの数の空白を挿入する。
+                ReplaceText(SelStart(), SelEnd(), "\n" + new string(' ', indent));
                 break;
 
             case VirtualKey.Space:

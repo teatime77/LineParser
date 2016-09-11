@@ -1362,8 +1362,8 @@ namespace Miyu {
 
                                 if (prev_line.Indent == line.Indent) {
 
+                                    //Debug.WriteLine("継続行 {0}", line.TextLine, "");
                                     line.Continued = true;
-                                    Debug.WriteLine("継続行 {0}", line.TextLine, "");
                                 }
                             }
                             else {
@@ -1371,8 +1371,8 @@ namespace Miyu {
                                 TToken prev_line_end_token = prev_line.Tokens.Last();
                                 if (prev_line_end_token.Kind != EKind.LC && prev_line_end_token.Kind != EKind.Colon && prev_line.Indent < line.Indent) {
 
+                                    //Debug.WriteLine("継続行 {0}", line.TextLine, "");
                                     line.Continued = true;
-                                    Debug.WriteLine("継続行 {0}", line.TextLine, "");
                                 }
                             }
                         }
@@ -1509,11 +1509,22 @@ namespace Miyu {
                                 }
 
                                 if (TGlb.LambdaFunction != null) {
-                                    obj_stack.Add(TGlb.LambdaFunction);
+                                    // ラムダ関数の始まりの場合
 
-                                    TGlb.LambdaFunction.DeclaringType = cls;
-                                    cls.Functions.Add(TGlb.LambdaFunction);
-                                    src.FunctionsSrc.Add(TGlb.LambdaFunction);
+                                    if(cls == null) {
+                                        // 構文エラーがある場合
+
+                                        TGlb.InLambdaFunction = false;
+                                    }
+                                    else {
+                                        // 構文エラーがない場合
+
+                                        obj_stack.Add(TGlb.LambdaFunction);
+
+                                        TGlb.LambdaFunction.DeclaringType = cls;
+                                        cls.Functions.Add(TGlb.LambdaFunction);
+                                        src.FunctionsSrc.Add(TGlb.LambdaFunction);
+                                    }
 
                                     TGlb.LambdaFunction = null;
                                 }

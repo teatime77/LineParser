@@ -312,7 +312,6 @@ namespace Miyu {
 
                 if (fnc_ref.VarRef == null) {
 
-                    ResolveName(cls, vars);
                     throw new TResolveNameException(fnc_ref);
                 }
 

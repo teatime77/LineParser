@@ -129,7 +129,7 @@ namespace Miyu {
             tick = DateTime.Now;
 
             bool is_first = true;
-            bool output_result = true;
+            bool output_result = false;
             while (true) {
                 do_again:
 
@@ -196,14 +196,14 @@ namespace Miyu {
                         if (src != SystemSourceFile) {
                             // System.csでない場合
 
-                            if (Modified.WaitOne(0)) {
-                                // ソースが変更された場合
-
-                                goto do_again;
-                            }
-
                             // ソースファイルの構文解析をする。
                             src.Parser.ParseFile(src);
+                        }
+
+                        if (Modified.WaitOne(0)) {
+                            // ソースが変更された場合
+
+                            goto do_again;
                         }
                     }
 
