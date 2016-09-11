@@ -346,7 +346,7 @@ namespace Miyu {
 
                 if (! (cls1 is TGenericClass)) {
 
-                    throw new TParseException(cls1.ClassName + ":総称型以外に引数型があります。");
+                    throw new TParseException(CurrentToken, cls1.ClassName + ":総称型以外に引数型があります。");
                 }
                 TGenericClass org_cla = cls1 as TGenericClass;
 
@@ -371,12 +371,12 @@ namespace Miyu {
 
                     GetToken(EKind.Comma);
                 }
-                GetToken(EKind.GT);
+                TToken gt = GetToken(EKind.GT);
 
                 if(org_cla.ArgClasses.Count != param_classes.Count) {
                     // 仮引数クラスの数が一致しない場合
 
-                    throw new TParseException("総称型の引数の数が一致しません。");
+                    throw new TParseException(gt, "総称型の引数の数が一致しません。");
                 }
             }
 
@@ -525,7 +525,7 @@ namespace Miyu {
                     GetToken(EKind.operator_);
                     fnc_name = GetToken(EKind.Undefined);
                     if (fnc_name.TokenType != ETokenType.Symbol) {
-                        throw new TParseException();
+                        throw new TParseException(fnc_name);
                     }
                 }
                 else {
@@ -555,7 +555,7 @@ namespace Miyu {
                         base_app = PrimaryExpression() as TApply;
                     }
                     else {
-                        throw new TParseException();
+                        throw new TParseException(CurrentToken);
                     }
                 }
             }
@@ -914,7 +914,7 @@ namespace Miyu {
                     GetToken(EKind.break_);
                 }
                 else {
-                    throw new TParseException();
+                    throw new TParseException(CurrentToken);
                 }
                 break;
 
@@ -991,7 +991,7 @@ namespace Miyu {
             }
 
             if (!(t1 is TApply)) {
-                throw new TParseException();
+                throw new TParseException(CurrentToken);
             }
 
             // 関数呼び出し文を返す。
@@ -1044,7 +1044,7 @@ namespace Miyu {
                     TVariable var1 = (parent_stmt as TVariableDeclaration).Variables[0];
 
                     if(! (var1.InitValue is TNewApply)) {
-                        throw new TParseException();
+                        throw new TParseException(CurrentToken);
                     }
 
                     TTerm ele = Expression();
@@ -1113,24 +1113,27 @@ namespace Miyu {
                         GetToken(EKind.RC);
                         if (TGlb.InLambdaFunction) {
                             // ラムダ関数の中の場合
-                            //!!!!!!!!!!!!!!!!!!!!! ラムダ関数の中に{}がある場合は未対応 !!!!!!!!!!!!!!!!!!!!!!!!
 
-                            Debug.Assert(TGlb.ApplyLambda != null);
+                            if (CurrentLine.Tokens[0].StartPos == TGlb.LambdaFunctionIndent) {
+                                // 現在行のインデントがラムダ関数の開始行のインデントと同じ場合
 
-                            // ラムダ関数の呼び出しの引数を追加する。
-                            List<TTerm> args = new List<TTerm>(TGlb.ApplyLambda.Args);
-                            while (CurrentToken.Kind == EKind.Comma) {
-                                // 追加の引数がある場合
+                                Debug.Assert(TGlb.ApplyLambda != null);
 
-                                GetToken(EKind.Comma);
-                                args.Add( Expression() );
+                                // ラムダ関数の呼び出しの引数を追加する。
+                                List<TTerm> args = new List<TTerm>(TGlb.ApplyLambda.Args);
+                                while (CurrentToken.Kind == EKind.Comma) {
+                                    // 追加の引数がある場合
+
+                                    GetToken(EKind.Comma);
+                                    args.Add(Expression());
+                                }
+                                TGlb.ApplyLambda.Args = args.ToArray();
+
+                                TGlb.InLambdaFunction = false;
+                                TGlb.ApplyLambda = null;
+
+                                GetToken(EKind.RP);
                             }
-                            TGlb.ApplyLambda.Args = args.ToArray();
-
-                            TGlb.InLambdaFunction = false;
-                            TGlb.ApplyLambda = null;
-
-                            GetToken(EKind.RP);
                         }
 
                         if(CurrentToken.Kind == EKind.SemiColon) {
@@ -1295,7 +1298,7 @@ namespace Miyu {
 
                 default:
                     Debug.WriteLine("行頭 {0}", CurrentToken.Kind);
-                    throw new TParseException();
+                    throw new TParseException(CurrentToken);
                 }
             }
             catch (TParseException) {
@@ -1699,7 +1702,7 @@ namespace Miyu {
 
             if(type != EKind.Undefined && type != CurrentToken.Kind) {
 
-                throw new TParseException();
+                throw new TParseException(CurrentToken);
             }
 
             TToken tkn = CurrentToken;
@@ -1747,7 +1750,7 @@ namespace Miyu {
         public TToken GetToken2(EKind kind1, EKind kind2) {
             if (CurrentToken.Kind != kind1 && CurrentToken.Kind != kind2) {
 
-                throw new TParseException();
+                throw new TParseException(CurrentToken);
             }
             return GetToken(EKind.Undefined);
         }
@@ -1788,7 +1791,7 @@ namespace Miyu {
             }
 
             if(from1.SelFrom == null && from1.InnerFrom == null) {
-                throw new TParseException();
+                throw new TParseException(CurrentToken);
             }
 
             return from1;
@@ -1838,6 +1841,9 @@ namespace Miyu {
 
                         TGlb.LambdaFunction = new TFunction(id, null);
                         TGlb.InLambdaFunction = true;
+
+                        // ラムダ関数の開始行のインデント
+                        TGlb.LambdaFunctionIndent = CurrentLine.Tokens[0].StartPos;
 
                         return new TReference(TGlb.LambdaFunction);
                     }
@@ -1946,7 +1952,7 @@ namespace Miyu {
                     return new TNewApply(EKind.NewInstance, new_tkn, cls, new TTerm[0], init);
                 }
                 else {
-                    throw new TParseException();
+                    throw new TParseException(CurrentToken);
                 }
 
             case EKind.ClassName:
@@ -1972,7 +1978,7 @@ namespace Miyu {
                 return new TApply(opr, new TReference(cls));
             }
 
-            throw new TParseException();
+            throw new TParseException(CurrentToken);
         }
 
         public TTerm DotIndexExpression() {
@@ -2351,12 +2357,37 @@ namespace Miyu {
         }
     }
 
+    public class TBuildException : Exception {
+        public TBuildException(string msg) {
+            Debug.WriteLine("Build Exception : {0}", msg);
+        }
+    }
+
     public class TParseException : Exception {
-        public TParseException() {
+        void SetErrorTkn(TToken token) {
+            if (token == null) {
+
+                TParser.CurrentLine.Tokens[0].ErrorTkn = this;
+            }
+            else if (token == TParser.EOTToken) {
+
+                TParser.CurrentLine.Tokens[TParser.CurrentLine.Tokens.Length - 1].ErrorTkn = this;
+            }
+            else {
+
+                token.ErrorTkn = this;
+            }
+        }
+
+        public TParseException(TToken token) {
+            SetErrorTkn(token);
+
             Debug.WriteLine("Parse Exception : {0}", TParser.CurrentLine.TextLine, "");
         }
 
-        public TParseException(string msg) {
+        public TParseException(TToken token, string msg) {
+            SetErrorTkn(token);
+
             Debug.WriteLine("Parse Exception : {0}\r\n\t{1}", TParser.CurrentLine.TextLine, msg);
         }
     }

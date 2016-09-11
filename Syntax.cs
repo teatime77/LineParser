@@ -66,6 +66,10 @@ namespace Miyu {
 
         [ThreadStatic]
         public static TApply ApplyLambda;
+
+        // ラムダ関数の開始行のインデント
+        [ThreadStatic]
+        public static int LambdaFunctionIndent;
     }
 
     /*

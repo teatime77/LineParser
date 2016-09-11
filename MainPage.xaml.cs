@@ -59,6 +59,14 @@ namespace Miyu {
         public void InvalidateMainPage() {
             UIContext.Post(state => {
 
+                if (!MainProject.Modified.WaitOne(0) && ! TProject.InBuild) {
+                    // ソースが変更されてない場合
+
+                    // ソースの解析後の字句情報を得る。
+                    foreach (TSourceFile src in MainProject.SourceFiles) {
+                        src.EditLines = src.Lines;
+                    }
+                }
                 LeftEditor.InvalidateCanvas();
                 RightEditor.InvalidateCanvas();
             }, null);

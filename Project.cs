@@ -19,6 +19,7 @@ namespace Miyu {
         public static string OutputDir = ApplicationData.Current.LocalFolder.Path + "\\out";
         public static string WebDir = OutputDir + "\\web";
         public static string ClassesDir = WebDir + "\\class";
+        public static bool InBuild;
 
         public List<TType> AppClasses;
 
@@ -135,6 +136,7 @@ namespace Miyu {
 
                 // ソースの変更を待つ。
                 Modified.WaitOne();
+                InBuild = true;
                 Modified.Reset();
 
                 if (is_first) {
@@ -181,6 +183,13 @@ namespace Miyu {
 
                                 // 行のリストを得る。
                                 src.Lines = (from x in src.EditLines select new TLine(x)).ToList();
+                            }
+
+                            // 字句のエラーをクリアする。
+                            foreach(TLine line in src.Lines) {
+                                foreach(TToken tkn in line.Tokens) {
+                                    tkn.ErrorTkn = null;
+                                }
                             }
                         }
                     }
@@ -335,6 +344,8 @@ namespace Miyu {
                 catch (TBuildCancel) {
                 }
 
+                InBuild = false;
+
                 // メインページを再描画する。
                 MainPage.theMainPage.InvalidateMainPage();
             }
@@ -468,7 +479,7 @@ namespace Miyu {
                 if (tp.Info == null) {
                     // TypeInfoがない場合
 
-                    throw new TParseException("Unknown system class : " + tp.ClassName);
+                    throw new TBuildException("Unknown system class : " + tp.ClassName);
                 }
             }
         }
@@ -746,7 +757,7 @@ namespace Miyu {
             }
 
             if(cls.ArgClasses == null || cls.ArgClasses.Count != cls.OrgCla.ArgClasses.Count) {
-                throw new TParseException();
+                throw new TBuildException("Assign Parameter In Specialized Class Error: " + cls.ClassName);
             }
 
             // 仮引数クラスから実引数の型への変換辞書を作る。
