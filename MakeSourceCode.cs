@@ -395,7 +395,14 @@ namespace Miyu {
                             else {
 
                                 sw.Fmt(fnc.ArgsFnc[0].NameVar, ' ', EKind.Lambda, ' ');
-                                TermText(fnc.LambdaFnc, sw);
+                                if(fnc.LambdaFnc != null) {
+
+                                    TermText(fnc.LambdaFnc, sw);
+                                }
+                                else {
+
+                                    StatementText(fnc.BlockFnc, sw, 3);
+                                }
                             }
                         }
                         else {
@@ -901,7 +908,7 @@ namespace Miyu {
             case EType.Interface:
                 sw.Fmt(EKind.interface_);
                 break;
-            case EType.Delegate:
+            case EType.Delegate_:
                 sw.Fmt(EKind.delegate_);
                 break;
             }

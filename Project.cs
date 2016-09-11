@@ -334,6 +334,9 @@ namespace Miyu {
                 }
                 catch (TBuildCancel) {
                 }
+
+                // メインページを再描画する。
+                MainPage.theMainPage.InvalidateMainPage();
             }
         }
 
@@ -762,7 +765,7 @@ namespace Miyu {
             // 親クラスのリストの中に仮引数クラスがあれば実引数の型を割り当てる。
             cls.SuperClasses = (from c in cls.OrgCla.SuperClasses select AssignParameterClass(c, dic)).ToList();
 
-            Debug.Assert((cls.OrgCla.RetType != null) == (cls.OrgCla.KindClass == EType.Delegate));
+            Debug.Assert((cls.OrgCla.RetType != null) == (cls.OrgCla.KindClass == EType.Delegate_));
             if (cls.OrgCla.RetType != null) {
                 // デリゲートの場合
 

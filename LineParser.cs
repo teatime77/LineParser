@@ -271,7 +271,7 @@ namespace Miyu {
                 // パラメータ化クラスを得る。無ければ新たに作る。
                 dlg = TGlb.Project.GetParameterizedClass(id.TextTkn, param_classes);
             }
-            dlg.KindClass = EType.Delegate;
+            dlg.KindClass = EType.Delegate_;
 
             // 引数のリストを読む。
             CurrentClass = dlg;
@@ -1111,8 +1111,25 @@ namespace Miyu {
 
                     case EKind.RC:
                         GetToken(EKind.RC);
-                        if (CurrentToken.Kind == EKind.RP && TGlb.InLambdaFunction) {
+                        if (TGlb.InLambdaFunction) {
+                            // ラムダ関数の中の場合
+                            //!!!!!!!!!!!!!!!!!!!!! ラムダ関数の中に{}がある場合は未対応 !!!!!!!!!!!!!!!!!!!!!!!!
+
+                            Debug.Assert(TGlb.ApplyLambda != null);
+
+                            // ラムダ関数の呼び出しの引数を追加する。
+                            List<TTerm> args = new List<TTerm>(TGlb.ApplyLambda.Args);
+                            while (CurrentToken.Kind == EKind.Comma) {
+                                // 追加の引数がある場合
+
+                                GetToken(EKind.Comma);
+                                args.Add( Expression() );
+                            }
+                            TGlb.ApplyLambda.Args = args.ToArray();
+
                             TGlb.InLambdaFunction = false;
+                            TGlb.ApplyLambda = null;
+
                             GetToken(EKind.RP);
                         }
 
@@ -1810,12 +1827,28 @@ namespace Miyu {
                     return new TApply(id, expr_list);
                 }
                 else if(CurrentToken.Kind == EKind.Lambda) {
-                    GetToken(EKind.Lambda);
+                    // ラムダ関数の場合
 
-                    TTerm ret = Expression();
-                    TFunction fnc = new TFunction(id, ret);
+                    TToken lambda = GetToken(EKind.Lambda);
 
-                    return new TReference(fnc);
+                    if (CurrentToken.Kind == EKind.LC) {
+                        // 「 x => { 」 の形の場合
+
+                        GetToken(EKind.LC);
+
+                        TGlb.LambdaFunction = new TFunction(id, null);
+                        TGlb.InLambdaFunction = true;
+
+                        return new TReference(TGlb.LambdaFunction);
+                    }
+                    else {
+                        // 「 x => x * x 」 の形の場合
+
+                        TTerm ret = Expression();
+                        TFunction fnc = new TFunction(id, ret);
+
+                        return new TReference(fnc);
+                    }
                 }
                 else {
 
@@ -1962,7 +1995,19 @@ namespace Miyu {
                             GetToken(EKind.RP);
                         }
 
-                        t1 = new TDotApply(t1, id, args);
+                        TDotApply dot_app = new TDotApply(t1, id, args);
+                        if(args.Length == 1 && args[0] is TReference) {
+                            // 引数が1個の変数参照の場合
+
+                            TReference arg0 = args[0] as TReference;
+                            if(arg0.VarRef is TFunction && (arg0.VarRef as TFunction).KindFnc == EKind.Lambda) {
+                                // ラムダ関数の変数参照の場合
+
+                                TGlb.ApplyLambda = dot_app;
+                            }
+                        }
+
+                        t1 = dot_app;
                     }
                     else {
 

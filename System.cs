@@ -99,6 +99,8 @@ class DateTime {
 }
 class Debug {
 }
+class Delegate {
+}
 class DesignMode {
 }
 class Dictionary<TKey, TValue> {
@@ -228,6 +230,8 @@ class StorageFolder {
 class string {
 }
 class StringWriter {
+}
+class SynchronizationContext {
 }
 class Task {
 }

@@ -62,9 +62,9 @@ namespace Miyu {
                 }
                 else {
 
-                    if(var1.TypeVar.KindClass == EType.Delegate) {
+                    if(var1.TypeVar.KindClass == EType.Delegate_) {
 
-                        if(arg_types[i].KindClass != EType.Delegate) {
+                        if(arg_types[i].KindClass != EType.Delegate_) {
                             return false;
                         }
 
@@ -261,7 +261,6 @@ namespace Miyu {
             }
 
             if(VarRef != null) {
-
                 Debug.Assert(!VarRef.RefsVar.Contains(this));
                 VarRef.RefsVar.Add(this);
             }
@@ -312,6 +311,7 @@ namespace Miyu {
 
                 if (fnc_ref.VarRef == null) {
 
+                    //ResolveName(cls, vars);
                     throw new TResolveNameException(fnc_ref);
                 }
 
@@ -726,8 +726,11 @@ namespace Miyu {
                 TypeInfo param_type_info = param.ParameterType.GetTypeInfo();
 
                 if(arg_types[i] == TGlb.Project.NullClass) {
+                    // 実引数がnullの場合
 
-                    if( !param_type_info.IsSubclassOf(typeof(object))) {
+                    if ( param_type_info.AsType() != typeof(object) && ! param_type_info.IsSubclassOf(typeof(object)) ) {
+                        // 仮引数がオブジェクトでない場合
+
                         return false;
                     }
                 }
@@ -742,7 +745,16 @@ namespace Miyu {
                     }
 
                     if (!(param_type_info.FullName == arg_types[i].Info.FullName || !exact && IsSubclassOf(arg_types[i].Info, param.ParameterType))) {
-                        return false;
+                        if (param_type_info.IsSubclassOf(typeof(Delegate)) && arg_types[i].Info.IsSubclassOf(typeof(Delegate))) {
+                            // 仮引数と実引数がデリケートの場合
+
+                            //Debug.WriteLine("デリゲートの比較は未実施 : {0} ?==? {1}", param_type_info.FullName, arg_types[i].Info.FullName);
+                            continue;
+                        }
+                        else {
+
+                            return false;
+                        }
                     }
                 }
             }

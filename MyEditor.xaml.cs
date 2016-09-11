@@ -1183,7 +1183,7 @@ namespace Miyu {
          * キャンバスのサイズを設定する。
          */
         void UpdateEditCanvasSize() {
-            if (!double.IsNaN(LineHeight)) {
+            if (SourceFile != null && !double.IsNaN(LineHeight)) {
                 double document_height = SourceFile.EditLines.Count * LineHeight;
 
                 if (EditCanvas.Height != document_height) {

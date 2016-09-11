@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -15,12 +16,17 @@ namespace Miyu {
     /// それ自体で使用できる空白ページまたはフレーム内に移動できる空白ページ。
     /// </summary>
     public sealed partial class MainPage : Page {
+        public static MainPage theMainPage;
         TProject MainProject;
+        SynchronizationContext UIContext;
 
         public MainPage() {
             this.InitializeComponent();
 
             Debug.WriteLine("メイン開始");
+
+            theMainPage = this;
+            UIContext = SynchronizationContext.Current;
 
             MainProject = new TProject();
             MainProject.Main();
@@ -45,6 +51,17 @@ namespace Miyu {
                 editor.Focus(FocusState.Programmatic);
                 editor.InvalidateCanvas();
             }
+        }
+
+        /*
+         * メインページを再描画する。
+         */
+        public void InvalidateMainPage() {
+            UIContext.Post(state => {
+
+                LeftEditor.InvalidateCanvas();
+                RightEditor.InvalidateCanvas();
+            }, null);
         }
     }
 }

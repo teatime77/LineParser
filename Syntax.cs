@@ -26,7 +26,9 @@ namespace Miyu {
         Enum,
         Struct,
         Interface,
-        Delegate,
+
+        // Delegateクラスと区別するため
+        Delegate_,
     }
 
     /*
@@ -61,6 +63,9 @@ namespace Miyu {
 
         [ThreadStatic]
         public static bool InLambdaFunction;
+
+        [ThreadStatic]
+        public static TApply ApplyLambda;
     }
 
     /*
@@ -178,7 +183,7 @@ namespace Miyu {
 
         public TType(string name, TType ret_type, TType[] arg_types) {
             SetIdxClass();
-            KindClass = EType.Delegate;
+            KindClass = EType.Delegate_;
             ClassName = name;
             RetType = ret_type;
             ArgTypes = arg_types;
