@@ -1301,6 +1301,9 @@ namespace Miyu {
                     throw new TParseException(CurrentToken);
                 }
             }
+            catch (TCodeCompletionException code_completion_exception) {
+                return code_completion_exception.CodeCompletion;
+            }
             catch (TParseException) {
             }
 
@@ -1987,9 +1990,23 @@ namespace Miyu {
             while(CurrentToken.Kind == EKind.Dot || CurrentToken.Kind == EKind.LB) {
                 if(CurrentToken.Kind == EKind.Dot) {
 
-                    GetToken(EKind.Dot);
+                    TToken dot = GetToken(EKind.Dot);
+
+                    if(dot == TProject.ChangedToken && CurrentToken.Kind != EKind.Identifier && CurrentToken.Kind != EKind.ClassName) {
+                        // 変更した字句がこのドットで現在の字句が識別子やクラス名でない場合
+
+                        Debug.WriteLine("コード補完開始 !!!!!!");
+                        throw new TCodeCompletionException(t1, null);
+                    }
 
                     TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
+
+                    if (id == TProject.ChangedToken) {
+                        // 変更した字句が現在の字句(識別子/クラス名)の場合
+
+                        Debug.WriteLine("コード補完 絞り込み !!!!!!");
+                        throw new TCodeCompletionException(t1, id);
+                    }
 
                     if (CurrentToken.Kind == EKind.LP) {
                         GetToken(EKind.LP);
@@ -2409,5 +2426,17 @@ namespace Miyu {
     }
 
     public class TBuildCancel : Exception {
+    }
+
+    /*
+     * コード補完の例外
+     */
+    public class TCodeCompletionException : Exception {
+        // コード補完の文
+        public TCodeCompletion CodeCompletion;
+
+        public TCodeCompletionException(TTerm dot_left, TToken id) {
+            CodeCompletion = new TCodeCompletion(dot_left, id);
+        }
     }
 }

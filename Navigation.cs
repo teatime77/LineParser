@@ -157,6 +157,9 @@ namespace Miyu {
             else if (stmt is TLabelStatement) {
                 LabelNavi(stmt as TLabelStatement, args);
             }
+            else if (stmt is TCodeCompletion) {
+                CodeCompletionNavi(stmt as TCodeCompletion, args);
+            }
             else if (stmt is TBlockStatement) {
                 if (stmt is TBlock) {
                     BlockNavi(stmt as TBlock, args);
@@ -353,6 +356,14 @@ namespace Miyu {
             BeforeAction(lbl, args);
 
             AfterAction(lbl, args);
+        }
+
+        public virtual void CodeCompletionNavi(TCodeCompletion cc, List<object> args) {
+            BeforeAction(cc, args);
+
+            TermNavi(cc.DotLeft, args);
+
+            AfterAction(cc, args);
         }
 
         void SubTerm(TTerm trm) {

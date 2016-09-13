@@ -20,6 +20,8 @@ namespace Miyu {
         public static string WebDir = OutputDir + "\\web";
         public static string ClassesDir = WebDir + "\\class";
         public static bool InBuild;
+        public static TToken ChangedToken;
+        public static List<TVariable> CodeCompletionVariables = new List<TVariable>();
 
         public List<TType> AppClasses;
 
@@ -182,7 +184,8 @@ namespace Miyu {
                                 // ソースファイルをロックする。
 
                                 // 行のリストを得る。
-                                src.Lines = (from x in src.EditLines select new TLine(x)).ToList();
+                                src.Lines = src.EditLines;
+                                src.EditLines = (from x in src.Lines select new TLine(x)).ToList();
                             }
 
                             // 字句のエラーをクリアする。

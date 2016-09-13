@@ -795,6 +795,12 @@ namespace Miyu {
                     sw.Fmt(lbl.LabelToken, EKind.Colon, EKind.NL);
                     return;
                 }
+                else if (stmt is TCodeCompletion) {
+                    TCodeCompletion cc = stmt as TCodeCompletion;
+
+                    sw.Fmt("コード補完", EKind.NL);
+                    return;
+                }
                 else {
 
                     Debug.Assert(false);

@@ -326,6 +326,21 @@ namespace Miyu {
                     break;
                 }
             }
+
+            lock (TProject.CodeCompletionVariables) {
+                if(TProject.CodeCompletionVariables.Count != 0) {
+
+                    y = (float)ViewPadding.Y;
+                    foreach(TVariable v in TProject.CodeCompletionVariables) {
+                        string str = v.NameVar;
+
+                        args.DrawingSession.DrawText(str, x_start, y, Colors.Black, TextFormat);
+
+                        // 現在の行の高さを計算して、yに加算する。
+                        y += (float)MeasureText(str, TextFormat).Height;
+                    }
+                }
+            }
         }
 
         /*

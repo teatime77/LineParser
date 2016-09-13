@@ -493,6 +493,32 @@ namespace Miyu {
         }
     }
 
+    partial class TCodeCompletion {
+        public override void ResolveName(TType cls, List<TVariable> vars) {
+            DotLeft.ResolveName(cls, vars);
+            if(DotLeft.TypeTrm != null) {
+                List<TField> vfld;
+                if(IdentifierCC == null) {
+
+                    vfld = DotLeft.TypeTrm.Fields;
+                }
+                else {
+
+                    vfld = (from fld in DotLeft.TypeTrm.Fields where fld.NameVar.StartsWith(IdentifierCC.TextTkn) select fld).ToList();
+                }
+                
+                foreach(TField v in vfld) {
+                    Debug.WriteLine("コード補完 {0}", v.NameVar, "");
+                }
+
+                lock (TProject.CodeCompletionVariables) {
+                    TProject.CodeCompletionVariables.Clear();
+                    TProject.CodeCompletionVariables.AddRange(from x in  vfld select x as TVariable);
+                }
+            }
+        }
+    }
+
     partial class TBlockStatement {
         /*
                     int vars_count = vars.Count;

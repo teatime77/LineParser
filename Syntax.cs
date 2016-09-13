@@ -1017,6 +1017,22 @@ namespace Miyu {
     }
 
     /*
+     * コード補完
+     */
+    public partial class TCodeCompletion : TStatement {
+        // ドットの左側の項
+        public TTerm DotLeft;
+
+        // ドットの右側の識別子
+        public TToken IdentifierCC;
+
+        public TCodeCompletion(TTerm dot_left, TToken id) {
+            DotLeft = dot_left;
+            IdentifierCC = id;
+        }
+    }
+
+    /*
      * 属性
      */
     public class TAttribute : TStatement {

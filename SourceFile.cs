@@ -139,7 +139,14 @@ namespace Miyu {
                 // 現在行の字句解析をして字句タイプのリストを得る。
                 line.Tokens = Parser.LexicalAnalysis(line.TextLine, last_token_type);
 
+                // 行のすべての字句に対し
                 foreach (TToken tkn in line.Tokens) {
+
+                    if(line_top + tkn.StartPos <= sel_start && sel_start < line_top + tkn.EndPos) {
+
+                        TProject.ChangedToken = tkn;
+                        Debug.WriteLine("変更した字句 : {0}", tkn.TextTkn, "");
+                    }
 
                     // 字句型をテキストにセットする。
                     for (int i = tkn.StartPos; i < tkn.EndPos; i++) {
