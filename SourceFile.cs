@@ -142,10 +142,14 @@ namespace Miyu {
                 // 行のすべての字句に対し
                 foreach (TToken tkn in line.Tokens) {
 
-                    if(line_top + tkn.StartPos <= sel_start && sel_start < line_top + tkn.EndPos) {
+                    if(! ( sel_start == 0 && sel_end == Chars.Count) ) {
+                        // ソースファイル全体の更新ではない場合
 
-                        TProject.ChangedToken = tkn;
-                        Debug.WriteLine("変更した字句 : {0}", tkn.TextTkn, "");
+                        if (line_top + tkn.StartPos <= sel_start && sel_start < line_top + tkn.EndPos) {
+
+                            TProject.ChangedToken = tkn;
+                            Debug.WriteLine("変更した字句 : {0}", tkn.TextTkn, "");
+                        }
                     }
 
                     // 字句型をテキストにセットする。

@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -67,6 +63,7 @@ namespace Miyu {
                         src.EditLines = src.Lines;
                     }
                 }
+
                 LeftEditor.InvalidateCanvas();
                 RightEditor.InvalidateCanvas();
             }, null);

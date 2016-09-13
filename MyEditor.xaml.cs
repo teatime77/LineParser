@@ -189,6 +189,9 @@ namespace Miyu {
             float x_start = (float)ViewPadding.X;
             float y = (float)ViewPadding.Y;
 
+            float cc_x = -1;
+            float cc_y = -1;
+
             int sel_start = SelStart();
             int sel_end = SelEnd();
 
@@ -309,7 +312,12 @@ namespace Miyu {
                     float y0 = y;
                     float y1 = (float)(y + current_sz.Height);
 
+                    // 挿入カーソルを描画する。
                     args.DrawingSession.DrawLine(x1, y0, x1, y1, Colors.Blue, 1);
+
+                    // コード補完の表示位置
+                    cc_x = x1;
+                    cc_y = y0;
                 }
 
                 line_idx++;
@@ -327,20 +335,57 @@ namespace Miyu {
                 }
             }
 
+            if(cc_x != -1) {
+                // コード補完の表示位置がセットされた場合
+
+                // コード補完を表示する。
+                ShowCodeCompletion(args, view_w, view_h, cc_x, cc_y);
+            }
+        }
+
+        /*
+         * コード補完を表示する。
+         */
+        void ShowCodeCompletion(CanvasDrawEventArgs args, float view_w, float view_h, float x0, float y0) {
             lock (TProject.CodeCompletionVariables) {
-                if(TProject.CodeCompletionVariables.Count != 0) {
+                if (TProject.CodeCompletionVariables.Count != 0) {
 
-                    y = (float)ViewPadding.Y;
-                    foreach(TVariable v in TProject.CodeCompletionVariables) {
-                        string str = v.NameVar;
+                    // コード補完を表示する行数
+                    int rows = TProject.CodeCompletionRows;
 
-                        args.DrawingSession.DrawText(str, x_start, y, Colors.Black, TextFormat);
+                    int offset = TProject.CodeCompletionOffset;
 
-                        // 現在の行の高さを計算して、yに加算する。
-                        y += (float)MeasureText(str, TextFormat).Height;
+                    // コード補完を表示する桁数
+                    int cc_cols = 20;
+
+                    Rect rc = new Rect(x0, y0, cc_cols * SpaceWidth, rows * LineHeight);
+                    using (args.DrawingSession.CreateLayer(1, rc)) {
+
+                        args.DrawingSession.FillRectangle(rc, Colors.White);
+
+                        float y = y0;
+                        for(int i = offset; i < offset + rows && i < TProject.CodeCompletionVariables.Count; i++) {
+                            TVariable v = TProject.CodeCompletionVariables[i];
+
+                            string str = v.NameVar;
+
+                            args.DrawingSession.DrawText(str, x0, y, Colors.Black, TextFormat);
+
+                            if(i == TProject.CodeCompletionIdx) {
+
+                                args.DrawingSession.DrawRectangle(x0, y, (float)rc.Width, (float)LineHeight, Colors.Blue, 1);
+                            }
+
+                            // 現在の行の高さを計算して、yに加算する。
+                            y += (float)LineHeight;
+                        }
                     }
                 }
             }
+        }
+
+        public void ShowMenu() {
+            Flyout.ShowAttachedFlyout(OverlappedButton);
         }
 
         /*
@@ -481,6 +526,7 @@ namespace Miyu {
 
             case VirtualKey.Up:
                 // 上矢印(↑)
+
                 // 現在の行の先頭位置を得る。
                 current_line_top = SourceFile.GetLineTop(SelCurrent);
 
@@ -503,6 +549,7 @@ namespace Miyu {
 
             case VirtualKey.Down:
                 // 下矢印(↓)
+
                 // 現在の行の先頭位置を得る。
                 current_line_top = SourceFile.GetLineTop(SelCurrent);
 
@@ -611,6 +658,75 @@ namespace Miyu {
         }
 
         /*
+         * コード補完の表示中のキー入力処理
+         */
+        public bool KeyDownCodeCompletion(KeyEventArgs e) {
+            switch (e.VirtualKey) {
+            case VirtualKey.Left:
+            case VirtualKey.Right:
+                return true;
+
+            case VirtualKey.Enter:
+                string name;
+
+                lock (TProject.CodeCompletionVariables) {
+
+                    name = TProject.CodeCompletionVariables[TProject.CodeCompletionIdx].NameVar.Substring(TProject.CodeCompletionString.Length);
+
+                    // コード補完の候補リストをクリアする。
+                    TProject.CodeCompletionVariables.Clear();
+                }
+
+                // コード補完の文字列を挿入する。
+                ReplaceText(SelStart(), SelEnd(), name);
+                return true;
+
+            case VirtualKey.Escape:
+            case VirtualKey.Up:
+            case VirtualKey.Down:
+            case VirtualKey.PageUp:
+            case VirtualKey.PageDown:
+
+                lock (TProject.CodeCompletionVariables) {
+
+                    switch (e.VirtualKey) {
+                    case VirtualKey.Escape:
+
+                        // コード補完の候補リストをクリアする。
+                        TProject.CodeCompletionVariables.Clear();
+                        break;
+
+                    case VirtualKey.Up:
+                        TProject.CodeCompletionIdx = Math.Max(TProject.CodeCompletionIdx - 1, 0);
+                        TProject.CodeCompletionOffset = Math.Min(TProject.CodeCompletionIdx, TProject.CodeCompletionOffset);
+                        break;
+
+                    case VirtualKey.Down:
+                        TProject.CodeCompletionIdx = Math.Min(TProject.CodeCompletionIdx + 1, TProject.CodeCompletionVariables.Count - 1);
+                        TProject.CodeCompletionOffset = Math.Max(TProject.CodeCompletionIdx - (TProject.CodeCompletionRows - 1), TProject.CodeCompletionOffset);
+                        break;
+
+                    case VirtualKey.PageUp:
+                        TProject.CodeCompletionOffset = Math.Max(TProject.CodeCompletionOffset - TProject.CodeCompletionRows, 0);
+                        TProject.CodeCompletionIdx = TProject.CodeCompletionOffset;
+                        break;
+
+                    case VirtualKey.PageDown:
+                        TProject.CodeCompletionIdx = Math.Min(TProject.CodeCompletionIdx + TProject.CodeCompletionRows, TProject.CodeCompletionVariables.Count - 1);
+                        TProject.CodeCompletionOffset = Math.Max(TProject.CodeCompletionIdx - (TProject.CodeCompletionRows - 1), TProject.CodeCompletionOffset);
+                        break;
+                    }
+                }
+
+                // 再描画する。
+                InvalidateCanvas();
+                return true;
+            }
+
+            return false;
+        }
+
+        /*
             キーが押された。
         */
         private async void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs e) {
@@ -620,6 +736,17 @@ namespace Miyu {
 
             if (editContext == null || InComposition || OverlappedButton.FocusState == FocusState.Unfocused) {
                 return;
+            }
+
+            if (TProject.CodeCompletionVariables.Count != 0) {
+                // コード補完の表示中の場合
+
+                bool handled = KeyDownCodeCompletion(e);
+                if (handled) {
+                    // 処理済みの場合
+
+                    return;
+                }
             }
 
             switch (e.VirtualKey) {
@@ -772,6 +899,29 @@ namespace Miyu {
                     // アンドゥ / リドゥ
                     UndoRedo(e.VirtualKey == VirtualKey.Z);
                 }
+                break;
+
+            case VirtualKey.F9:
+                MenuFlyout mnu = new MenuFlyout();
+                MenuFlyoutItem mi;
+
+                mi = new MenuFlyoutItem();
+                mi.Text = "こんにちは";
+                mnu.Items.Add(mi);
+
+                mi = new MenuFlyoutItem();
+                mi.Text = "はじめまして";
+                mnu.Items.Add(mi);
+
+                mi = new MenuFlyoutItem();
+                mi.Text = "どうぞよろしくね";
+                mnu.Items.Add(mi);
+
+                mnu.ShowAt(this, new Point(100, 200));
+                break;
+
+            case VirtualKey.F11:
+                ShowMenu();
                 break;
             }
         }

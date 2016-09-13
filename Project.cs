@@ -21,7 +21,12 @@ namespace Miyu {
         public static string ClassesDir = WebDir + "\\class";
         public static bool InBuild;
         public static TToken ChangedToken;
+
         public static List<TVariable> CodeCompletionVariables = new List<TVariable>();
+        public static int CodeCompletionOffset;
+        public static int CodeCompletionIdx;
+        public const  int CodeCompletionRows = 10;
+        public static string CodeCompletionString = "";
 
         public List<TType> AppClasses;
 
@@ -54,8 +59,10 @@ namespace Miyu {
         // 特定化クラスの辞書
         public Dictionary<string, TGenericClass> SpecializedClassTable = new Dictionary<string, TGenericClass>();
 
-        public List<Assembly> AssemblyList = new List<Assembly>();
+        // TypeInfoの辞書
         public Dictionary<string, TType> TypeInfoTable = new Dictionary<string, TType>();
+
+        public List<Assembly> AssemblyList = new List<Assembly>();
 
         public Dictionary<string, string> TypeAliasTable = new Dictionary<string, string>();
 
@@ -128,6 +135,7 @@ namespace Miyu {
             Dictionary<string, TType> simple_class_table_save = null;
             Dictionary<string, TGenericClass> parameterized_class_table_save = null;
             Dictionary<string, TGenericClass> specialized_class_table_save = null;
+            Dictionary<string, TType> type_info_table_save = null;
 
             tick = DateTime.Now;
 
@@ -163,15 +171,17 @@ namespace Miyu {
                     simple_class_table_save         = new Dictionary<string, TType>(SimpleClassTable);
                     parameterized_class_table_save  = new Dictionary<string, TGenericClass>(ParameterizedClassTable);
                     specialized_class_table_save    = new Dictionary<string, TGenericClass>(SpecializedClassTable);
+                    type_info_table_save            = new Dictionary<string, TType>(TypeInfoTable);
                 }
 
                 try {
                     Debug.WriteLine("解析開始");
 
                     // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を復元する。
-                    SimpleClassTable = new Dictionary<string, TType>(simple_class_table_save);
+                    SimpleClassTable        = new Dictionary<string, TType>(simple_class_table_save);
                     ParameterizedClassTable = new Dictionary<string, TGenericClass>(parameterized_class_table_save);
-                    SpecializedClassTable = new Dictionary<string, TGenericClass>(specialized_class_table_save);
+                    SpecializedClassTable   = new Dictionary<string, TGenericClass>(specialized_class_table_save);
+                    TypeInfoTable           = new Dictionary<string, TType>(type_info_table_save);
 
                     ParseDone = false;
 
@@ -195,6 +205,11 @@ namespace Miyu {
                                 }
                             }
                         }
+                    }
+
+                    // コード補完の候補リストをクリアする。
+                    lock (TProject.CodeCompletionVariables) {
+                        TProject.CodeCompletionVariables.Clear();
                     }
 
                     // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。

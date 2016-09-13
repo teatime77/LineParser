@@ -179,6 +179,9 @@ namespace Miyu {
                 else if (stmt is TLock) {
                     LockNavi(stmt as TLock, args);
                 }
+                else if (stmt is TUsingBlock) {
+                    UsingBlockNavi(stmt as TUsingBlock, args);
+                }
                 else if (stmt is TWhile) {
                     WhileNavi(stmt as TWhile, args);
                 }
@@ -302,6 +305,23 @@ namespace Miyu {
             }
 
             AfterAction(lck, args);
+        }
+
+        public virtual void UsingBlockNavi(TUsingBlock usng, List<object> args) {
+            BeforeAction(usng, args);
+
+            if(usng.UsingVar != null) {
+
+                VariableNavi(usng.UsingVar, args);
+            }
+
+            TermNavi(usng.UsingObj, args);
+
+            foreach (TStatement stmt in usng.StatementsBlc) {
+                StatementNavi(stmt, args);
+            }
+
+            AfterAction(usng, args);
         }
 
         public virtual void WhileNavi(TWhile wh, List<object> args) {
@@ -431,6 +451,9 @@ namespace Miyu {
                 }
                 else if (stmt is TLock) {
                     TLock lck = stmt as TLock;
+                }
+                else if (stmt is TUsingBlock) {
+                    TUsingBlock usng = stmt as TUsingBlock;
                 }
                 else if (stmt is TWhile) {
                     TWhile while1 = stmt as TWhile;

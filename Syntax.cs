@@ -73,7 +73,7 @@ namespace Miyu {
     }
 
     /*
-     * using文
+     * usingディレクティブ
      */
     public class TUsing {
         public List<string> Packages = new List<string>();
@@ -967,6 +967,14 @@ namespace Miyu {
      */
     public partial class TLock : TBlockStatement {
         public TTerm LockObj;
+    }
+
+    /*
+     * using文
+     */
+    public partial class TUsingBlock : TBlockStatement {
+        public TVariable UsingVar;
+        public TTerm UsingObj;
     }
 
     /*

@@ -19,6 +19,7 @@ interface IEnumerable<T> {
     IEnumerable<T> Take(int count);
     List<T> ToList();
     T[] ToArray();
+    T Max();
 }
 
 class Action {
@@ -180,6 +181,10 @@ class MainPage {
 class ManualResetEvent {
 }
 class Math {
+}
+class MenuFlyout {
+}
+class MenuFlyoutItem {
 }
 class MethodInfo {
 }

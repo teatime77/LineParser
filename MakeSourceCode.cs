@@ -673,6 +673,20 @@ namespace Miyu {
                     TermText(lock1.LockObj, sw);
                     sw.Fmt(EKind.RP, EKind.LC, EKind.NL);
                 }
+                else if (stmt is TUsingBlock) {
+                    TUsingBlock using1 = stmt as TUsingBlock;
+
+                    sw.Fmt(EKind.using_, EKind.LP);
+
+                    if(using1.UsingVar != null) {
+
+                        VariableText(using1.UsingVar, sw);
+                        sw.Fmt(EKind.Assign);
+                    }
+
+                    TermText(using1.UsingObj, sw);
+                    sw.Fmt(EKind.RP, EKind.LC, EKind.NL);
+                }
                 else if (stmt is TWhile) {
                     TWhile while1 = stmt as TWhile;
 

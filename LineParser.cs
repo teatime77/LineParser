@@ -788,6 +788,34 @@ namespace Miyu {
         }
 
         /*
+         * usingの開始行を読む。
+         */
+        public TUsingBlock ReadUsingLine() {
+            TUsingBlock using1 = new TUsingBlock();
+
+            GetToken(EKind.using_);
+
+            LPopt();
+
+            if(CurrentToken.Kind == EKind.ClassName) {
+
+                TType type = ReadType(false);
+                TToken id = GetToken(EKind.Identifier);
+
+                using1.UsingVar = new TVariable(null, id, type, null);
+
+                GetToken(EKind.Assign);
+            }
+            using1.UsingObj = Expression();
+            RPopt();
+
+            LCopt();
+            GetToken(EKind.EOT);
+
+            return using1;
+        }
+
+        /*
          * foreachの開始行を読む。
          */
         public TForEach ReadForEachLine() {
@@ -1157,7 +1185,14 @@ namespace Miyu {
 
                 switch (CurrentToken.Kind) {
                 case EKind.using_:
-                    return ReadUsing();
+                    if(NextToken.Kind == EKind.LP) {
+
+                        return ReadUsingLine();
+                    }
+                    else {
+
+                        return ReadUsing();
+                    }
 
                 case EKind.namespace_:
                     return ReadNamespace();

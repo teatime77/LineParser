@@ -505,15 +505,33 @@ namespace Miyu {
                 else {
 
                     vfld = (from fld in DotLeft.TypeTrm.Fields where fld.NameVar.StartsWith(IdentifierCC.TextTkn) select fld).ToList();
+
+                    if ((from f in vfld select f.NameVar.Length).Max() == IdentifierCC.TextTkn.Length) {
+
+                        lock (TProject.CodeCompletionVariables) {
+                            TProject.CodeCompletionVariables.Clear();
+                        }
+                        return;
+                    }
                 }
-                
-                foreach(TField v in vfld) {
+
+                foreach (TField v in vfld) {
                     Debug.WriteLine("コード補完 {0}", v.NameVar, "");
                 }
 
                 lock (TProject.CodeCompletionVariables) {
                     TProject.CodeCompletionVariables.Clear();
                     TProject.CodeCompletionVariables.AddRange(from x in  vfld select x as TVariable);
+                    TProject.CodeCompletionOffset = 0;
+                    TProject.CodeCompletionIdx = 0;
+
+                    if (IdentifierCC == null) {
+                        TProject.CodeCompletionString = "";
+                    }
+                    else {
+
+                        TProject.CodeCompletionString = IdentifierCC.TextTkn;
+                    }
                 }
             }
         }
