@@ -16,7 +16,8 @@ namespace Miyu {
 
     //------------------------------------------------------------ TProject
     public partial class TProject  {
-        public static string OutputDir = ApplicationData.Current.LocalFolder.Path + "\\out";
+        public static string HomeDir = ApplicationData.Current.LocalFolder.Path;
+        public static string OutputDir = HomeDir + "\\out";
         public static string WebDir = OutputDir + "\\web";
         public static string ClassesDir = WebDir + "\\class";
         public static bool InBuild;
@@ -329,10 +330,19 @@ namespace Miyu {
                             TTokenWriter tw = new TTokenWriter(src.Parser);
                             src.Parser.SourceFileText(src, tw);
 
-                            string fname = Path.GetFileNameWithoutExtension(src.PathSrc);
+                            string dir_path = Path.GetDirectoryName(src.PathSrc);
+                            string fname;
+                            if (dir_path == "") {
 
-                            File.WriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText(), Encoding.UTF8);
-                            File.WriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname), Encoding.UTF8);
+                                fname = Path.GetFileNameWithoutExtension(src.PathSrc);
+                            }
+                            else {
+
+                                fname = dir_path + "\\" + Path.GetFileNameWithoutExtension(src.PathSrc);
+                            }
+
+                            FileWriteAllText(OutputDir + "\\" + fname + ".cs", tw.ToPlainText());
+                            FileWriteAllText(html_dir + "\\" + fname + ".html", tw.ToHTMLText(fname));
                         }
 
                         // HTMLのソースコードを作る。
@@ -386,8 +396,8 @@ namespace Miyu {
 
         public void OpenProject() {
             StorageFolder localFolder = ApplicationData.Current.LocalFolder;
-            SourceFiles = (from file_name in File.ReadAllLines(localFolder.Path + @"\ProjectFiles.txt", Encoding.UTF8)
-                           select new TSourceFile(localFolder.Path + @"\" + file_name, TCSharpParser.CSharpParser)).ToList();
+            SourceFiles = (from file_name in File.ReadAllLines(HomeDir + @"\ProjectFiles.txt", Encoding.UTF8)
+                           select new TSourceFile(file_name, TCSharpParser.CSharpParser)).ToList();
 
             SystemSourceFile = (from src in SourceFiles where Path.GetFileName(src.PathSrc) == "System.cs" select src).First();
 

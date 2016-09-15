@@ -1074,6 +1074,16 @@ namespace Miyu {
             return TParser.HTMLHead1 + title + TParser.HTMLHead2 + "<pre><code>\r\n" + s + "</code></pre></body></html>";
         }
 
+        public static void FileWriteAllText(string path, string contents) {
+            string dir_path = Path.GetDirectoryName(path);
+
+            if (!Directory.Exists(dir_path)) {
+                Directory.CreateDirectory(dir_path);
+            }
+
+            File.WriteAllText(path, contents, Encoding.UTF8);
+        }
+
         /*
          * HTMLのソースコードを作る。
          */

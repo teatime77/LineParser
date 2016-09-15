@@ -33,7 +33,7 @@ namespace Miyu {
             PathSrc = path;
             Parser = parser;
 
-            string text = File.ReadAllText(path, Encoding.UTF8).Replace("\r\n", "\n");
+            string text = File.ReadAllText(TProject.HomeDir + @"\" + path, Encoding.UTF8).Replace("\r\n", "\n");
             Chars.AddRange(from c in text select new TChar(c));
 
             Lines.Clear();

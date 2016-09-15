@@ -8,4 +8,14 @@
         public void InitializeComponent(){
         }
     }
+
+    partial class FindReplace {
+        public void InitializeComponent(){
+        }
+    }
+
+    partial class WindowTool {
+        public void InitializeComponent() {
+        }
+    }
 }

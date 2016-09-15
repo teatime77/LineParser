@@ -20,19 +20,13 @@ namespace Miyu {
     public sealed partial class WindowTool : UserControl {
         bool PointerDown;
         Point DownPoint;
-        double DownLeft, DownTop;
+        double DownLeft;
+        double DownTop;
         FrameworkElement UserWindow;
         Canvas ParentCanvas;
 
         public WindowTool() {
             this.InitializeComponent();
-        }
-
-        private void TitleBar_PointerPressed(object sender, PointerRoutedEventArgs e) {
-        }
-
-        private void TitleBar_PointerMoved(object sender, PointerRoutedEventArgs e) {
-
         }
 
         private void UserControl_PointerPressed(object sender, PointerRoutedEventArgs e) {
@@ -47,7 +41,6 @@ namespace Miyu {
             DownTop  = Canvas.GetTop(UserWindow);
 
             Debug.WriteLine("Press {0}", DownPoint);
-
         }
 
         private void UserControl_PointerMoved(object sender, PointerRoutedEventArgs e) {
@@ -60,7 +53,6 @@ namespace Miyu {
                 Canvas.SetLeft(UserWindow, DownLeft + dx);
                 Canvas.SetTop(UserWindow, DownTop + dy);
             }
-
         }
 
         private void UserControl_PointerReleased(object sender, PointerRoutedEventArgs e) {
@@ -71,10 +63,6 @@ namespace Miyu {
 
                 ReleasePointerCapture(e.Pointer);
             }
-
-        }
-
-        private void TitleBar_PointerReleased(object sender, PointerRoutedEventArgs e) {
         }
     }
 }

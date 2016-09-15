@@ -221,6 +221,8 @@ class short {
 }
 class Size {
 }
+class SizeChangedEventArgs {
+}
 class Stack<T> : IEnumerable<T> {
     void Clear();
     int Count;

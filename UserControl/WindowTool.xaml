@@ -12,7 +12,7 @@
     <Grid>
         <Border BorderBrush="Gray" BorderThickness="2" Height="300" Width="400"/>
         <Rectangle Fill="Blue" VerticalAlignment="Top" Height="24"/>
-        <TextBlock x:Name="TitleBar" TextWrapping="Wrap" Text="タイトルバー" VerticalAlignment="Top" Height="24" Margin="0,0,16,0" Foreground="White" PointerPressed="TitleBar_PointerPressed" PointerMoved="TitleBar_PointerMoved" PointerReleased="TitleBar_PointerReleased"/>
+        <TextBlock x:Name="TitleBar" TextWrapping="Wrap" Text="タイトルバー" VerticalAlignment="Top" Height="24" Margin="0,0,16,0" Foreground="White"/>
 
     </Grid>
 </UserControl>
