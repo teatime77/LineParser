@@ -303,7 +303,14 @@ namespace Miyu {
             CoreTextEditContextを作るとこれが呼ばれる。
         */
         private void EditContext_TextRequested(CoreTextEditContext sender, CoreTextTextRequestedEventArgs ev) {
-            ev.Request.Text = SourceFile.StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
+            if(SourceFile == null) {
+
+                ev.Request.Text = "";
+            }
+            else {
+
+                ev.Request.Text = SourceFile.StringFromRange(ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
+            }
 
             MyEditor.WriteLine("<<--- TextRequested : {0}-{1}", ev.Request.Range.StartCaretPosition, ev.Request.Range.EndCaretPosition);
         }

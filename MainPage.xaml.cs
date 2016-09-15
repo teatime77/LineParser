@@ -68,5 +68,20 @@ namespace Miyu {
                 RightEditor.InvalidateCanvas();
             }, null);
         }
+
+        private void MainCanvas_SizeChanged(object sender, SizeChangedEventArgs e) {
+            double h = MainCanvas.ActualHeight;
+
+            lst_SourceFiles.Height  = h;
+            LeftEditor.Height       = h;
+            RightEditor.Height      = h;
+
+            double w = (MainCanvas.ActualWidth - lst_SourceFiles.ActualWidth) / 2;
+
+            LeftEditor.Width    = w;
+            RightEditor.Width   = w;
+
+            Canvas.SetLeft(RightEditor, Canvas.GetLeft(LeftEditor) + w);
+        }
     }
 }
