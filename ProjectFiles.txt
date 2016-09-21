@@ -14,5 +14,7 @@ Project.cs
 Syntax.cs
 SourceFile.cs
 Navigation.cs
+Utility.cs
 UserControl\FindReplace.xaml.cs
 UserControl\WindowTool.xaml.cs
+UserControl\OutputWindow.xaml.cs

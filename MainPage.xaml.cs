@@ -14,7 +14,7 @@ namespace Miyu {
     public sealed partial class MainPage : Page {
         public static MainPage theMainPage;
         TProject MainProject;
-        SynchronizationContext UIContext;
+        public static SynchronizationContext UIContext;
 
         public MainPage() {
             this.InitializeComponent();
@@ -71,17 +71,21 @@ namespace Miyu {
 
         private void MainCanvas_SizeChanged(object sender, SizeChangedEventArgs e) {
             double h = MainCanvas.ActualHeight;
+            double h2 = h - OutputPane.ActualHeight;
 
             lst_SourceFiles.Height  = h;
-            LeftEditor.Height       = h;
-            RightEditor.Height      = h;
+            LeftEditor.Height       = h2;
+            RightEditor.Height      = h2;
 
             double w = (MainCanvas.ActualWidth - lst_SourceFiles.ActualWidth) / 2;
 
             LeftEditor.Width    = w;
             RightEditor.Width   = w;
+            OutputPane.Width    = 2 * w;
 
             Canvas.SetLeft(RightEditor, Canvas.GetLeft(LeftEditor) + w);
+
+            Canvas.SetTop(OutputPane, h2);
         }
     }
 }

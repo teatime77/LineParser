@@ -24,22 +24,32 @@ namespace Miyu {
             関数名と引数の数と型が同じならtrue
         */
         public bool Match(string name, List<TType> arg_types, bool exact) {
-            if (NameVar != name || arg_types.Count < ArgsFnc.Length) {
-                // 関数名か引数の数が違う場合
+            if (NameVar != name) {
+                // 関数名が違う場合
 
                 return false;
             }
 
-            if (ArgsFnc.Length < arg_types.Count) {
+            // 最後が可変個の引数ならtrue
+            bool last_is_params = (ArgsFnc.Length != 0 && ArgsFnc[ArgsFnc.Length - 1].isParams());
 
-                if(ArgsFnc.Length == 0 || ! ArgsFnc[ArgsFnc.Length - 1].isParams()) {
-                    // 最後の仮引数が可変個の引数でない場合
+            if (arg_types.Count < ArgsFnc.Length) {
+                // 実引数が仮引数より少ない場合
+
+                if(arg_types.Count + 1 != ArgsFnc.Length || ! last_is_params) {
+                    // 最後の可変個の引数の省略でない場合
 
                     return false;
                 }
             }
 
-            for (int i = 0; i < ArgsFnc.Length; i++) {
+            if (ArgsFnc.Length < arg_types.Count && ! last_is_params) {
+                // 実引数が仮引数より多く、最後が可変個の引数でない場合
+
+                return false;
+            }
+
+            for (int i = 0; i < Math.Min(arg_types.Count, ArgsFnc.Length); i++) {
                 TVariable var1 = ArgsFnc[i];
 
                 if (var1.isParams()) {

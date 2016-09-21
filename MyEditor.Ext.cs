@@ -18,4 +18,10 @@
         public void InitializeComponent() {
         }
     }
+
+    partial class OutputWindow {
+        ListBox OutputList;
+        public void InitializeComponent() {
+        }
+    }
 }

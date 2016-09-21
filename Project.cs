@@ -176,7 +176,7 @@ namespace Miyu {
                 }
 
                 try {
-                    Debug.WriteLine("解析開始");
+                    TLog.WriteLine("解析開始");
 
                     // System.csの構文解析が終わった時点での単純クラス,パラメータ化クラス,特定化クラスの辞書を復元する。
                     SimpleClassTable        = new Dictionary<string, TType>(simple_class_table_save);
@@ -217,7 +217,7 @@ namespace Miyu {
                     RegisterClassNames();
 
                     tick = DateTime.Now;
-                    Debug.WriteLine("型名登録 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    TLog.WriteLine("型名登録 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
                     foreach (TSourceFile src in SourceFiles) {
@@ -235,7 +235,7 @@ namespace Miyu {
                         }
                     }
 
-                    Debug.WriteLine("解析終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    TLog.WriteLine("解析終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     tick = DateTime.Now;
 
                     TSetParentNavi set_parent = new TSetParentNavi();
@@ -285,7 +285,7 @@ namespace Miyu {
                     foreach (TSourceFile src in SourceFiles) {
                         src.Parser.SourceFileResolveName(src);
                     }
-                    Debug.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                    TLog.WriteLine("名前解決 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
 
                     // 単純クラスの辞書のチェック
                     foreach (TType c in SimpleClassTable.Values) {
@@ -348,25 +348,25 @@ namespace Miyu {
                         // HTMLのソースコードを作る。
                         MakeHTMLSourceCode();
 
-                        Debug.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        TLog.WriteLine("ソース生成 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                         tick = DateTime.Now;
 
                         // 使用・定義連鎖を作る。
                         MakeUseDefineChain();
 
-                        Debug.WriteLine("使用・定義連鎖 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        TLog.WriteLine("使用・定義連鎖 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                         tick = DateTime.Now;
 
                         // クラス図を作る。
                         MakeClassDiagram();
 
-                        Debug.WriteLine("クラス図 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        TLog.WriteLine("クラス図 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                         tick = DateTime.Now;
 
                         // 要約を作る。
                         MakeSummary();
 
-                        Debug.WriteLine("要約 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        TLog.WriteLine("要約 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                     }
                 }
                 catch (TBuildCancel) {

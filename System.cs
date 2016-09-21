@@ -176,6 +176,8 @@ class List<T> {
     //void Sort(Comparison<T> comparison);
     //T[] ToArray();
 }
+class ListBox {
+}
 class MainPage {
 }
 class ManualResetEvent {

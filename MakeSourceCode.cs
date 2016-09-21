@@ -1136,7 +1136,8 @@ namespace Miyu {
                     sw.WriteLine("<ul>");
 
                     // クラスに属する関数に対し
-                    foreach(TFunction fnc in cls.Functions) {
+                    var vfnc = from x in cls.Functions where x.KindFnc != EKind.Lambda select x;
+                    foreach (TFunction fnc in vfnc) {
                         string fnc_dir = class_dir + "\\" + fnc.UniqueName();
 
                         if (! Directory.Exists(fnc_dir)) {

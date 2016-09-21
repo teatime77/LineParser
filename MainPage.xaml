@@ -10,8 +10,9 @@
 
     <Canvas x:Name="MainCanvas" SizeChanged="MainCanvas_SizeChanged">
         <ListBox x:Name="lst_SourceFiles" DoubleTapped="lst_SourceFiles_DoubleTapped" Height="640" Width="256" />
-        <Miyu:MyEditor x:Name="LeftEditor" Height="640" Width="394" Canvas.Left="256"  />
-        <Miyu:MyEditor x:Name="RightEditor" Height="640" Canvas.Left="655" Width="369"  />
+        <Miyu:MyEditor x:Name="LeftEditor" Height="540" Width="394" Canvas.Left="256"  />
+        <Miyu:MyEditor x:Name="RightEditor" Height="540" Canvas.Left="655" Width="369"  />
+        <Miyu:OutputWindow x:Name="OutputPane" Height="100" Width="768" Canvas.Left="256" Canvas.Top="540"/>
         <Miyu:FindReplace Canvas.Left="21" Canvas.Top="426" Width="166"/>
     </Canvas>
 </Page>
