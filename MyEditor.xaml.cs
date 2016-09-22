@@ -36,7 +36,7 @@ namespace Miyu {
         public List<TChar> Chars = new List<TChar>();
 
         // 描画した図形のリスト
-        List<TShape> DrawList = new List<TShape>();
+        List<TText2D> DrawList = new List<TText2D>();
 
         // フォントなどの書式
         CanvasTextFormat TextFormat = new CanvasTextFormat();
@@ -277,7 +277,7 @@ namespace Miyu {
                         }
                     }
 
-                    DrawList.Add(new TShape(x, y, sz, phrase_start_pos, pos + 1));
+                    DrawList.Add(new TText2D(x, y, sz, phrase_start_pos, pos + 1));
 
                     x += (float)sz.Width;
 
@@ -630,7 +630,7 @@ namespace Miyu {
                 line_idx = SourceFile.GetLFCount(0, i);
                 Debug.WriteLine("PageUp {0}", line_diff);
                 new_sel_current = i;
-                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
+                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1, true);
                 break;
 
             case VirtualKey.PageDown:
@@ -649,7 +649,7 @@ namespace Miyu {
                 line_idx = SourceFile.GetLFCount(0, i);
                 Debug.WriteLine("PageDown {0}", line_diff);
                 new_sel_current = i;
-                EditScroll.ScrollToVerticalOffset(Math.Min(EditCanvas.Height, line_idx * LineHeight));
+                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1, true);
                 break;
             }
 
@@ -1237,7 +1237,7 @@ namespace Miyu {
         private void CoreWindow_PointerWheelChanged(CoreWindow sender, PointerEventArgs args) {
             int scroll_direction = (0 < args.CurrentPoint.Properties.MouseWheelDelta ? -1 : 1);
             int offset = (int)Math.Round(EditScroll.VerticalOffset / LineHeight);
-            EditScroll.ScrollToVerticalOffset((offset + scroll_direction) * LineHeight);
+            EditScroll.ChangeView(null, (offset + scroll_direction) * LineHeight, 1, true);
             MyEditor.WriteLine("<<--- PointerWheelChanged {0}", args.CurrentPoint.Properties.MouseWheelDelta);
         }
 
@@ -1289,7 +1289,7 @@ namespace Miyu {
             Point pt = new Point(pointer.Position.X - canvas_pos.X, pointer.Position.Y - canvas_pos.Y);
 
             // 描画された図形に対し
-            foreach (TShape shape in DrawList) {
+            foreach (TText2D shape in DrawList) {
                 if (shape.Bounds.Contains(pt)) {
 
                     int phrase_pos;
@@ -1398,7 +1398,7 @@ namespace Miyu {
 
             SelOrigin = 0;
             SelCurrent = 0;
-            EditScroll.ScrollToVerticalOffset(0);
+            EditScroll.ChangeView(null, 0, 1, true);
 
             if (editContext != null) {
 
@@ -1467,9 +1467,13 @@ namespace Miyu {
         描画される図形のクラス
         現在は文字列描画のみだが、将来的には画像なども可能にする。
     */
-    public class TShape {
+    public partial class TShape {
         // 図形を囲む矩形
         public Rect Bounds;
+
+        public Color ForeColor = Colors.Black;
+
+        public float StrokeWidth = 1;
 
         // 図形に対応するテキストの範囲
         public int StartPos;
@@ -1478,11 +1482,27 @@ namespace Miyu {
         /*
             コンストラクタ
         */
-        public TShape(double x, double y, Size sz, int start_pos, int end_pos) {
+        public TShape(Point pos, Point sz) {
+            Bounds = new Rect(pos, new Size(sz.X, sz.Y));
+        }
+
+        /*
+            コンストラクタ
+        */
+        public TShape(double x, double y, Size sz) {
             Bounds.X = x;
             Bounds.Y = y;
             Bounds.Width = sz.Width;
             Bounds.Height = sz.Height;
+        }
+    }
+
+    public class TText2D : TShape {
+
+        /*
+            コンストラクタ
+        */
+        public TText2D(double x, double y, Size sz, int start_pos, int end_pos) : base(x, y, sz) {
             StartPos = start_pos;
             EndPos = end_pos;
         }

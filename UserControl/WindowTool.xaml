@@ -10,9 +10,10 @@
     d:DesignWidth="400" PointerPressed="UserControl_PointerPressed" PointerMoved="UserControl_PointerMoved" PointerReleased="UserControl_PointerReleased">
 
     <Grid>
-        <Border BorderBrush="Gray" BorderThickness="2" Height="300" Width="400"/>
+        <Border BorderBrush="Gray" BorderThickness="2" />
         <Rectangle Fill="Blue" VerticalAlignment="Top" Height="24"/>
         <TextBlock x:Name="TitleBar" TextWrapping="Wrap" Text="タイトルバー" VerticalAlignment="Top" Height="24" Margin="0,0,16,0" Foreground="White"/>
+        <Rectangle x:Name="CornerHandle" Fill="Blue" HorizontalAlignment="Right" Height="10" VerticalAlignment="Bottom" Width="10" Margin="0,0,0,0"/>
 
     </Grid>
 </UserControl>

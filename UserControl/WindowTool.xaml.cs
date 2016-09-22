@@ -22,8 +22,11 @@ namespace Miyu {
         Point DownPoint;
         double DownLeft;
         double DownTop;
+        double DownWidth;
+        double DownHeight;
         FrameworkElement UserWindow;
         Canvas ParentCanvas;
+        object EventSource;
 
         public WindowTool() {
             this.InitializeComponent();
@@ -40,7 +43,12 @@ namespace Miyu {
             DownLeft = Canvas.GetLeft(UserWindow);
             DownTop  = Canvas.GetTop(UserWindow);
 
-            Debug.WriteLine("Press {0}", DownPoint);
+            DownWidth = UserWindow.ActualWidth;
+            DownHeight = UserWindow.ActualHeight;
+
+            EventSource = e.OriginalSource;
+
+            Debug.WriteLine("Press {0} {1}", DownPoint, e.OriginalSource);
         }
 
         private void UserControl_PointerMoved(object sender, PointerRoutedEventArgs e) {
@@ -50,8 +58,16 @@ namespace Miyu {
                 double dy = pt.Y - DownPoint.Y;
                 Debug.WriteLine("Drag {0},{1}", dx, dy);
 
-                Canvas.SetLeft(UserWindow, DownLeft + dx);
-                Canvas.SetTop(UserWindow, DownTop + dy);
+                if(EventSource == CornerHandle) {
+
+                    UserWindow.Width = DownWidth + dx;
+                    UserWindow.Height = DownHeight + dy;
+                }
+                else {
+
+                    Canvas.SetLeft(UserWindow, DownLeft + dx);
+                    Canvas.SetTop(UserWindow, DownTop + dy);
+                }
             }
         }
 

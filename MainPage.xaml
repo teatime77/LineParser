@@ -14,5 +14,6 @@
         <Miyu:MyEditor x:Name="RightEditor" Height="540" Canvas.Left="655" Width="369"  />
         <Miyu:OutputWindow x:Name="OutputPane" Height="100" Width="768" Canvas.Left="256" Canvas.Top="540"/>
         <Miyu:FindReplace Canvas.Left="21" Canvas.Top="426" Width="166"/>
+        <Miyu:MyDesigner Width="500" Height="500" Canvas.Left="119" Canvas.Top="35"/>
     </Canvas>
 </Page>
