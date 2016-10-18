@@ -11,7 +11,30 @@
     d:DesignWidth="500" Loaded="UserControl_Loaded">
 
     <Grid Background="White">
-        <Grid HorizontalAlignment="Left" Width="20" Margin="0,26,0,0" Background="LightGray"/>
+        <Grid HorizontalAlignment="Left" Width="20" Margin="0,26,0,0" Background="LightGray">
+            <StackPanel x:Name="ToolBoxPanel">
+                <Button x:Name="button" Content="Button" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="19" BorderBrush="Blue" Click="ToolBox_Click">
+                    <Button.Background>
+                        <ImageBrush ImageSource="ms-appx:///Assets/ToolBox/Arrow.png"/>
+                    </Button.Background>
+                </Button>
+                <Button Content="Button"  Height="19" Click="ToolBox_Click">
+                    <Button.Background>
+                        <ImageBrush ImageSource="ms-appx:///Assets/ToolBox/Line.png"/>
+                    </Button.Background>
+                </Button>
+                <Button Content="Button"  Height="19" Click="ToolBox_Click">
+                    <Button.Background>
+                        <ImageBrush ImageSource="ms-appx:///Assets/ToolBox/Rectangle.png"/>
+                    </Button.Background>
+                </Button>
+                <Button Content="Button"  Height="19" Click="ToolBox_Click">
+                    <Button.Background>
+                        <ImageBrush ImageSource="ms-appx:///Assets/ToolBox/Ellipse.png"/>
+                    </Button.Background>
+                </Button>
+            </StackPanel>
+        </Grid>
         <Grid HorizontalAlignment="Left" Width="80" Margin="20,26,0,0" Background="Gray"/>
 
         <ScrollViewer x:Name="DesignerScroll" Margin="100,26,0,0" VerticalScrollMode="Enabled" HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible" ViewChanged="DesignerScroll_ViewChanged" >

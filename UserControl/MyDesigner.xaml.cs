@@ -40,6 +40,8 @@ namespace Miyu {
 
         public Point CanvasSize = new Point(5000, 5000);
 
+        int ToolIdx;
+
         // ズーム レベル
         public int ZoomLevel = 0;
         public double ZoomScale = 1;
@@ -231,6 +233,23 @@ namespace Miyu {
                     PointerEventLoop = null;
                 }
             }
+        }
+
+        private void ToolBox_Click(object sender, RoutedEventArgs e) {
+            Button btn1 = ToolBoxPanel.Children[ToolIdx] as Button;
+            btn1.BorderBrush = new SolidColorBrush(Colors.Black);
+
+            ToolIdx = ToolBoxPanel.Children.IndexOf(e.OriginalSource as UIElement);
+
+            Button btn2 = ToolBoxPanel.Children[ToolIdx] as Button;
+            btn2.BorderBrush = new SolidColorBrush(Colors.Blue);
+
+            btn1.InvalidateArrange();
+            btn2.UpdateLayout();
+
+            ToolBoxPanel.UpdateLayout();
+
+            Debug.WriteLine("tool box : {0}", e.OriginalSource);
         }
     }
 
