@@ -125,7 +125,7 @@ namespace Miyu {
             DesignerCanvas.Width = ZoomScale * CanvasSize.X;
             DesignerCanvas.Height = ZoomScale * CanvasSize.Y;
 
-            DesignerScroll.ChangeView(px2, py2, 1, true);
+            DesignerScroll.ChangeView(px2, py2, 1.0f, true);
 
             // 再描画する。
             InvalidateCanvas();

@@ -1710,7 +1710,6 @@ namespace Miyu {
                 }
 
                 TLine line = src.Lines[line_idx];
-                //Debug.WriteLine("名前解決 : {0}", line.TextLine.TrimEnd(), "");
 
                 if (line.ObjLine is TStatement) {
                     TStatement stmt = line.ObjLine as TStatement;
@@ -1727,7 +1726,8 @@ namespace Miyu {
                     try {
                         stmt.ResolveName(line.ClassLine, vars);
                     }
-                    catch (TResolveNameException) {
+                    catch (TResolveNameException ex) {
+                        Debug.WriteLine("名前解決 {0} : {1}", ex.ErrRef.NameRef, line.TextLine.Trim());
                     }
                 }
             }
@@ -2445,6 +2445,7 @@ namespace Miyu {
     }
 
     public class TResolveNameException : Exception {
+        public TReference ErrRef;
 
         public TResolveNameException() {
         }
@@ -2454,6 +2455,7 @@ namespace Miyu {
         }
 
         public TResolveNameException(TReference ref1) {
+            ErrRef = ref1;
             if(ref1.TokenTrm != null) {
                 ref1.TokenTrm.ErrorTkn = this;
             }

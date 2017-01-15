@@ -20,6 +20,7 @@ interface IEnumerable<T> {
     List<T> ToList();
     T[] ToArray();
     T Max();
+    T Sum();
 }
 
 class Action {

@@ -630,7 +630,7 @@ namespace Miyu {
                 line_idx = SourceFile.GetLFCount(0, i);
                 Debug.WriteLine("PageUp {0}", line_diff);
                 new_sel_current = i;
-                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1, true);
+                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1.0f, true);
                 break;
 
             case VirtualKey.PageDown:
@@ -649,7 +649,7 @@ namespace Miyu {
                 line_idx = SourceFile.GetLFCount(0, i);
                 Debug.WriteLine("PageDown {0}", line_diff);
                 new_sel_current = i;
-                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1, true);
+                EditScroll.ChangeView(null, Math.Min(EditCanvas.Height, line_idx * LineHeight), 1.0f, true);
                 break;
             }
 
@@ -1237,7 +1237,7 @@ namespace Miyu {
         private void CoreWindow_PointerWheelChanged(CoreWindow sender, PointerEventArgs args) {
             int scroll_direction = (0 < args.CurrentPoint.Properties.MouseWheelDelta ? -1 : 1);
             int offset = (int)Math.Round(EditScroll.VerticalOffset / LineHeight);
-            EditScroll.ChangeView(null, (offset + scroll_direction) * LineHeight, 1, true);
+            EditScroll.ChangeView(null, LineHeight * (offset + scroll_direction), 1.0f, true);
             MyEditor.WriteLine("<<--- PointerWheelChanged {0}", args.CurrentPoint.Properties.MouseWheelDelta);
         }
 
@@ -1398,7 +1398,7 @@ namespace Miyu {
 
             SelOrigin = 0;
             SelCurrent = 0;
-            EditScroll.ChangeView(null, 0, 1, true);
+            EditScroll.ChangeView(null, 0.0, 1.0f, true);
 
             if (editContext != null) {
 

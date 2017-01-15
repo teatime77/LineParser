@@ -66,7 +66,9 @@ namespace Miyu {
 
                 if (arg_types[i] == TGlb.Project.NullClass) {
 
-                    if (var1.TypeVar.IsPrimitive()) {
+                    if (var1.TypeVar.IsPrimitive() && name != "ChangeView") {
+                        // ChangeViewのNullableは未実装
+
                         return false;
                     }
                 }
