@@ -504,6 +504,9 @@ namespace Miyu {
                     }
                 }
             }
+            else if (self is TVariable) {
+                (self as TVariable).ParentVar = last;
+            }
 
             args.Add(self);
         }

@@ -1358,27 +1358,28 @@ namespace Miyu {
                     if (line.Indent < min_indent) {
 
                         min_indent = line.Indent;
+
+                        if (line.ObjLine is TFunction) {
+                            TFunction fnc = line.ObjLine as TFunction;
+                            vars.AddRange(fnc.ArgsFnc);
+                        }
+                        else if (line.ObjLine is TAbsFor) {
+                            TAbsFor for1 = line.ObjLine as TAbsFor;
+                            if (for1.LoopVariable != null) {
+
+                                vars.Add(for1.LoopVariable);
+                            }
+                        }
+                        else if (line.ObjLine is TCatch) {
+                            TCatch catch1 = line.ObjLine as TCatch;
+                            vars.Add(catch1.CatchVariable);
+                        }
                     }
 
                     if (line.ObjLine is TVariableDeclaration) {
 
                         TVariableDeclaration var_decl = line.ObjLine as TVariableDeclaration;
                         vars.AddRange(var_decl.Variables);
-                    }
-                    else if (line.ObjLine is TFunction) {
-                        TFunction fnc = line.ObjLine as TFunction;
-                        vars.AddRange(fnc.ArgsFnc);
-                    }
-                    else if (line.ObjLine is TAbsFor) {
-                        TAbsFor for1 = line.ObjLine as TAbsFor;
-                        if (for1.LoopVariable != null) {
-
-                            vars.Add(for1.LoopVariable);
-                        }
-                    }
-                    else if (line.ObjLine is TCatch) {
-                        TCatch catch1 = line.ObjLine as TCatch;
-                        vars.Add(catch1.CatchVariable);
                     }
                     else if (line.ObjLine is TType) {
 

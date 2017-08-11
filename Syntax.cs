@@ -445,6 +445,7 @@ namespace Miyu {
         public List<TAttribute> Attributes;
 
         [_weak]
+        public object ParentVar;
         public List<TReference> RefsVar = new List<TReference>();
         public TToken TokenVar;
         public TType TypeVar;

@@ -302,6 +302,8 @@ namespace Miyu {
                         Debug.Assert(c.GenericType == EClass.SpecializedClass);
                     }
 
+                    DeepLearning();
+
                     if (output_result) {
                         // 最初の場合
 

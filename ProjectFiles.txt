@@ -1,4 +1,6 @@
 ﻿System.cs
+NeuralNetwork.cs
+DeepLearning.cs
 CodeAnalysis.cs
 MakeSourceCode.cs
 MyEditor.xaml.cs

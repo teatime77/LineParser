@@ -5,6 +5,7 @@ class List<T> : IEnumerable<T> {
 }
 class Array<T> : IEnumerable<T> {
     int Length;
+    int GetLength(int dimension);
 }
 
 interface IEnumerable<T> {
@@ -131,6 +132,7 @@ class Enumerable<T> : IEnumerable<T> {
     //T[] ToArray();
     //int Count();
     T Max();
+    T Sum();
 }
 class EventInfo {
 }
@@ -184,6 +186,7 @@ class MainPage {
 class ManualResetEvent {
 }
 class Math {
+    public static double Sqrt(double d);
 }
 class MenuFlyout {
 }
