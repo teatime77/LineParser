@@ -1,12 +1,4 @@
-﻿using System.Diagnostics;
-using System.Collections.Generic;
-using System;
-using Windows.UI;
-using System.IO;
-using System.Net;
-using System.Linq;
-using System.Threading.Tasks;
-
+﻿
 /*--------------------------------------------------------------------------------
         1行の構文解析
 --------------------------------------------------------------------------------*/

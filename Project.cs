@@ -1,4 +1,8 @@
-﻿using Microsoft.Graphics.Canvas.UI.Xaml;
+﻿#if !CMD
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Windows.Storage;
+using Windows.UI;
+#endif
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,14 +13,16 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Windows.Storage;
-using Windows.UI;
 
 namespace Miyu {
 
     //------------------------------------------------------------ TProject
     public partial class TProject  {
+#if CMD
+        public static string HomeDir;
+#else
         public static string HomeDir = ApplicationData.Current.LocalFolder.Path;
+#endif
         public static string OutputDir = HomeDir + "\\out";
         public static string WebDir = OutputDir + "\\web";
         public static string ClassesDir = WebDir + "\\class";
@@ -302,7 +308,7 @@ namespace Miyu {
                         Debug.Assert(c.GenericType == EClass.SpecializedClass);
                     }
 
-                    DeepLearning();
+//                    DeepLearning();
 
                     if (output_result) {
                         // 最初の場合
@@ -376,8 +382,10 @@ namespace Miyu {
 
                 InBuild = false;
 
+#if !CMD
                 // メインページを再描画する。
                 MainPage.theMainPage.InvalidateMainPage();
+#endif
             }
         }
 
@@ -385,19 +393,24 @@ namespace Miyu {
          * アセンブリのリストを作る。
          */
         public void SetAssemblyList() {
+#if !CMD
             AssemblyList.Add(typeof(ApplicationData).GetTypeInfo().Assembly);
+#endif
             AssemblyList.Add(typeof(Assembly).GetTypeInfo().Assembly);
+#if !CMD
             AssemblyList.Add(typeof(CanvasControl).GetTypeInfo().Assembly);
+#endif
             AssemblyList.Add(typeof(Color).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Debug).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(File).GetTypeInfo().Assembly);
             AssemblyList.Add(typeof(Stack<int>).GetTypeInfo().Assembly);
+#if !CMD
             AssemblyList.Add(typeof(MainPage).GetTypeInfo().Assembly);
+#endif
             AssemblyList.Add(typeof(WebUtility).GetTypeInfo().Assembly);
         }
 
         public void OpenProject() {
-            StorageFolder localFolder = ApplicationData.Current.LocalFolder;
             SourceFiles = (from file_name in File.ReadAllLines(HomeDir + @"\ProjectFiles.txt", Encoding.UTF8)
                            select new TSourceFile(file_name, TCSharpParser.CSharpParser)).ToList();
 
@@ -545,7 +558,7 @@ namespace Miyu {
                         }
                         else {
 
-                            Debug.WriteLine("class syntax error");
+                            Debug.WriteLine("class syntax error:{0}", line.TextLine,"");
                         }
                     }
                 }

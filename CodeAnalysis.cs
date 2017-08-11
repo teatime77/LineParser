@@ -1,16 +1,12 @@
-﻿using Microsoft.Graphics.Canvas.UI.Xaml;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Reflection;
 using System.Text;
-using System.Threading;
-using Windows.Storage;
+#if !CMD
 using Windows.UI;
-using Windows.UI.Xaml;
+#endif
 
 namespace Miyu {
     /*
