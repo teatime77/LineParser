@@ -175,7 +175,7 @@ namespace Miyu {
 
         void SetIdxClass() {
             IdxClass = CountClass;
-            if(IdxClass == 126) {
+            if(IdxClass == 128) {
                 Debug.WriteLine("");
             }
             CountClass++;
@@ -882,6 +882,8 @@ namespace Miyu {
      */
     public abstract partial class TStatement {
         public TToken[] CommentStmt;
+        public TToken BeforeComment;
+        public TToken AfterComment;
 
         [_weak]
         public object ParentStmt;

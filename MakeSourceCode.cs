@@ -611,6 +611,11 @@ namespace Miyu {
                         sw.Fmt(EKind.else_, EKind.LC);
                     }
                     sw.WriteLine();
+
+                    if(if_block.AfterComment != null) {
+                        sw.Fmt(if_block.AfterComment);
+                        sw.WriteLine();
+                    }
                 }
                 else if (stmt is TCase) {
                     TCase cas = stmt as TCase;

@@ -41,7 +41,7 @@ namespace Miyu {
 
             var vcls = from x in SimpleClassTable.Values where x.Info == null && x.SourceFileCls != null select x;
 
-            TType main_class = (from x in vcls where x.ClassName == "TProject" select x).First();
+            TType main_class = (from x in vcls where x.ClassName == MainClassName select x).First();
 
             var vfnc = from c in vcls from f in c.Functions select f;
 

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Miyu {
     class Program {
         static void Main(string[] args) {
-            TProject.HomeDir = @"C:\usr\prj\mkfn";
+            TProject.MainClassName = "MkFn";
             TProject MainProject = new TProject();
             MainProject.Init();
             MainProject.Build();

@@ -19,10 +19,11 @@ namespace Miyu {
     //------------------------------------------------------------ TProject
     public partial class TProject  {
 #if CMD
-        public static string HomeDir;
+        public static string HomeDir = @"C:\usr\prj\mkfn";
 #else
         public static string HomeDir = ApplicationData.Current.LocalFolder.Path;
 #endif
+        public static string MainClassName = "TProject";
         public static string OutputDir = HomeDir + "\\out";
         public static string WebDir = OutputDir + "\\web";
         public static string ClassesDir = WebDir + "\\class";
@@ -147,7 +148,7 @@ namespace Miyu {
             tick = DateTime.Now;
 
             bool is_first = true;
-            bool output_result = false;
+            bool output_result = true;
             while (true) {
                 do_again:
 
@@ -342,6 +343,12 @@ namespace Miyu {
                             Directory.CreateDirectory(html_dir);
                         }
 
+                        // クラス図を作る。
+                        MakeClassDiagram();
+
+                        TLog.WriteLine("クラス図 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
+                        tick = DateTime.Now;
+
                         // 値を代入している変数参照のDefinedをtrueにする。
                         TSetDefined set_defined = new TSetDefined();
                         set_defined.ProjectNavi(this, null);
@@ -376,12 +383,6 @@ namespace Miyu {
                         MakeUseDefineChain();
 
                         TLog.WriteLine("使用・定義連鎖 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
-                        tick = DateTime.Now;
-
-                        // クラス図を作る。
-                        MakeClassDiagram();
-
-                        TLog.WriteLine("クラス図 終了 {0}", DateTime.Now.Subtract(tick).TotalMilliseconds);
                         tick = DateTime.Now;
 
                         // 要約を作る。
@@ -594,7 +595,7 @@ namespace Miyu {
         /*
          * 名前からクラスを得る。登録済みのクラスが無ければ新たに作る。
          */
-        public TType GetClassByName(string name, bool in_generic = false) {
+        public TType GetClassByName(string name, bool in_generic_id = false) {
             TType cls;
             TGenericClass gen_class;
 
@@ -623,8 +624,21 @@ namespace Miyu {
                     }
                 }
 
-                if (in_generic) {
-                    Debug.WriteLine("");
+                var vc = from c in TParser.ParameterClasses where c.ClassName == name select c;
+                if (vc.Any()) {
+                    // 名前が一致する仮引数クラスがある場合
+
+                    return vc.First();
+                }
+
+                if (in_generic_id) {
+
+                    TType param_class = new TType(name);
+                    param_class.GenericType = EClass.ParameterClass;
+
+                    TParser.ParameterClasses.Add(param_class);
+
+                    return param_class;
                 }
 
                 // 登録済みのクラスが無ければ単純クラスを新たに作る。
