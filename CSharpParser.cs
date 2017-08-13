@@ -54,7 +54,17 @@ namespace Miyu {
             TType type = ReadType(false);
             TToken id = GetToken(EKind.Identifier);
 
-            return new TVariable(id, type, kind);
+            TTerm init = null;
+            if (CurrentToken.Kind == EKind.Assign) {
+                // 初期値がある場合
+
+                GetToken(EKind.Assign);
+
+                // 初期値の式
+                init = Expression();
+            }
+
+            return new TVariable(id, type, kind, init);
         }
     }
 }

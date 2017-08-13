@@ -403,6 +403,9 @@ namespace Miyu {
 
             // キーワードの文字列を辞書に登録する。
             for(int i = 0; i < keyword_list.Length; i++) {
+                if(this is TCSharpParser && (token_list[i] == EKind.constructor_ || token_list[i] == EKind.function_)) {
+                    continue;
+                }
                 KeywordMap.Add(keyword_list[i], token_list[i]);
 
                 KindString.Add(token_list[i], keyword_list[i]);

@@ -165,8 +165,14 @@ namespace Miyu {
                     // 型宣言の字句(class, struct, enum, interface, delegate)の直後の識別子は型名とする。
                     RegisterClassNames();
 
+                    TGlb.SourceFile = SystemSourceFile;
+
                     // System.csの構文解析をする。
+#if CMD
                     SystemSourceFile.Parser.ParseFile(SystemSourceFile);
+#else
+                    SystemSourceFile.Parser.LineParseFile(SystemSourceFile);
+#endif
 
                     // 型の別名の辞書をセットする。
                     SetTypeAliasTable();
@@ -231,7 +237,14 @@ namespace Miyu {
                             // System.csでない場合
 
                             // ソースファイルの構文解析をする。
+                            TGlb.SourceFile = src;
+
+#if CMD
                             src.Parser.ParseFile(src);
+#else
+                            src.Parser.LineParseFile(src);
+#endif
+                            TGlb.SourceFile = null;
                         }
 
                         if (Modified.WaitOne(0)) {
@@ -556,7 +569,7 @@ namespace Miyu {
                                 type_names.Add(name);
                             }
                         }
-                        else {
+                        else if(line.Tokens[idx].Kind != EKind.delegate_) {
 
                             Debug.WriteLine("class syntax error:{0}", line.TextLine,"");
                         }
@@ -581,7 +594,7 @@ namespace Miyu {
         /*
          * 名前からクラスを得る。登録済みのクラスが無ければ新たに作る。
          */
-        public TType GetClassByName(string name) {
+        public TType GetClassByName(string name, bool in_generic = false) {
             TType cls;
             TGenericClass gen_class;
 
@@ -608,6 +621,10 @@ namespace Miyu {
 
                         return v.First();
                     }
+                }
+
+                if (in_generic) {
+                    Debug.WriteLine("");
                 }
 
                 // 登録済みのクラスが無ければ単純クラスを新たに作る。

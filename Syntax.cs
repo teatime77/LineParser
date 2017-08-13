@@ -59,6 +59,9 @@ namespace Miyu {
         public static TParser Parser;
 
         [ThreadStatic]
+        public static TSourceFile SourceFile;
+
+        [ThreadStatic]
         public static TFunction LambdaFunction;
 
         [ThreadStatic]
@@ -112,6 +115,7 @@ namespace Miyu {
         public bool isPartial;
         public bool isStatic;
         public bool isConst;
+        public bool isNew;
         public bool isOverride;
         public bool isAbstract;
         public bool isVirtual;
@@ -171,6 +175,9 @@ namespace Miyu {
 
         void SetIdxClass() {
             IdxClass = CountClass;
+            if(IdxClass == 126) {
+                Debug.WriteLine("");
+            }
             CountClass++;
         }
 
@@ -191,6 +198,10 @@ namespace Miyu {
             ClassName = name;
             RetType = ret_type;
             ArgTypes = arg_types;
+        }
+
+        public override string ToString() {
+            return string.Format("{0} {1} {2}", ClassName, KindClass, GenericType);
         }
 
         public virtual string GetClassText() {
@@ -466,12 +477,13 @@ namespace Miyu {
             InitValue = init;
         }
 
-        public TVariable(TToken name, TType type, EKind kind) {
+        public TVariable(TToken name, TType type, EKind kind, TTerm init = null) {
             TokenVar = name;
             NameVar = name.TextTkn;
             TypeVar = type;
+            InitValue = init;
 
-            if(kind != EKind.Undefined) {
+            if (kind != EKind.Undefined) {
                 ModifierVar = new TModifier();
                 switch (kind) {
                 case EKind.ref_:
@@ -598,6 +610,12 @@ namespace Miyu {
             KindFnc = EKind.Lambda;
             ArgsFnc = new TVariable[1];
             ArgsFnc[0] = new TVariable(name);
+            LambdaFnc = trm;
+        }
+
+        public TFunction(TTerm[] args, TTerm trm) : base() {
+            KindFnc = EKind.Lambda;
+            ArgsFnc = (from x in args select new TVariable((x as TReference).NameRef, null)).ToArray();
             LambdaFnc = trm;
         }
 
@@ -937,6 +955,11 @@ namespace Miyu {
     public partial class TSwitch : TStatement {
         public TTerm TermSwitch;
         public List<TCase> Cases = new List<TCase>();
+
+        public void AddCase(TCase cas) {
+            Cases.Add(cas);
+
+        }
     }
 
     /*

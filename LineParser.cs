@@ -24,6 +24,18 @@ namespace Miyu {
         public static TType CurrentClass;
 
         [ThreadStatic]
+        public static List<TType> GenericTypes = new List<TType>();
+
+        [ThreadStatic]
+        public static List<string> GenericArgs = new List<string>();
+
+        [ThreadStatic]
+        public static List<TFunction> NestedFunctions = new List<TFunction>();
+
+        [ThreadStatic]
+        public static int   CurrentLineIdx;
+
+        [ThreadStatic]
         public static TLine CurrentLine;
 
         public TToken[] TokenList;
@@ -31,6 +43,7 @@ namespace Miyu {
         public TToken CurrentToken;
         public TToken NextToken;
         public bool Running;
+        public bool BlockParsing;
         public ELanguage LanguageSP;
 
         // キーワードの文字列の辞書
@@ -89,9 +102,24 @@ namespace Miyu {
         }
 
         /*
+         * enumの開始行を読む。
+         */
+        public TType ReadEnum(TSourceFile src, TModifier mod1) {
+            TType enum1 = ReadEnumLine(src, mod1);
+
+            while (CurrentToken.Kind != EKind.RC) {
+                TField fld = ReadEnumFieldLine();
+            }
+            GetToken(EKind.RC);
+            GetToken(EKind.EOT);
+
+            return enum1;
+        }
+
+        /*
          * classの開始行を読む。
          */
-        public TType ReadClassLine(TSourceFile src, TModifier mod1) {
+        public TType ReadClassLine(TSourceFile src, TModifier mod1, out bool continued) {
             EKind kind = CurrentToken.Kind;
 
             GetToken(EKind.Undefined);
@@ -106,7 +134,7 @@ namespace Miyu {
 
                 GetToken(EKind.LT);
                 while (true) {
-                    TToken param_name = GetToken(EKind.Identifier);
+                    TToken param_name = GetToken2(EKind.Identifier, EKind.ClassName);
 
                     TType param_class = new TType(param_name.TextTkn);
                     param_class.GenericType = EClass.ParameterClass;
@@ -178,7 +206,16 @@ namespace Miyu {
                 }
             }
 
-            LCopt();
+            if (CurrentToken.Kind == EKind.LC) {
+
+                GetToken(EKind.LC);
+                continued = true;
+            }
+            else {
+
+                continued = false;
+            }
+
             GetToken(EKind.EOT);
             CurrentClass = null;
 
@@ -220,6 +257,92 @@ namespace Miyu {
             }
 
             return cls;
+        }
+
+        public TAttribute ReadAttribute() {
+            GetToken(EKind.LB);
+            TType attr = ReadType(false);
+            GetToken(EKind.RB);
+            GetToken(EKind.EOT);
+            return new TAttribute(attr);
+        }
+
+        /*
+         * classの開始行を読む。
+         */
+        public TType ReadClass(TSourceFile src, TModifier mod1) {
+            bool continued;
+            CurrentClass = ReadClassLine(src, mod1, out continued);
+
+            while (CurrentToken.Kind != EKind.RC) {
+                // 修飾子を読みます。
+                TModifier mod2 = ReadModifier();
+
+                GenericTypes.Clear();
+                switch (CurrentToken.Kind) {
+                case EKind.ClassName:
+                    TToken class_token = CurrentToken;
+                    TType tp = ReadType(false);
+
+                    if (CurrentToken.Kind == EKind.LP) {
+
+                        // コンストラクター宣言の開始行を読む。
+                        TFunction fnc = ReadFunction(class_token, tp, mod2, tp);
+                    }
+                    else {
+                        if (CurrentToken.Kind == EKind.operator_) {
+
+                        }
+                        else if (CurrentToken.Kind == EKind.delegate_) {
+                        }
+                        else if (CurrentToken.Kind == EKind.Identifier) {
+                            if (NextToken.Kind == EKind.LT) {
+
+                                // 関数定義を読む。
+                                TFunction fnc = ReadFunction(null, null, mod2, tp);
+                                break;
+                            }
+                        }
+                        else if (CurrentToken.Kind == EKind.ClassName) {
+                            // 関数定義を読む。
+                            TFunction fnc = ReadFunction(null, null, mod2, tp);
+                            break;
+                        }
+                        else {
+
+                            throw new TParseException(CurrentToken);
+                        }
+
+                        if (NextToken.Kind == EKind.LP) {
+
+                            // 関数定義を読む。
+                            TFunction fnc = ReadFunction(null, null, mod2, tp);
+                        }
+                        else {
+
+                            // フィールドの宣言文を読む。
+                            TField fld = ReadFieldLine(mod1, tp);
+                        }
+                    }
+
+                    break;
+
+                case EKind.LB:
+                    ReadAttribute();
+                    break;
+
+                default:
+                    throw new TParseException(CurrentToken);
+                }
+            }
+
+            GetToken(EKind.RC);
+            GetToken(EKind.EOT);
+
+            TType class_def = CurrentClass;
+            CurrentClass = null;
+
+            return class_def;
         }
 
         /*
@@ -284,6 +407,9 @@ namespace Miyu {
             // 引数の型
             dlg.ArgTypes = (from t in vars select t.TypeVar).ToArray();
 
+            GetToken(EKind.SemiColon);
+            GetToken(EKind.EOT);
+
             return dlg;
         }
 
@@ -323,7 +449,7 @@ namespace Miyu {
          * enumのフィールドの行を読む。
          */
         public TField ReadEnumFieldLine() {
-            TToken id = GetToken(EKind.Identifier);
+            TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
 
             OptGetToken(EKind.Comma);
             GetToken(EKind.EOT);
@@ -334,9 +460,9 @@ namespace Miyu {
         /*
          * 型を読む。
          */
-        public TType ReadType(bool new_class) {
+        public TType ReadType(bool new_class, bool in_generic = false) {
             TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
-            TType cls1 = TGlb.Project.GetClassByName(id.TextTkn);
+            TType cls1 = TGlb.Project.GetClassByName(id.TextTkn, in_generic);
 
             List<TType> param_classes = null;
             bool contains_argument_class = false;
@@ -354,7 +480,7 @@ namespace Miyu {
 
                 GetToken(EKind.LT);
                 while (true) {
-                    TType param_class = ReadType(false);
+                    TType param_class = ReadType(false, true);
 
                     if (param_class.GenericType == EClass.ParameterClass || param_class.GenericType == EClass.UnspecializedClass) {
                         // 仮引数クラスか非特定化クラスを含むクラスの場合
@@ -462,7 +588,8 @@ namespace Miyu {
                 GetToken(EKind.Dot);
             }
 
-            LineEnd();
+            GetToken(EKind.SemiColon);
+            GetToken(EKind.EOT);
 
             return using1;
         }
@@ -470,10 +597,10 @@ namespace Miyu {
         /*
          * namespaceの開始行を読む。
          */
-        public TNamespace ReadNamespace() {
+        public TNamespace ReadNamespaceLine() {
             GetToken(EKind.namespace_);
 
-            TToken id = GetToken(EKind.Identifier);
+            TToken id = GetToken2(EKind.Identifier, EKind.ClassName);
             GetToken(EKind.LC);
             GetToken(EKind.EOT);
 
@@ -507,13 +634,44 @@ namespace Miyu {
             return vars;
         }
 
+        public TToken ReadCompleteName() {
+            TToken fnc_name;
+
+            fnc_name = GetToken2(EKind.Identifier, EKind.ClassName);
+
+            if (CurrentToken.Kind == EKind.LT) {
+                GetToken(EKind.LT);
+                while (true) {
+                    TToken arg_tkn = GetToken2(EKind.Identifier, EKind.ClassName);
+                    if (arg_tkn.Kind == EKind.Identifier) {
+                        GenericArgs.Add(arg_tkn.TextTkn);
+                    }
+
+                    if (CurrentToken.Kind != EKind.Comma) {
+
+                        break;
+                    }
+                    GetToken(EKind.Comma);
+                }
+                GetToken(EKind.GT);
+
+                if (CurrentToken.Kind == EKind.Dot) {
+
+                    GetToken(EKind.Dot);
+                    fnc_name = GetToken(EKind.Identifier);
+                }
+            }
+
+            return fnc_name;
+        }
+
         /*
          * 関数定義の開始行を読む。
          */
-        public TFunction ReadFunctionLine(TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
+        public TFunction ReadFunctionLine(TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend, out bool continued) {
             TToken fnc_name;
             EKind kind_fnc = EKind.function_;
-            
+
             if(constructor_class != null) {
                 fnc_name = constructor_token;
                 kind_fnc = EKind.constructor_;
@@ -528,9 +686,13 @@ namespace Miyu {
                         throw new TParseException(fnc_name);
                     }
                 }
+                else if (CurrentToken.Kind == EKind.delegate_) {
+
+                    fnc_name = GetToken(EKind.delegate_);
+                }
                 else {
 
-                    fnc_name = GetToken(EKind.Identifier);
+                    fnc_name = ReadCompleteName();
                 }
             }
 
@@ -550,7 +712,7 @@ namespace Miyu {
                 }
                 else if(constructor_class != null) {
 
-                    if(CurrentToken.Kind == EKind.base_) {
+                    if(CurrentToken.Kind == EKind.base_ || CurrentToken.Kind == EKind.this_) {
 
                         base_app = PrimaryExpression() as TApply;
                     }
@@ -563,15 +725,47 @@ namespace Miyu {
             if(CurrentToken.Kind == EKind.SemiColon) {
 
                 GetToken(EKind.SemiColon);
+                continued = false;
             }
             else {
 
                 LCopt();
+                continued = true;
             }
 
             GetToken(EKind.EOT);
 
             return new TFunction(mod1, fnc_name, vars.ToArray(), ret_type, base_app, kind_fnc);
+        }
+
+        /*
+         * 関数定義の開始行を読む。
+         */
+        public TFunction ReadFunction(TToken constructor_token, TType constructor_class, TModifier mod1, TType ret_type_prepend) {
+            bool continued;
+
+            TFunction fnc = ReadFunctionLine(constructor_token, constructor_class, mod1, ret_type_prepend, out continued);
+            NestedFunctions.Add(fnc);
+
+            if (continued) {
+
+                while (CurrentToken.Kind != EKind.RC) {
+                    ReadStatement();
+                }
+                GetToken(EKind.RC);
+                if(CurrentToken.Kind == EKind.EOT) {
+
+                    GetToken(EKind.EOT);
+                }
+            }
+
+            NestedFunctions.RemoveAt(NestedFunctions.Count - 1);
+
+            if (NestedFunctions.Count == 0) {
+                GenericArgs.Clear();
+            }
+
+            return fnc;
         }
 
         /*
@@ -662,7 +856,7 @@ namespace Miyu {
 
                 var_decl.Variables.Add(var1);
 
-                if(CurrentToken.Kind != EKind.Comma) {
+                if (CurrentToken.Kind != EKind.Comma) {
 
                     break;
                 }
@@ -746,7 +940,7 @@ namespace Miyu {
             case1.TermsCase.AddRange(expr_list);
 
             Colonopt();
-            if(CurrentToken.Kind == EKind.LC) {
+            if (CurrentToken.Kind == EKind.LC) {
                 GetToken(EKind.LC);
             }
             GetToken(EKind.EOT);
@@ -815,6 +1009,16 @@ namespace Miyu {
             return using1;
         }
 
+        public TBlockStatement ReadBlockBody(TBlockStatement blc) {
+            while (CurrentToken.Kind != EKind.RC) {
+                ReadStatement();
+            }
+            GetToken(EKind.RC);
+            GetToken(EKind.EOT);
+
+            return blc;
+        }
+
         /*
          * foreachの開始行を読む。
          */
@@ -848,7 +1052,7 @@ namespace Miyu {
         /*
          * forの開始行を読む。
          */
-        public TFor ReadForLine() {
+        public TFor ReadForLine(out bool continued) {
             TFor for1 = new TFor();
 
             GetToken(EKind.for_);
@@ -885,6 +1089,7 @@ namespace Miyu {
             }
 
             GetToken(EKind.RP);
+            continued = (CurrentToken.Kind == EKind.LC);
             GetToken2(EKind.LC, EKind.SemiColon);
             GetToken(EKind.EOT);
 
@@ -981,6 +1186,7 @@ namespace Miyu {
             case EKind.Assign:
             case EKind.AddEq:
             case EKind.SubEq:
+            case EKind.MulEq:
             case EKind.DivEq:
             case EKind.ModEq:
                 // 代入文の場合
@@ -1026,6 +1232,147 @@ namespace Miyu {
             return new TCall(t1 as TApply);
         }
 
+        public TCase ReadCase() {
+            TCase case1 = new TCase();
+
+            while (CurrentToken.Kind == EKind.case_ || CurrentToken.Kind == EKind.default_) {
+                TToken tkn = GetToken2(EKind.case_, EKind.default_);
+
+                if (tkn.Kind == EKind.default_) {
+                    case1.IsDefault = true;
+                }
+                else {
+
+                    case1.TermsCase.Add(Expression());
+                }
+                GetToken(EKind.Colon);
+                GetToken(EKind.EOT);
+            }
+
+            while (CurrentToken.Kind != EKind.case_ && CurrentToken.Kind != EKind.default_ && CurrentToken.Kind != EKind.RC) {
+
+                case1.StatementsBlc.Add(ReadStatement());
+            }
+
+            return case1;
+        }
+
+        public TSwitch ReadSwitch() {
+            TSwitch swt = ReadSwitchLine();
+
+            while(CurrentToken.Kind != EKind.RC) {
+                swt.AddCase( ReadCase() );
+            }
+
+            GetToken(EKind.RC);
+            GetToken(EKind.EOT);
+
+            return swt;
+        }
+
+        public TStatement ReadStatement() {
+            bool continued;
+
+            switch (CurrentToken.Kind) {
+            case EKind.using_:
+                return ReadBlockBody(ReadUsingLine());
+
+            case EKind.var_:
+                return ReadVariableDeclarationLine(null, false);
+
+            case EKind.if_:
+                return ReadBlockBody(ReadIfLine());
+
+            case EKind.else_:
+                return ReadBlockBody(ReadElseLine());
+
+            case EKind.switch_:
+                return ReadSwitch();
+
+            case EKind.lock_:
+                return ReadBlockBody(ReadLockLine());
+
+            case EKind.while_:
+                return ReadBlockBody(ReadWhileLine());
+
+            case EKind.for_:
+                TFor for1 = ReadForLine(out continued);
+                if (continued) {
+                    return ReadBlockBody(for1);
+                }
+                else {
+
+                    return for1;
+                }
+
+            case EKind.foreach_:
+                return ReadBlockBody(ReadForEachLine());
+
+            case EKind.try_:
+                return ReadBlockBody(ReadTryLine());
+
+            case EKind.catch_:
+                return ReadBlockBody(ReadCatchLine());
+
+            case EKind.return_:
+            case EKind.yield_:
+            case EKind.throw_:
+            case EKind.break_:
+            case EKind.continue_:
+            case EKind.goto_:
+                return ReadJumpLine();
+
+            case EKind.ClassName:
+                TType tp = ReadType(false);
+                if (CurrentToken.Kind == EKind.Identifier) {
+
+                    // 変数宣言文を読む。
+                    return ReadVariableDeclarationLine(tp, false);
+                }
+                else {
+
+                    LookaheadClass = tp;
+
+                    // 代入文か関数呼び出し文を読む。
+                    return ReadAssignmentCallLine(false) as TStatement;
+                }
+
+
+            case EKind.Identifier:
+            case EKind.base_:
+
+                if (NextToken.Kind == EKind.Colon) {
+                    TToken id = GetToken(EKind.Identifier);
+                    GetToken(EKind.Colon);
+                    if(CurrentToken.Kind == EKind.SemiColon) {
+
+                        GetToken(EKind.SemiColon);
+                    }
+                    GetToken(EKind.EOT);
+                    return new TLabelStatement(id);
+                }
+                else {
+
+                    // 代入文か関数呼び出し文を読む。
+                    return ReadAssignmentCallLine(false) as TStatement;
+                }
+
+            case EKind.this_:
+            case EKind.await_:
+            case EKind.LP:
+            case EKind.StringLiteral:
+            case EKind.typeof_:
+                // 代入文か関数呼び出し文を読む。
+                return ReadAssignmentCallLine(false) as TStatement;
+
+            default:
+                throw new TParseException(CurrentToken);
+            }
+        }
+
+        /*
+            コメント以外の最初のトークンの位置を返す。コメント以外のトークンがない場合は-1を返す。
+        */
         public int LineTopTokenIndex(TToken[] token_list) {
             for(int i = 0; i < token_list.Length; i++) {
                 TToken tkn = token_list[i];
@@ -1033,14 +1380,88 @@ namespace Miyu {
                 case ETokenType.BlockComment:
                 case ETokenType.BlockCommentContinued:
                 case ETokenType.LineComment:
+                    // コメントの場合
+
                     break;
 
                 default:
+                    // コメントでない場合
+
                     return i;
                 }
             }
 
+            // コメント以外のトークンがない場合
             return -1;
+        }
+
+        /*
+            修飾子を読みます。
+        */
+        TModifier ReadModifier() {
+            TModifier mod1 = new TModifier();
+
+            while (true) {
+                switch (CurrentToken.Kind) {
+                case EKind.public_:
+                    GetToken(EKind.public_);
+                    mod1.isPublic = true;
+                    break;
+
+                case EKind.private_:
+                    GetToken(EKind.private_);
+                    mod1.isPrivate = true;
+                    break;
+
+                case EKind.abstract_:
+                    GetToken(EKind.abstract_);
+                    mod1.isAbstract = true;
+                    break;
+
+                case EKind.sealed_:
+                    GetToken(EKind.sealed_);
+                    mod1.isSealed = true;
+                    break;
+
+                case EKind.partial_:
+                    GetToken(EKind.partial_);
+                    mod1.isPartial = true;
+                    break;
+
+                case EKind.const_:
+                    GetToken(EKind.const_);
+                    mod1.isConst = true;
+                    break;
+
+                case EKind.static_:
+                    GetToken(EKind.static_);
+                    mod1.isStatic = true;
+                    break;
+
+                case EKind.virtual_:
+                    GetToken(EKind.virtual_);
+                    mod1.isVirtual = true;
+                    break;
+
+                case EKind.new_:
+                    GetToken(EKind.new_);
+                    mod1.isNew = true;
+                    break;
+
+                case EKind.override_:
+                    GetToken(EKind.override_);
+                    mod1.isOverride = true;
+                    break;
+
+                case EKind.async_:
+                    GetToken(EKind.async_);
+                    mod1.isAsync = true;
+                    break;
+
+                default:
+                    return mod1;
+                }
+            }
         }
 
         /*
@@ -1050,19 +1471,23 @@ namespace Miyu {
             TokenPos = line_top_idx;
 
             if (TokenPos < TokenList.Length) {
+                // 行の終わりでない場合
 
                 CurrentToken = TokenList[TokenPos];
             }
             else {
+                // 行の終わりの場合
 
                 CurrentToken = EOTToken;
             }
 
             if (TokenPos + 1 < TokenList.Length) {
+                // 次のトークンが行の終わりでない場合
 
                 NextToken = TokenList[TokenPos + 1];
             }
             else {
+                // 次のトークンが行の終わりの場合
 
                 NextToken = EOTToken;
             }
@@ -1084,59 +1509,10 @@ namespace Miyu {
                     return ele;
                 }
 
-                TModifier mod1 = new TModifier();
+                // 修飾子を読みます。
+                TModifier mod1 = ReadModifier();
                 while (true) {
                     switch (CurrentToken.Kind) {
-                    case EKind.public_:
-                        GetToken(EKind.public_);
-                        mod1.isPublic = true;
-                        break;
-
-                    case EKind.private_:
-                        GetToken(EKind.private_);
-                        mod1.isPrivate = true;
-                        break;
-
-                    case EKind.abstract_:
-                        GetToken(EKind.abstract_);
-                        mod1.isAbstract = true;
-                        break;
-
-                    case EKind.sealed_:
-                        GetToken(EKind.sealed_);
-                        mod1.isSealed = true;
-                        break;
-
-                    case EKind.partial_:
-                        GetToken(EKind.partial_);
-                        mod1.isPartial = true;
-                        break;
-
-                    case EKind.const_:
-                        GetToken(EKind.const_);
-                        mod1.isConst = true;
-                        break;
-
-                    case EKind.static_:
-                        GetToken(EKind.static_);
-                        mod1.isStatic = true;
-                        break;
-
-                    case EKind.virtual_:
-                        GetToken(EKind.virtual_);
-                        mod1.isVirtual = true;
-                        break;
-
-                    case EKind.override_:
-                        GetToken(EKind.override_);
-                        mod1.isOverride = true;
-                        break;
-
-                    case EKind.async_:
-                        GetToken(EKind.async_);
-                        mod1.isAsync = true;
-                        break;
-
                     case EKind.RC:
                         GetToken(EKind.RC);
                         if (TGlb.InLambdaFunction) {
@@ -1183,6 +1559,7 @@ namespace Miyu {
                 }
                 start_l:
 
+                bool continued;
                 switch (CurrentToken.Kind) {
                 case EKind.using_:
                     if(NextToken.Kind == EKind.LP) {
@@ -1195,7 +1572,7 @@ namespace Miyu {
                     }
 
                 case EKind.namespace_:
-                    return ReadNamespace();
+                    return ReadNamespaceLine();
 
                 case EKind.enum_:
                     return ReadEnumLine(src, mod1);
@@ -1203,7 +1580,7 @@ namespace Miyu {
                 case EKind.class_:
                 case EKind.struct_:
                 case EKind.interface_:
-                    return ReadClassLine(src, mod1);
+                    return ReadClassLine(src, mod1, out continued);
 
                 case EKind.delegate_:
                     return ReadDelegateLine(mod1);
@@ -1233,7 +1610,7 @@ namespace Miyu {
                     return ReadWhileLine();
 
                 case EKind.for_:
-                    return ReadForLine();
+                    return ReadForLine(out continued);
 
                 case EKind.foreach_:
                     return ReadForEachLine();
@@ -1258,7 +1635,8 @@ namespace Miyu {
 
                     if (CurrentToken.Kind == EKind.LP) {
 
-                        return ReadFunctionLine(class_token, tp, mod1, tp);
+                        // コンストラクター宣言の開始行を読む。
+                        return ReadFunctionLine(class_token, tp, mod1, tp, out continued);
                     }
 
                     if (CurrentToken.Kind != EKind.Identifier) {
@@ -1271,16 +1649,19 @@ namespace Miyu {
 
                     if (NextToken.Kind == EKind.LP) {
 
-                        return ReadFunctionLine(null, null, mod1, tp);
+                        // メソッド宣言の開始行を読む。
+                        return ReadFunctionLine(null, null, mod1, tp, out continued);
                     }
                     else {
 
                         if (parent_fnc == null) {
 
+                            // フィールドの宣言文を読む。
                             return ReadFieldLine(mod1, tp);
                         }
                         else {
 
+                            // 変数宣言文を読む。
                             return ReadVariableDeclarationLine(tp, false);
                         }
                     }
@@ -1306,7 +1687,7 @@ namespace Miyu {
                     }
                     else if (parent_fnc == null) {
 
-                        return ReadFunctionLine(null, null, mod1, null);
+                        return ReadFunctionLine(null, null, mod1, null, out continued);
                     }
                     else {
 
@@ -1323,7 +1704,7 @@ namespace Miyu {
                     return ReadAssignmentCallLine(false);
 
                 case EKind.operator_:
-                    return ReadFunctionLine(null, null, mod1, null);
+                    return ReadFunctionLine(null, null, mod1, null, out continued);
 
                 case EKind.LB:
                     GetToken(EKind.LB);
@@ -1451,12 +1832,320 @@ namespace Miyu {
         /*
          * ソースファイルの構文解析をする。
          */
-        public async void ParseFile(TSourceFile src) {
+        public void ParseFile(TSourceFile src) {
+            BlockParsing = true;
+
+            src.ClassesSrc.Clear();
+
+            CurrentLineIdx = 0;
+
+            // 行を読む。
+            ReadLine();
+
+            while (CurrentToken.Kind == EKind.using_) {
+                ReadUsing();
+            }
+
+            TNamespace name_space = null;
+            if(CurrentToken.Kind == EKind.namespace_) {
+
+                name_space = ReadNamespaceLine();
+            }
+
+            while (CurrentToken.Kind != EKind.EOT && CurrentToken.Kind != EKind.RC) {
+                // 修飾子を読みます。
+                TModifier mod1 = ReadModifier();
+
+                switch (CurrentToken.Kind) {
+                case EKind.enum_:
+                    ReadEnum(src, mod1);
+                    break;
+
+                case EKind.class_:
+                case EKind.struct_:
+                case EKind.interface_:
+                    ReadClass(src, mod1);
+                    break;
+
+                case EKind.delegate_:
+                    ReadDelegateLine(mod1);
+                    break;
+
+                default:
+                    throw new TParseException(CurrentToken);
+                }
+            }
+
+            if(name_space != null) {
+
+                GetToken(EKind.RC);
+            }
+            GetToken(EKind.EOT);
+
+            if (true) {
+                return;
+            }
+
+
+            object prev_obj = null;
+            List<TToken> comments = new List<TToken>();
+            List<object> obj_stack = new List<object>();
+
+            // ソースファイル内の継続行をセットする。
+            SetLineContinued(src);
+
+            // ソースファイル内のすべての行に対し
+            for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
+                //await Task.Delay(1);
+
+                TLine line = src.Lines[line_idx];
+                CurrentLine = line;
+                if (line.Continued) {
+                    // 継続行の場合
+
+                    continue;
+                }
+
+                line.ObjLine = null;
+                if (line.Tokens.Length == 0) {
+                    // 空行の場合
+
+                    comments.Add(new TToken(EKind.NL));
+                }
+                else {
+                    // 空行でない場合
+
+                    // コメント以外の最初のトークンの位置
+                    int line_top_idx = LineTopTokenIndex(line.Tokens);
+
+                    if (line_top_idx == -1) {
+                        // コメント以外のトークンがない場合
+
+                        comments.Add(line.Tokens[0]);
+                    }
+                    else {
+                        // コメント以外のトークンがある場合
+
+                        // コメント以外の最初のトークン
+                        TToken line_top_token = line.Tokens[line_top_idx];
+
+                        switch (line_top_token.TokenType) {
+                        case ETokenType.VerbatimString:
+                        case ETokenType.VerbatimStringContinued:
+                        case ETokenType.Error:
+                            // 逐語的リテラル文字列やエラーの場合
+
+                            break;
+
+                        default:
+                            // 逐語的リテラル文字列やエラーでない場合
+
+                            if (line.Indent < obj_stack.Count) {
+                                // インデントが小さくなった場合
+
+                                // 現在のインデントより深いオブジェクトをスタックから取り除く。
+                                obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
+                            }
+
+                            TType cls = null;
+                            TFunction parent_fnc = null;
+                            TBlockStatement parent_stmt = null;
+                            List<object> obj_stack_rev = new List<object>(obj_stack);
+                            obj_stack_rev.Reverse();
+
+                            // スタックの中からクラスを探す。
+                            var vcls = from x in obj_stack_rev where x is TType select x as TType;
+                            if (vcls.Any()) {
+                                // クラスがある場合
+
+                                cls = vcls.First();
+
+                            }
+                            line.ClassLine = cls;
+
+                            // スタックの中から関数を探す。
+                            var vfnc = from x in obj_stack_rev where x is TFunction select x as TFunction;
+                            if (vfnc.Any()) {
+                                parent_fnc = vfnc.First();
+                            }
+
+                            // スタックの中から最も内側の文を探す。
+                            var vstmt = from x in obj_stack_rev where x is TBlockStatement select x as TBlockStatement;
+                            if (vstmt.Any()) {
+                                parent_stmt = vstmt.First();
+                            }
+
+                            if (parent_stmt == null && parent_fnc != null) {
+                                parent_stmt = parent_fnc.BlockFnc;
+                            }
+
+                            //Debug.Write(string.Format("行解析 {0}", line.TextLine));
+                            TGlb.LambdaFunction = null;
+
+                            // 現在行のトークンリスト
+                            List<TToken> token_list = new List<TToken>(line.Tokens);
+
+                            // 継続行のトークンを現在行のトークンリストに追加する。
+                            for (int cont_line_idx = line_idx + 1; cont_line_idx < src.Lines.Count && src.Lines[cont_line_idx].Continued; cont_line_idx++) {
+                                token_list.AddRange(src.Lines[cont_line_idx].Tokens);
+                            }
+
+                            // 現在行と継続行を合わせたトークンリスト
+                            TokenList = token_list.ToArray();
+
+                            // 行の構文解析
+                            object obj = ParseLine(src, parent_fnc, parent_stmt, line_top_idx);
+                            if (obj != null) {
+
+                                while (obj_stack.Count < line.Indent) {
+                                    obj_stack.Add(null);
+                                }
+
+                                if (TGlb.LambdaFunction != null) {
+                                    // ラムダ関数の始まりの場合
+
+                                    if (cls == null) {
+                                        // 構文エラーがある場合
+
+                                        TGlb.InLambdaFunction = false;
+                                    }
+                                    else {
+                                        // 構文エラーがない場合
+
+                                        obj_stack.Add(TGlb.LambdaFunction);
+
+                                        TGlb.LambdaFunction.DeclaringType = cls;
+                                        cls.Functions.Add(TGlb.LambdaFunction);
+                                        src.FunctionsSrc.Add(TGlb.LambdaFunction);
+                                    }
+
+                                    TGlb.LambdaFunction = null;
+                                }
+                                else {
+
+                                    obj_stack.Add(obj);
+                                    Debug.Assert(obj_stack.IndexOf(obj) == line.Indent);
+                                }
+
+
+                                if (obj is TType) {
+                                    // クラス定義の場合
+
+                                    TType class_def = obj as TType;
+
+                                    if (class_def.SourceFileCls == src) {
+
+                                        class_def.CommentCls = comments.ToArray();
+                                    }
+                                    //ClassLineText(class_def, sw);
+                                    src.ClassesSrc.Add(class_def);
+                                }
+                                else if (obj is TVariable) {
+                                    // 変数宣言の場合
+
+                                    TVariable var1 = obj as TVariable;
+
+                                    if (prev_obj is TAttribute) {
+                                        if (var1.Attributes == null) {
+                                            var1.Attributes = new List<TAttribute>();
+                                        }
+                                        var1.Attributes.Add(prev_obj as TAttribute);
+                                    }
+
+                                    if (cls != null) {
+                                        // 現在行がクラス定義に含まれる場合
+
+                                        if (obj is TField) {
+                                            // フィールドの場合
+
+                                            TField fld = obj as TField;
+
+                                            fld.CommentVar = comments.ToArray();
+                                            fld.DeclaringType = cls;
+                                            cls.Fields.Add(fld);
+                                            src.FieldsSrc.Add(fld);
+                                        }
+                                        else if (obj is TFunction) {
+                                            // メソッドの場合
+
+                                            TFunction fnc = obj as TFunction;
+
+                                            fnc.CommentVar = comments.ToArray();
+                                            fnc.DeclaringType = cls;
+                                            cls.Functions.Add(fnc);
+                                            src.FunctionsSrc.Add(fnc);
+                                        }
+                                    }
+                                }
+                                else if (obj is TUsing) {
+                                    // using文の場合
+
+                                    src.Usings.Add(obj as TUsing);
+                                }
+                                else if (obj is TNamespace) {
+                                    // namespaceの場合
+
+                                    src.Namespace = obj as TNamespace;
+                                    src.Namespace.CommentNS = comments.ToArray();
+                                }
+                                else if (obj is TStatement) {
+                                    // 文の場合
+
+                                    TStatement stmt = obj as TStatement;
+
+                                    stmt.CommentStmt = comments.ToArray();
+                                    if (parent_stmt != null || parent_fnc != null) {
+                                        if (stmt is TCase) {
+                                            // case文の場合
+                                            TCase case1 = stmt as TCase;
+
+                                            if (parent_stmt.StatementsBlc.Count == 0) {
+
+                                                Debug.WriteLine("caseがブロックの先頭にある。");
+                                            }
+                                            else {
+                                                TStatement last_stmt = parent_stmt.StatementsBlc[parent_stmt.StatementsBlc.Count - 1];
+                                                if (last_stmt is TSwitch) {
+
+                                                    (last_stmt as TSwitch).Cases.Add(case1);
+                                                }
+                                                else {
+
+                                                    Debug.WriteLine("caseの前にswitchがない。");
+                                                }
+                                            }
+                                        }
+                                        else {
+
+                                            parent_stmt.StatementsBlc.Add(stmt);
+                                        }
+                                    }
+                                }
+                            }
+
+                            line.ObjLine = obj;
+                            prev_obj = obj;
+
+                            break;
+                        }
+                        if (!(prev_obj is TAttribute)) {
+
+                            comments.Clear();
+                        }
+                    }
+                }
+            }
+            CurrentClass = null;
+        }
+
+        /*
+         * ソースファイルを行ごとに構文解析をする。
+         */
+        public async void LineParseFile(TSourceFile src) {
             while (Running) {
                 await Task.Delay(1);
             }
             Running = true;
-            //Debug.WriteLine("parse file : 開始 {0}", Path.GetFileName(src.PathSrc), "");
 
             src.ClassesSrc.Clear();
 
@@ -1464,9 +2153,11 @@ namespace Miyu {
             List<TToken> comments = new List<TToken>();
             List<object> obj_stack = new List<object>();
 
+            // ソースファイル内の継続行をセットする。
             SetLineContinued(src);
 
-            for(int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
+            // ソースファイル内のすべての行に対し
+            for (int line_idx = 0; line_idx < src.Lines.Count; line_idx++) {
                 //await Task.Delay(1);
 
                 if (TGlb.Project.Modified.WaitOne(0)) {
@@ -1487,28 +2178,42 @@ namespace Miyu {
 
                 line.ObjLine = null;
                 if (line.Tokens.Length == 0) {
+                    // 空行の場合
+
                     comments.Add(new TToken(EKind.NL));
                 }
                 else {
+                    // 空行でない場合
+
+                    // コメント以外の最初のトークンの位置
                     int line_top_idx = LineTopTokenIndex(line.Tokens);
 
                     if (line_top_idx == -1) {
+                        // コメント以外のトークンがない場合
+
                         comments.Add(line.Tokens[0]);
                     }
-                    else { 
+                    else {
+                        // コメント以外のトークンがある場合
 
+                        // コメント以外の最初のトークン
                         TToken line_top_token = line.Tokens[line_top_idx];
 
                         switch (line_top_token.TokenType) {
                         case ETokenType.VerbatimString:
                         case ETokenType.VerbatimStringContinued:
                         case ETokenType.Error:
+                            // 逐語的リテラル文字列やエラーの場合
+
                             break;
 
                         default:
+                            // 逐語的リテラル文字列やエラーでない場合
 
                             if (line.Indent < obj_stack.Count) {
+                                // インデントが小さくなった場合
 
+                                // 現在のインデントより深いオブジェクトをスタックから取り除く。
                                 obj_stack.RemoveRange(line.Indent, obj_stack.Count - line.Indent);
                             }
 
@@ -1521,6 +2226,8 @@ namespace Miyu {
                             // スタックの中からクラスを探す。
                             var vcls = from x in obj_stack_rev where x is TType select x as TType;
                             if (vcls.Any()) {
+                                // クラスがある場合
+
                                 cls = vcls.First();
 
                                 if (cls is TGenericClass) {
@@ -1554,12 +2261,18 @@ namespace Miyu {
                             //Debug.Write(string.Format("行解析 {0}", line.TextLine));
                             TGlb.LambdaFunction = null;
 
+                            // 現在行のトークンリスト
                             List<TToken> token_list = new List<TToken>(line.Tokens);
+
+                            // 継続行のトークンを現在行のトークンリストに追加する。
                             for (int cont_line_idx = line_idx + 1; cont_line_idx < src.Lines.Count && src.Lines[cont_line_idx].Continued ; cont_line_idx++) {
                                 token_list.AddRange(src.Lines[cont_line_idx].Tokens);
                             }
 
+                            // 現在行と継続行を合わせたトークンリスト
                             TokenList = token_list.ToArray();
+
+                            // 行の構文解析
                             object obj = ParseLine(src, parent_fnc, parent_stmt, line_top_idx);
                             if (obj != null) {
 
@@ -1595,6 +2308,8 @@ namespace Miyu {
 
 
                                 if (obj is TType) {
+                                    // クラス定義の場合
+
                                     TType class_def = obj as TType;
 
                                     if(class_def.SourceFileCls == src) {
@@ -1605,6 +2320,8 @@ namespace Miyu {
                                     src.ClassesSrc.Add(class_def);
                                 }
                                 else if (obj is TVariable) {
+                                    // 変数宣言の場合
+
                                     TVariable var1 = obj as TVariable;
 
                                     if (prev_obj is TAttribute) {
@@ -1615,8 +2332,11 @@ namespace Miyu {
                                     }
 
                                     if (cls != null) {
+                                        // 現在行がクラス定義に含まれる場合
 
                                         if (obj is TField) {
+                                            // フィールドの場合
+
                                             TField fld = obj as TField;
 
                                             fld.CommentVar = comments.ToArray();
@@ -1625,6 +2345,8 @@ namespace Miyu {
                                             src.FieldsSrc.Add(fld);
                                         }
                                         else if (obj is TFunction) {
+                                            // メソッドの場合
+
                                             TFunction fnc = obj as TFunction;
 
                                             fnc.CommentVar = comments.ToArray();
@@ -1635,19 +2357,25 @@ namespace Miyu {
                                     }
                                 }
                                 else if (obj is TUsing) {
+                                    // using文の場合
 
                                     src.Usings.Add(obj as TUsing);
                                 }
                                 else if(obj is TNamespace) {
+                                    // namespaceの場合
+
                                     src.Namespace = obj as TNamespace;
                                     src.Namespace.CommentNS = comments.ToArray();
                                 }
                                 else if (obj is TStatement) {
+                                    // 文の場合
+
                                     TStatement stmt = obj as TStatement;
 
                                     stmt.CommentStmt = comments.ToArray();
                                     if (parent_stmt != null || parent_fnc != null) {
                                         if (stmt is TCase) {
+                                            // case文の場合
                                             TCase case1 = stmt as TCase;
 
                                             if (parent_stmt.StatementsBlc.Count == 0) {
@@ -1735,16 +2463,84 @@ namespace Miyu {
         }
 
         /*
+            行を読む。
+        */
+        public void ReadLine() {
+            TSourceFile src = TGlb.SourceFile;
+
+            for (; CurrentLineIdx < src.Lines.Count; CurrentLineIdx++) {
+                CurrentLine = src.Lines[CurrentLineIdx];
+
+                // コメント以外の最初のトークンの位置
+                TokenPos = LineTopTokenIndex(CurrentLine.Tokens);
+
+                if (TokenPos == -1) {
+                    continue;
+                }
+
+                TokenList = CurrentLine.Tokens;
+
+                if (CurrentClass is TGenericClass) {
+                    TGenericClass gen = CurrentClass as TGenericClass;
+
+                    var vtkn = from t in gen.ArgClasses from tk in TokenList where tk.TextTkn == t.ClassName select tk;
+                    foreach (TToken tk in vtkn) {
+                        tk.Kind = EKind.ClassName;
+                    }
+                }
+                var arg_tkns = from tk in TokenList where GenericArgs.Contains(tk.TextTkn) select tk;
+                foreach (TToken tk in arg_tkns) {
+                    tk.Kind = EKind.ClassName;
+                }
+
+
+                CurrentToken = TokenList[TokenPos];
+
+                if (TokenPos + 1 < TokenList.Length) {
+                    // 次のトークンが行の終わりでない場合
+
+                    NextToken = TokenList[TokenPos + 1];
+                }
+                else {
+                    // 次のトークンが行の終わりの場合
+
+                    NextToken = EOTToken;
+                }
+                Debug.WriteLine("read line:{0} {1} {2}", Path.GetFileName(TGlb.SourceFile.PathSrc), CurrentLineIdx, CurrentLine.TextLine, "");
+
+                return;
+            }
+        }
+
+        /*
          * 指定された種類の字句を読む。
          */
         public TToken GetToken(EKind type) {
+            if (CurrentToken == EOTToken && type != EKind.EOT && BlockParsing && CurrentLineIdx + 1 < TGlb.SourceFile.Lines.Count) {
+                // 現在のトークンがEOTで、指定したトークンがEOTでなく、ブロックパースで、次の行がある場合
 
-            if(type != EKind.Undefined && type != CurrentToken.Kind) {
+                // 次の行を読む。
+                CurrentLineIdx++;
+                ReadLine();
+            }
+
+            if (type != EKind.Undefined && type != CurrentToken.Kind) {
 
                 throw new TParseException(CurrentToken);
             }
 
             TToken tkn = CurrentToken;
+
+
+            if (CurrentToken == EOTToken && BlockParsing && CurrentLineIdx + 1 < TGlb.SourceFile.Lines.Count) {
+                // 現在のトークンがEOTで、ブロックパースで、次の行がある場合
+
+                // 次の行を読む。
+                CurrentLineIdx++;
+                ReadLine();
+
+                return tkn;
+            }
 
             while (true) {
 
@@ -1843,11 +2639,17 @@ namespace Miyu {
             TTerm term;
             TToken opr;
             List<TTerm> init;
+            TTerm[] expr_list;
 
             if (LookaheadClass != null) {
                 TReference ref_class = new TReference(LookaheadClass);
                 LookaheadClass = null;
                 return ref_class;
+            }
+
+            if (CurrentToken.Kind == EKind.EOT) {
+
+                GetToken(EKind.EOT);
             }
 
             switch (CurrentToken.Kind) {
@@ -1862,7 +2664,7 @@ namespace Miyu {
                 if (CurrentToken.Kind == EKind.LP) {
                     GetToken(EKind.LP);
 
-                    TTerm[] expr_list = ExpressionList().ToArray();
+                    expr_list = ExpressionList().ToArray();
 
                     GetToken(EKind.RP);
 
@@ -1929,7 +2731,21 @@ namespace Miyu {
                     return new TReference(TGlb.LambdaFunction);
                 }
 
-                term = Expression();
+                expr_list = ExpressionList().ToArray();
+                if(expr_list.Length == 1) {
+
+//                    term = Expression();
+                    term = expr_list[0];
+                }
+                else {
+
+                    GetToken(EKind.RP);
+                    GetToken(EKind.Lambda);
+                    TTerm ret = Expression();
+                    TFunction fnc = new TFunction(expr_list, ret);
+
+                    return new TReference(fnc);
+                }
 
                 GetToken(EKind.RP);
 
@@ -1955,6 +2771,15 @@ namespace Miyu {
                     args = ExpressionList().ToArray();
 
                     GetToken(EKind.RP);
+
+                    if (CurrentToken.Kind == EKind.LC) {
+
+                        GetToken(EKind.LC);
+
+                        init = ExpressionList();
+
+                        GetToken(EKind.RC);
+                    }
 
                     return new TNewApply(EKind.NewInstance, new_tkn, cls, args, null);
                 }
@@ -2015,6 +2840,10 @@ namespace Miyu {
                 cls = ReadType(false);
                 GetToken(EKind.RP);
                 return new TApply(opr, new TReference(cls));
+
+            case EKind.delegate_:
+                TFunction dlg = ReadFunction(null, null, new TModifier(), TGlb.Project.VoidClass);
+                return new TReference(dlg);
             }
 
             throw new TParseException(CurrentToken);
@@ -2316,6 +3145,12 @@ namespace Miyu {
                 if(CurrentToken.Kind == EKind.Comma) {
 
                     GetToken(EKind.Comma);
+                    OptGetToken(EKind.EOT);
+                    if (CurrentToken.Kind == EKind.RC || CurrentToken.Kind == EKind.RB || CurrentToken.Kind == EKind.RP) {
+                        // 最後の項目の後ろにコンマがある場合
+
+                        return expr_list;
+                    }
                 }
                 else {
                     
@@ -2382,6 +3217,10 @@ namespace Miyu {
             StartPos = start_pos;
             EndPos = end_pos;
         }
+
+        public override string ToString() {
+            return string.Format("{0} {1}", TextTkn, Kind);
+        }
     }
 
     public class TLine {
@@ -2434,8 +3273,8 @@ namespace Miyu {
 
         public TParseException(TToken token) {
             SetErrorTkn(token);
-
-            Debug.WriteLine("Parse Exception : {0}", TParser.CurrentLine.TextLine, "");
+            string msg = string.Join(" ", from x in TGlb.Parser.TokenList select x.TextTkn);
+            Debug.WriteLine("Parse Exception : {0} {1} {2}", Path.GetFileName(TGlb.SourceFile.PathSrc), TParser.CurrentLineIdx, msg, "");
         }
 
         public TParseException(TToken token, string msg) {
